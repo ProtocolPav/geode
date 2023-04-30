@@ -1,0 +1,313 @@
+import asyncio
+import json
+from typing import AsyncIterable
+import shutil
+from datetime import datetime
+import os
+
+import httpx
+from httpx import AsyncClient
+from bs4 import BeautifulSoup
+from jproperties import Properties
+import re
+
+class ServerStopped(Exception):
+    ...
+
+
+async def initiate_backup(file_list, world_name: str):
+    path_to_worlds = 'server/1.19.1/worlds'
+    path_to_backup = 'server/1.19.1/backup'
+    daily_backup_hour = 16
+    monthly_backup_day = 28
+
+    file_date = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+    os.makedirs(f'{path_to_backup}/{world_name} {file_date}/db')
+
+    for file in file_list:
+        file_path = file.split('/')
+        file_to_copy = file_path[-1].split(':')[0]
+        file_length = int(file_path[-1].split(':')[1])
+
+        db = "db" if 'db' in file_path else ""
+
+        original_path = f"{path_to_worlds}/{world_name}/{db}/{file_to_copy}"
+        destination_path = f"{path_to_backup}/{world_name} {file_date}/{db}/{file_to_copy}"
+
+        shutil.copyfile(original_path, destination_path)
+
+        with open(destination_path, 'a') as f:
+            f.truncate(file_length)
+            if os.path.getsize(f.name) != file_length:
+                print(f"[{datetime.now().replace(microsecond=0)} BACKUP] Copied {file_to_copy}, but file lengths are different.\n"
+                      f"\t\t\tExpected file size: {file_length}\n"
+                      f"\t\t\tActual file length: {os.path.getsize(f.name)}")
+
+    shutil.make_archive(f"{path_to_backup}/{world_name} {file_date}", 'zip',
+                        f"{path_to_backup}/{world_name} {file_date}")
+    shutil.rmtree(f"{path_to_backup}/{world_name} {file_date}")
+
+    size = os.path.getsize(f"{path_to_backup}/{world_name} {file_date}.zip")
+
+    print(f"[{datetime.now().replace(microsecond=0)} BACKUP] Finished backup")
+    print(f"[{datetime.now().replace(microsecond=0)} DETAILS] This backup is {round(size / 1000 / 1000, 2)}MB")
+    print(f"[{datetime.now().replace(microsecond=0)} DETAILS] Beginning s3 upload...")
+
+    if datetime.now().hour == daily_backup_hour:
+        if datetime.now().day == monthly_backup_day:
+            backup_type = "monthly"
+        else:
+            backup_type = "daily"
+    else:
+        backup_type = "hourly"
+
+    process = await asyncio.create_subprocess_shell(
+        f"aws s3 sync server/1.19.1/backup/ s3://everthorn-backups/{backup_type}/",
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+        limit=1024 * 512
+    )
+
+    try:
+        while True:
+            line = await process.stdout.readline()
+            line = line.decode().rstrip()
+            if line == '':
+                print("got EOL - aborting s3 upload")
+                break
+            elif f'upload: {path_to_backup}/{world_name} {file_date}.zip' in line:
+                print(f"[{datetime.now().replace(microsecond=0)} UPLOAD] {path_to_backup}/{world_name} {file_date}.zip")
+                os.remove(f"{path_to_backup}/{world_name} {file_date}.zip")
+                break
+    except asyncio.LimitOverrunError:
+        print("AsyncioLimitOverrunError - Separator not found, and Chunk limit is exceeded!\n"
+              "s3 upload aborted")
+
+
+class BedrockServer:
+    client: asyncio.subprocess.Process
+    logs: list[str]
+    status: str
+    server_properties: dict
+    config: dict
+    version: str
+    discord_guild_id: int
+    process_id: int
+
+    def __init__(self):
+        self.logs = []
+        self.server_properties = {}
+        self.config = json.load(open("bdsconfig.json", "r"))
+        self.version = self.config['last_saved_version']
+        self.discord_guild_id = self.config['discord_guild_link']
+        self.status = "started_by_user"
+
+        print(f'[SERVER] Last saved version loaded as {self.version}')
+        print('[SERVER]', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
+
+        prop_file = Properties()
+        prop_file.load(open("server/1.19.1/server.properties", 'rb'))
+        self.server_properties = prop_file.properties
+
+    def client_running(self) -> bool:
+        try:
+            return True if self.client.returncode is None else False
+        except AttributeError:
+            return False
+
+    async def execute(self, text: str, sleep=0):
+        self.client.stdin.write(f'{text}\n'.encode())
+        await self.client.stdin.drain()
+        await asyncio.sleep(sleep)
+
+    async def bds_stdout_processor(self) -> AsyncIterable[str]:
+        """Processes the raw BDS output before passing it"""
+        while True:
+            line = (await self.client.stdout.readline()).decode().rstrip()
+
+            if f'{self.server_properties["level-name"]}/db/' in line:
+                await initiate_backup(line.split(', '), self.server_properties["level-name"])
+
+            elif 'Player connected: ' in line:
+                async with AsyncClient() as client:
+                    gamertag = line[line.index(': ') + 2 : line.index(',')]
+                    await client.post(f"http://thorny-wbs:8000/<guild_id:{self.discord_guild_id}>/<gamertag:{gamertag}>/connect")
+                    yield line
+
+            elif 'Player disconnected: ' in line:
+                async with AsyncClient() as client:
+                    gamertag = line[line.index(': ') + 2: line.index(',')]
+                    await client.post(f"http://thorny-wbs:8000/<guild_id:{self.discord_guild_id}>/<gamertag:{gamertag}>/disconnect")
+                    yield line
+
+            elif "Version " in line:
+                self.version = line.split("Version ")[1]
+                self.config['last_saved_version'] = self.version
+                json.dump(self.config, open('bdsconfig.json', "w"))
+                yield line
+
+            elif "Killed" in line:
+                self.status = "server_crashed"
+
+            elif line == "":
+                raise ServerStopped
+
+            else:
+                yield line
+
+            self.logs.append(line)
+
+    async def console_output(self):
+        async for line in aiter(self.bds_stdout_processor()):
+            print(f"[PID{self.process_id}]", line)
+
+    async def backup_loop(self):
+        if self.config['backup']['enabled']:
+            while True:
+                await asyncio.sleep(50)
+                print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} BACKUP] Beginning backup")
+                await self.execute('save hold', sleep=5)
+                await self.execute('save query', sleep=10)
+                await self.execute('save resume', sleep=3835)
+
+    async def create_client(self):
+        self.client = await asyncio.create_subprocess_shell("cd server/1.19.1 && LD_LIBRARY_PATH=. ./bedrock_server",
+                                                            stdin=asyncio.subprocess.PIPE,
+                                                            stdout=asyncio.subprocess.PIPE,
+                                                            stderr=asyncio.subprocess.STDOUT,
+                                                            limit= 1024 * 512
+                                                            )
+
+        self.process_id = self.client.pid
+
+        server_tasks = [asyncio.create_task(coro=self.console_output(),
+                                            name=f"[PID{self.process_id}] Minecraft Server Console Output"),
+                        asyncio.create_task(coro=self.backup_loop(),
+                                            name=f"[PID{self.process_id}] Minecraft Server Backup Handler")]
+
+        for key, val in self.server_properties.items():
+            print(f"[INFO] {key} = {val}")
+
+        try:
+            await asyncio.gather(*server_tasks)
+
+        except ServerStopped:
+            print("Exception ServerStopped raised - canceling all tasks")
+
+            for task in server_tasks:
+                print(f"[SERVER] Canceling task {task.get_name()}")
+                task.cancel()
+
+
+class Handler:
+    handler_version: str = "v3.2"
+    server: BedrockServer
+    config: dict
+    new_update: str
+
+    def server_running(self) -> bool:
+        try:
+            return self.server.client_running()
+        except AttributeError:
+            return False
+
+    async def check_for_crash(self):
+        while True:
+            if self.server.status == "server_crashed" and not self.server_running():
+                await self.start_server()
+
+            await asyncio.sleep(3)
+
+    async def start_server(self):
+        self.config = json.load(open("bdsconfig.json", "r"))
+
+        if not self.server_running():
+            print(f'HANDLER VERSION {self.handler_version}')
+            async with httpx.AsyncClient() as client:
+                await client.post(f'http://thorny-wbs:8000/<guild_id:{self.config["discord_guild_link"]}>/disconnect/all')
+
+            self.server = BedrockServer()
+            await self.check_for_updates()
+            await asyncio.sleep(10)
+
+            asyncio.get_event_loop().create_task(coro=self.server.create_client(),
+                                                 name=f"Minecraft Server")
+
+    async def stop_server(self):
+        if self.server_running():
+            async with httpx.AsyncClient() as client:
+                await client.post(f'http://thorny-wbs:8000/<guild_id:{self.config["discord_guild_link"]}>/disconnect/all')
+
+            await self.server.execute('stop')
+            self.server.status = "stopped_by_user"
+
+    async def check_for_updates(self):
+        async with httpx.AsyncClient() as client:
+            print("[HANDLER] Checking for updates...")
+            server_download_site = await client.get("https://www.minecraft.net/en-us/download/server/bedrock",
+                                                    follow_redirects=True,
+                                                    headers={"Accept-Encoding": "identity", "Accept-Language": "en",
+                                                             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+
+            soup = BeautifulSoup(server_download_site.text, 'html.parser')
+            link = str(soup.find("a", href=re.compile("https://minecraft.azureedge.net/bin-linux/bedrock-server")).get('href'))
+
+            if self.server.version not in link:
+                await asyncio.create_subprocess_shell(
+                    f"curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip && "
+                    f"unzip -o server/temp.zip bedrock_server -d server/temp && "
+                    f"cp server/temp/bedrock_server server/1.19.1/bedrock_server",
+                    stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.STDOUT,
+                )
+                print(f"[HANDLER] I have updated the server according to the link {link}")
+
+                self.new_update = link.split('-')[3].split('.zip')[0]
+
+            print("[HANDLER] The server is up to date!")
+
+    async def execute_backup(self):
+        await self.server.execute('save hold', sleep=2)
+        await self.server.execute('save query', sleep=10)
+        await self.server.execute('save resume')
+
+    async def execute_whitelist(self, gamertag: str, operation: str):
+        if operation.lower() == "remove":
+            await self.server.execute(f'allowlist remove "{gamertag}"')
+        else:
+            await self.server.execute(f'allowlist add "{gamertag}"')
+
+    async def execute_kick(self, gamertag: str):
+        await self.server.execute(f'kick "{gamertag}"')
+
+    async def backups_list(self):
+        backups = []
+        process = await asyncio.create_subprocess_shell(
+            f"aws s3 ls s3://everthorn-backups/hourly/",
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            limit=1024 * 512
+        )
+
+        try:
+            while True:
+                line = await process.stdout.readline()
+                line = line.decode().rstrip()
+                if line == '':
+                    print("got EOL - all backups retrieved")
+                    break
+                elif self.server.server_properties['level-name'] in line:
+                    size = int(line.split("  ")[1].split(" ")[0]) / 1024 / 1024
+                    name = line.split("  ")[1].split(" ")[1]
+                    date = line.split("  ")[1].split(" ")[2]
+                    time = line.split("  ")[1].split(" ")[3].strip(".zip")
+                    backups.append({'world_name': name,
+                                    'backup_size_MiB': size,
+                                    'backup_date': datetime.fromisoformat(date),
+                                    'backup_time': time})
+        except asyncio.LimitOverrunError:
+            print("AsyncioLimitOverrunError - Separator not found, and Chunk limit is exceeded!\n"
+                  "s3 list aborted")

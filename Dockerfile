@@ -14,7 +14,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteract
 RUN mkdir server
     # && curl -H 'Cache-Control: no-cache, no-store' https://minecraft.azureedge.net/bin-linux/bedrock-server-1.19.1.01.zip --output server/1.19.1.zip && unzip server/1.19.1.zip -d server/1.19.1
 
-RUN pip install websockets==10.0 aioconsole sanic==22.9.0 httpx bs4 jproperties
+COPY requirements.txt /requirements.txt
+RUN pip install -r /requirements.txt
 
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip && sudo ./aws/install
 

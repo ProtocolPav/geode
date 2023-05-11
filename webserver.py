@@ -10,9 +10,11 @@ handler = Handler()
 
 @app.route('/status')
 async def status(request: Request):
+    print(handler.system_logs)
     return json({'server_online': handler.server_running(),
                  'server_status': handler.server.status,
-                 'uptime': datetime.now() - handler.server.start_time,
+                 'uptime': f"{datetime.now() - handler.server.start_time}",
+                 'system_usage': handler.system_logs,
                  'update': handler.new_update if hasattr(handler, 'new_update') else None,
                  'logs': handler.server.logs[-30:]})
 
@@ -77,7 +79,9 @@ async def init_bdswrapper(application, loop: asyncio.AbstractEventLoop):
     await asyncio.sleep(10)
     await handler.start_server()
     await asyncio.gather(asyncio.create_task(coro=handler.check_for_crash(),
-                                             name=f"Handler Auto Restart On Crash"))
+                                             name="Handler AutoRestart"),
+                         asyncio.create_task(coro=handler.log_system_usage(),
+                                             name="Handler SystemLog"))
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0")

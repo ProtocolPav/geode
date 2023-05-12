@@ -10,13 +10,12 @@ handler = Handler()
 
 @app.route('/status')
 async def status(request: Request):
-    print(handler.system_logs)
     return json({'server_online': handler.server_running(),
                  'server_status': handler.server.status,
                  'uptime': f"{datetime.now() - handler.server.start_time}",
                  'system_usage': handler.system_logs,
                  'update': handler.new_update if hasattr(handler, 'new_update') else None,
-                 'logs': handler.server.logs[-30:]})
+                 'logs': handler.server.logs})
 
 
 @app.post('/stop')

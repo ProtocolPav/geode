@@ -2,6 +2,7 @@ import asyncio
 import json
 from typing import AsyncIterable
 import shutil
+import psutil
 from datetime import datetime
 import os
 
@@ -11,11 +12,14 @@ from bs4 import BeautifulSoup
 from jproperties import Properties
 import re
 
-class ServerStopped(Exception):
-    ...
+class ServerStop(Exception):
+    def __init__(self, requested_by_user: bool):
+        super().__init__()
+
+        self.user_stop = requested_by_user
 
 
-async def initiate_backup(file_list, world_name: str):
+async def initiate_backup(file_list, world_name: str, process_id: int):
     path_to_worlds = 'server/1.19.1/worlds'
     path_to_backup = 'server/1.19.1/backup'
     daily_backup_hour = 16
@@ -38,10 +42,6 @@ async def initiate_backup(file_list, world_name: str):
 
         with open(destination_path, 'a') as f:
             f.truncate(file_length)
-            if os.path.getsize(f.name) != file_length:
-                print(f"[{datetime.now().replace(microsecond=0)} BACKUP] Copied {file_to_copy}, but file lengths are different.\n"
-                      f"\t\t\tExpected file size: {file_length}\n"
-                      f"\t\t\tActual file length: {os.path.getsize(f.name)}")
 
     shutil.make_archive(f"{path_to_backup}/{world_name} {file_date}", 'zip',
                         f"{path_to_backup}/{world_name} {file_date}")
@@ -49,9 +49,9 @@ async def initiate_backup(file_list, world_name: str):
 
     size = os.path.getsize(f"{path_to_backup}/{world_name} {file_date}.zip")
 
-    print(f"[{datetime.now().replace(microsecond=0)} BACKUP] Finished backup")
-    print(f"[{datetime.now().replace(microsecond=0)} DETAILS] This backup is {round(size / 1000 / 1000, 2)}MB")
-    print(f"[{datetime.now().replace(microsecond=0)} DETAILS] Beginning s3 upload...")
+    print(f"[PID{process_id}] [{datetime.now().replace(microsecond=0)} BACKUP] Finished backup")
+    print(f"[PID{process_id}] [{datetime.now().replace(microsecond=0)} BACKUP] This backup is {round(size / 1000 / 1000, 2)}MB")
+    print(f"[PID{process_id}] [{datetime.now().replace(microsecond=0)} BACKUP] Beginning s3 upload...")
 
     if datetime.now().hour == daily_backup_hour:
         if datetime.now().day == monthly_backup_day:
@@ -77,7 +77,7 @@ async def initiate_backup(file_list, world_name: str):
                 print("got EOL - aborting s3 upload")
                 break
             elif f'upload: {path_to_backup}/{world_name} {file_date}.zip' in line:
-                print(f"[{datetime.now().replace(microsecond=0)} UPLOAD] {path_to_backup}/{world_name} {file_date}.zip")
+                print(f"[PID{process_id}] [{datetime.now().replace(microsecond=0)} BACKUP] s3 upload successful!")
                 os.remove(f"{path_to_backup}/{world_name} {file_date}.zip")
                 break
     except asyncio.LimitOverrunError:
@@ -87,6 +87,7 @@ async def initiate_backup(file_list, world_name: str):
 
 class BedrockServer:
     client: asyncio.subprocess.Process
+    start_time: datetime
     logs: list[str]
     status: str
     server_properties: dict
@@ -101,7 +102,8 @@ class BedrockServer:
         self.config = json.load(open("bdsconfig.json", "r"))
         self.version = self.config['last_saved_version']
         self.discord_guild_id = self.config['discord_guild_link']
-        self.status = "started_by_user"
+        self.status = ""
+        self.start_time = datetime.now().replace(microsecond=0)
 
         print(f'[SERVER] Last saved version loaded as {self.version}')
         print('[SERVER]', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
@@ -127,7 +129,7 @@ class BedrockServer:
             line = (await self.client.stdout.readline()).decode().rstrip()
 
             if f'{self.server_properties["level-name"]}/db/' in line:
-                await initiate_backup(line.split(', '), self.server_properties["level-name"])
+                await initiate_backup(line.split(', '), self.server_properties["level-name"], self.process_id)
 
             elif 'Player connected: ' in line:
                 async with AsyncClient() as client:
@@ -147,11 +149,12 @@ class BedrockServer:
                 json.dump(self.config, open('bdsconfig.json', "w"))
                 yield line
 
-            elif "Killed" in line:
-                self.status = "server_crashed"
+            elif "Quit correctly" in line:
+                yield line
+                raise ServerStop(requested_by_user=True)
 
             elif line == "":
-                raise ServerStopped
+                raise ServerStop(requested_by_user=False)
 
             else:
                 yield line
@@ -192,8 +195,13 @@ class BedrockServer:
         try:
             await asyncio.gather(*server_tasks)
 
-        except ServerStopped:
-            print("Exception ServerStopped raised - canceling all tasks")
+        except ServerStop as e:
+            if e.user_stop:
+                print(f"[SERVER] Server stop requested by user")
+            else:
+                print(f"[SERVER] Server has crashed")
+                self.status = "server_crashed"
+            print(f"[SERVER] Canceling all running tasks")
 
             for task in server_tasks:
                 print(f"[SERVER] Canceling task {task.get_name()}")
@@ -201,7 +209,8 @@ class BedrockServer:
 
 
 class Handler:
-    handler_version: str = "v3.2"
+    handler_version: str = "v4.0"
+    system_logs: dict
     server: BedrockServer
     config: dict
     new_update: str
@@ -215,9 +224,22 @@ class Handler:
     async def check_for_crash(self):
         while True:
             if self.server.status == "server_crashed" and not self.server_running():
+                self.server.status = "responding_to_crash"
+                await asyncio.sleep(20)
                 await self.start_server()
 
             await asyncio.sleep(3)
+
+    async def log_system_usage(self):
+        self.system_logs = {"ram_usage": []}
+        while True:
+            ram_usage = psutil.virtual_memory()
+            self.system_logs['ram_usage'].append({'used': ram_usage.used,
+                                                  'total': ram_usage.total,
+                                                  'percentage': ram_usage.percent,
+                                                  'time': f"{datetime.now()}"})
+
+            await asyncio.sleep(10)
 
     async def start_server(self):
         self.config = json.load(open("bdsconfig.json", "r"))
@@ -240,7 +262,6 @@ class Handler:
                 await client.post(f'http://thorny-wbs:8000/<guild_id:{self.config["discord_guild_link"]}>/disconnect/all')
 
             await self.server.execute('stop')
-            self.server.status = "stopped_by_user"
 
     async def check_for_updates(self):
         async with httpx.AsyncClient() as client:
@@ -265,6 +286,8 @@ class Handler:
                 print(f"[HANDLER] I have updated the server according to the link {link}")
 
                 self.new_update = link.split('-')[3].split('.zip')[0]
+            elif self.server.version in link and hasattr(self, 'new_update'):
+                self.__delattr__('new_update')
 
             print("[HANDLER] The server is up to date!")
 

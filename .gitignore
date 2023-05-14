@@ -2,3 +2,5 @@
 /test-bds-server/
 /friendconnect/
 /.idea/
+/bdsconfig.json
+/system_usage.json

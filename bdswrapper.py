@@ -197,20 +197,21 @@ class BedrockServer:
 
         except ServerStop as e:
             if e.user_stop:
-                print(f"[SERVER] Server stop requested by user")
+                print(f"[{datetime.now().replace(microsecond=0)} SERVER] Server stop requested by user")
             else:
-                print(f"[SERVER] Server has crashed")
+                print(f"[{datetime.now().replace(microsecond=0)} SERVER] Server has crashed")
                 self.status = "server_crashed"
-            print(f"[SERVER] Canceling all running tasks")
+            print(f"[{datetime.now().replace(microsecond=0)} SERVER] Canceling all running tasks...")
 
+            await asyncio.sleep(60)
             for task in server_tasks:
-                print(f"[SERVER] Canceling task {task.get_name()}")
+                print(f"[{datetime.now().replace(microsecond=0)} SERVER] Canceling task {task.get_name()}")
                 task.cancel()
 
 
 class Handler:
     handler_version: str = "v4.0"
-    system_logs: dict
+    system_logs: list[dict]
     server: BedrockServer
     config: dict
     new_update: str
@@ -222,24 +223,33 @@ class Handler:
             return False
 
     async def check_for_crash(self):
+        print('[HANDLER] Starting AutoRestart...')
         while True:
             if self.server.status == "server_crashed" and not self.server_running():
                 self.server.status = "responding_to_crash"
                 await asyncio.sleep(20)
                 await self.start_server()
 
-            await asyncio.sleep(3)
+            await asyncio.sleep(1)
 
     async def log_system_usage(self):
-        self.system_logs = {"ram_usage": []}
-        while True:
-            ram_usage = psutil.virtual_memory()
-            self.system_logs['ram_usage'].append({'used': ram_usage.used,
-                                                  'total': ram_usage.total,
-                                                  'percentage': ram_usage.percent,
-                                                  'time': f"{datetime.now()}"})
+        print('[HANDLER] Starting SystemLogger...')
+        with open("system_usage.json", "r+") as usage_file:
+            self.system_logs = json.load(usage_file)
+            while True:
+                ram_usage = psutil.virtual_memory()
+                cpu_usage = psutil.cpu_percent(None)
+                self.system_logs.append({'time': f"{datetime.now()}",
+                                         'ram_used': ram_usage.used,
+                                         'ram_total': ram_usage.total,
+                                         'ram_percentage': ram_usage.percent,
+                                         'cpu_percent': cpu_usage})
 
-            await asyncio.sleep(10)
+                usage_file.seek(0)
+                json.dump(self.system_logs, usage_file, indent=4)
+                usage_file.truncate()
+
+                await asyncio.sleep(10)
 
     async def start_server(self):
         self.config = json.load(open("bdsconfig.json", "r"))
@@ -304,6 +314,9 @@ class Handler:
 
     async def execute_kick(self, gamertag: str):
         await self.server.execute(f'kick "{gamertag}"')
+
+    async def execute_message(self, message: str):
+        await self.server.execute(f"say {message}")
 
     async def backups_list(self):
         backups = []

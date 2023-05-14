@@ -211,7 +211,7 @@ class BedrockServer:
 
 class Handler:
     handler_version: str = "v4.0"
-    system_logs: dict
+    system_logs: list[dict]
     server: BedrockServer
     config: dict
     new_update: str
@@ -223,24 +223,33 @@ class Handler:
             return False
 
     async def check_for_crash(self):
+        print('[HANDLER] Starting AutoRestart...')
         while True:
             if self.server.status == "server_crashed" and not self.server_running():
                 self.server.status = "responding_to_crash"
                 await asyncio.sleep(20)
                 await self.start_server()
 
-            await asyncio.sleep(3)
+            await asyncio.sleep(1)
 
     async def log_system_usage(self):
-        self.system_logs = {"ram_usage": []}
-        while True:
-            ram_usage = psutil.virtual_memory()
-            self.system_logs['ram_usage'].append({'used': ram_usage.used,
-                                                  'total': ram_usage.total,
-                                                  'percentage': ram_usage.percent,
-                                                  'time': f"{datetime.now()}"})
+        print('[HANDLER] Starting SystemLogger...')
+        with open("system_usage.json", "r+") as usage_file:
+            self.system_logs = json.load(usage_file)
+            while True:
+                ram_usage = psutil.virtual_memory()
+                cpu_usage = psutil.cpu_percent(None)
+                self.system_logs.append({'time': f"{datetime.now()}",
+                                         'ram_used': ram_usage.used,
+                                         'ram_total': ram_usage.total,
+                                         'ram_percentage': ram_usage.percent,
+                                         'cpu_percent': cpu_usage})
 
-            await asyncio.sleep(10)
+                usage_file.seek(0)
+                json.dump(self.system_logs, usage_file, indent=4)
+                usage_file.truncate()
+
+                await asyncio.sleep(10)
 
     async def start_server(self):
         self.config = json.load(open("bdsconfig.json", "r"))

@@ -80,7 +80,7 @@ async def init_bdswrapper(application, loop: asyncio.AbstractEventLoop):
     await asyncio.gather(asyncio.create_task(coro=handler.check_for_crash(),
                                              name="Handler AutoRestart"),
                          asyncio.create_task(coro=handler.log_system_usage(),
-                                             name="Handler SystemLog"))
+                                             name="Handler SystemLogger"))
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0")

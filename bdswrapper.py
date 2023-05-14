@@ -197,14 +197,15 @@ class BedrockServer:
 
         except ServerStop as e:
             if e.user_stop:
-                print(f"[SERVER] Server stop requested by user")
+                print(f"[{datetime.now().replace(microsecond=0)} SERVER] Server stop requested by user")
             else:
-                print(f"[SERVER] Server has crashed")
+                print(f"[{datetime.now().replace(microsecond=0)} SERVER] Server has crashed")
                 self.status = "server_crashed"
-            print(f"[SERVER] Canceling all running tasks")
+            print(f"[{datetime.now().replace(microsecond=0)} SERVER] Canceling all running tasks...")
 
+            await asyncio.sleep(60)
             for task in server_tasks:
-                print(f"[SERVER] Canceling task {task.get_name()}")
+                print(f"[{datetime.now().replace(microsecond=0)} SERVER] Canceling task {task.get_name()}")
                 task.cancel()
 
 
@@ -304,6 +305,9 @@ class Handler:
 
     async def execute_kick(self, gamertag: str):
         await self.server.execute(f'kick "{gamertag}"')
+
+    async def execute_message(self, message: str):
+        await self.server.execute(f"say {message}")
 
     async def backups_list(self):
         backups = []

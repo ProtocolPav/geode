@@ -145,5 +145,243 @@
         "ram_total": 4112691200,
         "ram_percentage": 43.0,
         "cpu_percent": 1.0
+    },
+    {
+        "time": "2023-05-15 19:25:12.283422",
+        "ram_used": 1328156672,
+        "ram_total": 4112691200,
+        "ram_percentage": 39.6,
+        "cpu_percent": 2.0
+    },
+    {
+        "time": "2023-05-15 19:25:22.286453",
+        "ram_used": 1400684544,
+        "ram_total": 4112691200,
+        "ram_percentage": 41.3,
+        "cpu_percent": 2.5
+    },
+    {
+        "time": "2023-05-15 19:25:32.289763",
+        "ram_used": 1472061440,
+        "ram_total": 4112691200,
+        "ram_percentage": 43.1,
+        "cpu_percent": 1.7
+    },
+    {
+        "time": "2023-05-15 19:26:12.747092",
+        "ram_used": 1344315392,
+        "ram_total": 4112691200,
+        "ram_percentage": 40.0,
+        "cpu_percent": 2.0
+    },
+    {
+        "time": "2023-05-15 19:26:22.750699",
+        "ram_used": 1398276096,
+        "ram_total": 4112691200,
+        "ram_percentage": 41.3,
+        "cpu_percent": 2.5
+    },
+    {
+        "time": "2023-05-15 19:26:32.754838",
+        "ram_used": 1482264576,
+        "ram_total": 4112691200,
+        "ram_percentage": 43.3,
+        "cpu_percent": 1.7
+    },
+    {
+        "time": "2023-05-15 19:26:42.757515",
+        "ram_used": 1486286848,
+        "ram_total": 4112691200,
+        "ram_percentage": 43.4,
+        "cpu_percent": 1.1
+    },
+    {
+        "time": "2023-05-15 19:26:52.759979",
+        "ram_used": 1488388096,
+        "ram_total": 4112691200,
+        "ram_percentage": 43.5,
+        "cpu_percent": 1.1
+    },
+    {
+        "time": "2023-05-15 19:27:02.762185",
+        "ram_used": 1491955712,
+        "ram_total": 4112691200,
+        "ram_percentage": 43.6,
+        "cpu_percent": 1.0
+    },
+    {
+        "time": "2023-05-15 19:27:12.765176",
+        "ram_used": 1493262336,
+        "ram_total": 4112691200,
+        "ram_percentage": 43.6,
+        "cpu_percent": 1.1
+    },
+    {
+        "time": "2023-05-15 19:27:22.768172",
+        "ram_used": 1492049920,
+        "ram_total": 4112691200,
+        "ram_percentage": 43.6,
+        "cpu_percent": 1.1
+    },
+    {
+        "time": "2023-05-15 19:27:32.771502",
+        "ram_used": 1495298048,
+        "ram_total": 4112691200,
+        "ram_percentage": 43.7,
+        "cpu_percent": 1.0
+    },
+    {
+        "time": "2023-05-15 19:27:42.774005",
+        "ram_used": 1500237824,
+        "ram_total": 4112691200,
+        "ram_percentage": 43.8,
+        "cpu_percent": 0.9
+    },
+    {
+        "time": "2023-05-15 19:27:52.775303",
+        "ram_used": 1502748672,
+        "ram_total": 4112691200,
+        "ram_percentage": 43.8,
+        "cpu_percent": 1.0
+    },
+    {
+        "time": "2023-05-15 19:28:02.778257",
+        "ram_used": 1501995008,
+        "ram_total": 4112691200,
+        "ram_percentage": 43.8,
+        "cpu_percent": 0.9
+    },
+    {
+        "time": "2023-05-15 19:28:12.780233",
+        "ram_used": 1503637504,
+        "ram_total": 4112691200,
+        "ram_percentage": 43.9,
+        "cpu_percent": 1.0
+    },
+    {
+        "time": "2023-05-15 19:28:22.792376",
+        "ram_used": 1526394880,
+        "ram_total": 4112691200,
+        "ram_percentage": 44.4,
+        "cpu_percent": 2.2
+    },
+    {
+        "time": "2023-05-15 19:28:32.793550",
+        "ram_used": 1524981760,
+        "ram_total": 4112691200,
+        "ram_percentage": 44.4,
+        "cpu_percent": 0.9
+    },
+    {
+        "time": "2023-05-15 19:28:42.796511",
+        "ram_used": 1528303616,
+        "ram_total": 4112691200,
+        "ram_percentage": 44.5,
+        "cpu_percent": 1.0
+    },
+    {
+        "time": "2023-05-15 19:28:52.807797",
+        "ram_used": 1531498496,
+        "ram_total": 4112691200,
+        "ram_percentage": 44.5,
+        "cpu_percent": 1.1
+    },
+    {
+        "time": "2023-05-15 19:29:02.818582",
+        "ram_used": 1538240512,
+        "ram_total": 4112691200,
+        "ram_percentage": 44.7,
+        "cpu_percent": 1.0
+    },
+    {
+        "time": "2023-05-15 19:29:12.823830",
+        "ram_used": 1527296000,
+        "ram_total": 4112691200,
+        "ram_percentage": 44.4,
+        "cpu_percent": 0.9
+    },
+    {
+        "time": "2023-05-15 19:29:22.834668",
+        "ram_used": 1375723520,
+        "ram_total": 4112691200,
+        "ram_percentage": 40.7,
+        "cpu_percent": 1.2
+    },
+    {
+        "time": "2023-05-15 19:29:32.847174",
+        "ram_used": 1375694848,
+        "ram_total": 4112691200,
+        "ram_percentage": 40.7,
+        "cpu_percent": 1.3
+    },
+    {
+        "time": "2023-05-15 19:29:42.857943",
+        "ram_used": 1382256640,
+        "ram_total": 4112691200,
+        "ram_percentage": 40.9,
+        "cpu_percent": 1.2
+    },
+    {
+        "time": "2023-05-15 19:29:52.861517",
+        "ram_used": 1422995456,
+        "ram_total": 4112691200,
+        "ram_percentage": 41.9,
+        "cpu_percent": 2.2
+    },
+    {
+        "time": "2023-05-15 19:30:02.864898",
+        "ram_used": 1510621184,
+        "ram_total": 4112691200,
+        "ram_percentage": 44.0,
+        "cpu_percent": 2.1
+    },
+    {
+        "time": "2023-05-15 19:30:12.867810",
+        "ram_used": 1511432192,
+        "ram_total": 4112691200,
+        "ram_percentage": 44.0,
+        "cpu_percent": 1.0
+    },
+    {
+        "time": "2023-05-15 19:30:22.870861",
+        "ram_used": 1510817792,
+        "ram_total": 4112691200,
+        "ram_percentage": 44.0,
+        "cpu_percent": 0.9
+    },
+    {
+        "time": "2023-05-15 19:30:32.872751",
+        "ram_used": 1512972288,
+        "ram_total": 4112691200,
+        "ram_percentage": 44.1,
+        "cpu_percent": 1.0
+    },
+    {
+        "time": "2023-05-15 19:30:42.876227",
+        "ram_used": 1512804352,
+        "ram_total": 4112691200,
+        "ram_percentage": 44.1,
+        "cpu_percent": 0.9
+    },
+    {
+        "time": "2023-05-15 19:30:52.879142",
+        "ram_used": 1511690240,
+        "ram_total": 4112691200,
+        "ram_percentage": 44.0,
+        "cpu_percent": 1.1
+    },
+    {
+        "time": "2023-05-15 19:31:02.882198",
+        "ram_used": 1515421696,
+        "ram_total": 4112691200,
+        "ram_percentage": 44.1,
+        "cpu_percent": 1.0
+    },
+    {
+        "time": "2023-05-15 19:31:12.885042",
+        "ram_used": 1518714880,
+        "ram_total": 4112691200,
+        "ram_percentage": 44.2,
+        "cpu_percent": 0.9
     }
 ]

@@ -106,7 +106,6 @@ class BedrockServer:
         self.start_time = datetime.now().replace(microsecond=0)
 
         print(f'[SERVER] Last saved version loaded as {self.version}')
-        print('[SERVER]', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
 
         prop_file = Properties()
         prop_file.load(open("server/1.19.1/server.properties", 'rb'))
@@ -169,6 +168,8 @@ class BedrockServer:
             print(f"[PID{self.process_id}]", line)
 
     async def backup_loop(self):
+        print('[SERVER]', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
+
         if self.config['backup']['enabled']:
             while True:
                 await asyncio.sleep(50)
@@ -218,7 +219,7 @@ class BedrockServer:
                 self.status = "server_crashed"
             print(f"[{datetime.now().replace(microsecond=0)} SERVER] Canceling all running tasks...")
 
-            await asyncio.sleep(60)
+            await asyncio.sleep(20)
             for task in server_tasks:
                 print(f"[{datetime.now().replace(microsecond=0)} SERVER] Canceling task {task.get_name()}")
                 task.cancel()

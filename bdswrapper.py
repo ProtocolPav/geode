@@ -19,7 +19,7 @@ class ServerStop(Exception):
         self.user_stop = requested_by_user
 
 
-async def initiate_backup(file_list, world_name: str, process_id: int):
+async def initiate_backup(file_list, world_name: str, process_id: int, s3_bucket: str):
     path_to_worlds = 'server/1.19.1/worlds'
     path_to_backup = 'server/1.19.1/backup'
     daily_backup_hour = 16
@@ -51,7 +51,7 @@ async def initiate_backup(file_list, world_name: str, process_id: int):
 
     print(f"[PID{process_id}] [{datetime.now().replace(microsecond=0)} BACKUP] Finished backup")
     print(f"[PID{process_id}] [{datetime.now().replace(microsecond=0)} BACKUP] This backup is {round(size / 1000 / 1000, 2)}MB")
-    print(f"[PID{process_id}] [{datetime.now().replace(microsecond=0)} BACKUP] Beginning s3 upload...")
+    print(f"[PID{process_id}] [{datetime.now().replace(microsecond=0)} BACKUP] Beginning s3 upload to {s3_bucket}...")
 
     if datetime.now().hour == daily_backup_hour:
         if datetime.now().day == monthly_backup_day:
@@ -62,7 +62,7 @@ async def initiate_backup(file_list, world_name: str, process_id: int):
         backup_type = "hourly"
 
     process = await asyncio.create_subprocess_shell(
-        f"aws s3 sync server/1.19.1/backup/ s3://everthorn-backups/{backup_type}/",
+        f"aws s3 sync server/1.19.1/backup/ s3://{s3_bucket}/{backup_type}/",
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
@@ -106,7 +106,6 @@ class BedrockServer:
         self.start_time = datetime.now().replace(microsecond=0)
 
         print(f'[SERVER] Last saved version loaded as {self.version}')
-        print('[SERVER]', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
 
         prop_file = Properties()
         prop_file.load(open("server/1.19.1/server.properties", 'rb'))
@@ -129,7 +128,10 @@ class BedrockServer:
             line = (await self.client.stdout.readline()).decode().rstrip()
 
             if f'{self.server_properties["level-name"]}/db/' in line:
-                await initiate_backup(line.split(', '), self.server_properties["level-name"], self.process_id)
+                await initiate_backup(line.split(', '),
+                                      self.server_properties["level-name"],
+                                      self.process_id,
+                                      self.config['backup']['s3_bucket'])
 
             elif 'Player connected: ' in line:
                 async with AsyncClient() as client:
@@ -146,7 +148,7 @@ class BedrockServer:
             elif "Version " in line:
                 self.version = line.split("Version ")[1]
                 self.config['last_saved_version'] = self.version
-                json.dump(self.config, open('bdsconfig.json', "w"))
+                json.dump(self.config, open('bdsconfig.json', "w"), indent=4)
                 yield line
 
             elif "Quit correctly" in line:
@@ -166,6 +168,8 @@ class BedrockServer:
             print(f"[PID{self.process_id}]", line)
 
     async def backup_loop(self):
+        print('[SERVER]', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
+
         if self.config['backup']['enabled']:
             while True:
                 await asyncio.sleep(50)
@@ -173,6 +177,15 @@ class BedrockServer:
                 await self.execute('save hold', sleep=5)
                 await self.execute('save query', sleep=10)
                 await self.execute('save resume', sleep=3835)
+
+    async def restart_timer(self):
+        if self.config['regular_restart_seconds'] != 0 :
+            print(f"[PID{self.process_id}] [SERVER] Regular Restart is "
+                  f"configured to restart every {self.config['regular_restart_seconds']} seconds")
+            await asyncio.sleep(self.config['regular_restart_seconds'])
+            self.status = "system_clearance"
+        else:
+            print(f"[PID{self.process_id}] [SERVER] Regular Restart is not configured. You may experience random crashes.")
 
     async def create_client(self):
         self.client = await asyncio.create_subprocess_shell("cd server/1.19.1 && LD_LIBRARY_PATH=. ./bedrock_server",
@@ -187,7 +200,10 @@ class BedrockServer:
         server_tasks = [asyncio.create_task(coro=self.console_output(),
                                             name=f"[PID{self.process_id}] Minecraft Server Console Output"),
                         asyncio.create_task(coro=self.backup_loop(),
-                                            name=f"[PID{self.process_id}] Minecraft Server Backup Handler")]
+                                            name=f"[PID{self.process_id}] Minecraft Server Backup Handler"),
+                        asyncio.create_task(coro=self.restart_timer(),
+                                            name=f"[PID{self.process_id}] Minecraft Server Regular Restart Timer")
+                        ]
 
         for key, val in self.server_properties.items():
             print(f"[INFO] {key} = {val}")
@@ -203,14 +219,14 @@ class BedrockServer:
                 self.status = "server_crashed"
             print(f"[{datetime.now().replace(microsecond=0)} SERVER] Canceling all running tasks...")
 
-            await asyncio.sleep(60)
+            await asyncio.sleep(20)
             for task in server_tasks:
                 print(f"[{datetime.now().replace(microsecond=0)} SERVER] Canceling task {task.get_name()}")
                 task.cancel()
 
 
 class Handler:
-    handler_version: str = "v4.0"
+    handler_version: str = "v4.2"
     system_logs: list[dict]
     server: BedrockServer
     config: dict
@@ -226,7 +242,17 @@ class Handler:
         print('[HANDLER] Starting AutoRestart...')
         while True:
             if self.server.status == "server_crashed" and not self.server_running():
+                print(f"[{datetime.now().replace(microsecond=0)} HANDLER] Responding to server crash...")
                 self.server.status = "responding_to_crash"
+                await asyncio.sleep(20)
+                await self.start_server()
+
+            elif self.server.status == "system_clearance" and self.server_running():
+                print(f"[{datetime.now().replace(microsecond=0)} HANDLER] Regular Server Restart...")
+                await self.execute_message("The server will restart in 60 seconds. You can join back straight away!")
+                self.server.status = "executing_regular_restart"
+                await asyncio.sleep(60)
+                await self.stop_server()
                 await asyncio.sleep(20)
                 await self.start_server()
 

@@ -1,1 +1,9 @@
-{"backup": {"enabled": false}, "last_saved_version": "1.19.81.01", "discord_guild_link": 1023300252805103626}
+{
+    "backup": {
+        "enabled": false,
+        "s3_bucket": "everthorn-backups-sto"
+    },
+    "regular_restart_seconds": 120,
+    "last_saved_version": "1.19.81.01",
+    "discord_guild_link": 1023300252805103626
+}

@@ -9,13 +9,27 @@ handler = Handler()
 
 
 @app.route('/status')
-async def status(request: Request):
+async def status(request: Request = None):
     return json({'server_online': handler.server_running(),
                  'server_status': handler.server.status,
-                 'uptime': f"{datetime.now() - handler.server.start_time}",
-                 'system_usage': handler.system_logs,
-                 'update': handler.new_update if hasattr(handler, 'new_update') else None,
-                 'logs': handler.server.logs})
+                 'update': handler.new_update if hasattr(handler, 'new_update') else None})
+
+@app.route('/status/uptime')
+async def return_uptime(request: Request = None):
+    return json({'server_start': f"{handler.server.start_time}",
+                 'uptime': f"{datetime.now() - handler.server.start_time}"})
+
+@app.route('/status/system_usage')
+async def return_usage(request: Request):
+    ...
+
+@app.route('/status/update')
+async def return_update(request: Request):
+    ...
+
+@app.route('/status/logs')
+async def return_logs(request: Request):
+    ...
 
 
 @app.post('/stop')
@@ -36,6 +50,13 @@ async def start(request: Request):
 async def backup(request: Request):
     await handler.execute_backup()
     return json({"backup_successful": True})
+
+
+@app.route('/message/<msg:str>')
+async def send_message(request: Request, msg: str):
+    message = msg[5:-3].replace("%20", " ")
+    await handler.execute_message(message)
+    return json({'message_sent': True})
 
 
 @app.post('/<gamertag:str>/whitelist/add')

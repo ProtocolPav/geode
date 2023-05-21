@@ -21,15 +21,15 @@ async def return_uptime(request: Request = None):
 
 @app.route('/status/system_usage')
 async def return_usage(request: Request):
-    ...
+    return json({'usage': handler.system_logs})
 
 @app.route('/status/update')
 async def return_update(request: Request):
-    ...
+    return json({'update': handler.new_update if hasattr(handler, 'new_update') else None})
 
 @app.route('/status/logs')
 async def return_logs(request: Request):
-    ...
+    return json({'logs': handler.server.logs})
 
 
 @app.post('/stop')

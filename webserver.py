@@ -36,14 +36,14 @@ async def return_logs(request: Request):
 async def stop(request: Request):
     await handler.stop_server()
 
-    return status()
+    return await status()
 
 
 @app.post('/start')
 async def start(request: Request):
     await handler.start_server()
 
-    return status()
+    return await status()
 
 
 @app.route('/backup')
@@ -57,6 +57,10 @@ async def send_message(request: Request, msg: str):
     message = msg[5:-3].replace("%20", " ")
     await handler.execute_message(message)
     return json({'message_sent': True})
+
+@app.route('/<gamertag:str>/give/<item:str>/<amount:int>')
+async def give_item(request: Request, gamertag: str, item: str, amount: int):
+    ...
 
 
 @app.post('/<gamertag:str>/whitelist/add')

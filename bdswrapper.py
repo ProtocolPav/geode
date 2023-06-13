@@ -145,8 +145,8 @@ class BedrockServer:
                     await client.post(f"http://thorny-wbs:8000/<guild_id:{self.discord_guild_id}>/<gamertag:{gamertag}>/disconnect")
                     yield line
 
-            elif "Version " in line:
-                self.version = line.split("Version ")[1]
+            elif "Version: " in line:
+                self.version = line.split("Version: ")[1]
                 self.config['last_saved_version'] = self.version
                 json.dump(self.config, open('bdsconfig.json', "w"), indent=4)
                 yield line
@@ -155,8 +155,12 @@ class BedrockServer:
                 yield line
                 raise ServerStop(requested_by_user=True)
 
+            elif line == "Killed":
+                yield line
+                print("Killed has been recorded!")
+                # raise ServerStop(requested_by_user=False)
             elif line == "":
-                raise ServerStop(requested_by_user=False)
+                print("EOL recorded!")
 
             else:
                 yield line
@@ -213,6 +217,7 @@ class BedrockServer:
 
         except ServerStop as e:
             if e.user_stop:
+                self.status = "stopped_by_user"
                 print(f"[{datetime.now().replace(microsecond=0)} SERVER] Server stop requested by user")
             else:
                 print(f"[{datetime.now().replace(microsecond=0)} SERVER] Server has crashed")
@@ -226,7 +231,7 @@ class BedrockServer:
 
 
 class Handler:
-    handler_version: str = "v4.2"
+    handler_version: str = "v4.3"
     system_logs: list[dict]
     server: BedrockServer
     config: dict
@@ -255,6 +260,9 @@ class Handler:
                 await self.stop_server()
                 await asyncio.sleep(20)
                 await self.start_server()
+
+            elif self.server.status != "stopped_by_user" and not self.server_running():
+                print("Status is not stopped by user, but server is not running.")
 
             await asyncio.sleep(1)
 

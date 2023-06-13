@@ -231,7 +231,7 @@ class BedrockServer:
 
 
 class Handler:
-    handler_version: str = "v4.3"
+    handler_version: str = "v4.4"
     system_logs: list[dict]
     server: BedrockServer
     config: dict
@@ -318,6 +318,16 @@ class Handler:
             soup = BeautifulSoup(server_download_site.text, 'html.parser')
             link = str(soup.find("a", href=re.compile("https://minecraft.azureedge.net/bin-linux/bedrock-server")).get('href'))
 
+            # New command testing.
+            # curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip
+            # unzip server/temp.zip -d server/new_server
+            # cp server/1.19.1/worlds server/new_server/ -r
+            # cp server/1.19.1/allowlist.json server/new_server/
+            # cp server/1.19.1/server.properties server/new_server/
+            # cp server/1.19.1/permissions.json server/new_server/
+            # I should run mv to rename 1.19.1 to 1.19.1-old and the new_server to 1.19.1
+            # But this throws an error right now. Unsure why.
+
             if self.server.version not in link:
                 await asyncio.create_subprocess_shell(
                     f"curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip && "
@@ -330,6 +340,7 @@ class Handler:
                 print(f"[HANDLER] I have updated the server according to the link {link}")
 
                 self.new_update = link.split('-')[3].split('.zip')[0]
+
             elif self.server.version in link and hasattr(self, 'new_update'):
                 self.__delattr__('new_update')
 

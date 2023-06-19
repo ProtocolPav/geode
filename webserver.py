@@ -63,6 +63,11 @@ async def give_item(request: Request, gamertag: str, item: str, amount: int):
     ...
 
 
+@app.route('/<gamertag:str>/give/<item:str>/<amount:int>')
+async def give_item(request: Request, gamertag: str, item: str, amount: int):
+    ...
+
+
 @app.post('/<gamertag:str>/whitelist/add')
 async def whitelist_add(request: Request, gamertag: str):
     gamertag = gamertag[12:-3].replace("%20", " ")

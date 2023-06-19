@@ -12,6 +12,8 @@ from bs4 import BeautifulSoup
 from jproperties import Properties
 import re
 
+from copy import deepcopy
+
 class ServerStop(Exception):
     def __init__(self, requested_by_user: bool):
         super().__init__()
@@ -89,6 +91,7 @@ class BedrockServer:
     client: asyncio.subprocess.Process
     start_time: datetime
     logs: list[str]
+    system_logs: list[dict]
     status: str
     server_properties: dict
     config: dict
@@ -96,12 +99,13 @@ class BedrockServer:
     discord_guild_id: int
     process_id: int
 
-    def __init__(self):
+    def __init__(self, handler):
         self.logs = []
         self.server_properties = {}
         self.config = json.load(open("bdsconfig.json", "r"))
         self.version = self.config['last_saved_version']
         self.discord_guild_id = self.config['discord_guild_link']
+        self.handler = handler
         self.status = ""
         self.start_time = datetime.now().replace(microsecond=0)
 
@@ -157,10 +161,7 @@ class BedrockServer:
 
             elif line == "Killed":
                 yield line
-                print("Killed has been recorded!")
-                # raise ServerStop(requested_by_user=False)
-            elif line == "":
-                print("EOL recorded!")
+                raise ServerStop(requested_by_user=False)
 
             else:
                 yield line
@@ -182,14 +183,44 @@ class BedrockServer:
                 await self.execute('save query', sleep=10)
                 await self.execute('save resume', sleep=3835)
 
-    async def restart_timer(self):
-        if self.config['regular_restart_seconds'] != 0 :
-            print(f"[PID{self.process_id}] [SERVER] Regular Restart is "
-                  f"configured to restart every {self.config['regular_restart_seconds']} seconds")
-            await asyncio.sleep(self.config['regular_restart_seconds'])
+    async def regular_restart(self):
+        if self.config['regular_restart']['mode'] == 'smart':
+            threshold = self.config['regular_restart']['threshold'] if self.config['regular_restart']['threshold'] > 10 else 25
+
+            print(f"[PID{self.process_id}] [SERVER] Regular Restart is set to smart mode at a threshold of {threshold}")
+            await self.smart_restart(threshold)
+
+        elif self.config['regular_restart']['mode'] == 'default':
+            interval = self.config['regular_restart']['interval'] if self.config['regular_restart']['interval'] > 0 else 12000
+
+            print(f"[PID{self.process_id}] [SERVER] Regular Restart is configured to restart every {interval} seconds")
+            await asyncio.sleep(interval)
             self.status = "system_clearance"
+
         else:
-            print(f"[PID{self.process_id}] [SERVER] Regular Restart is not configured. You may experience random crashes.")
+            print(f"[PID{self.process_id}] [SERVER] Regular Restart is not configured. "
+                  f"Please choose either 'smart' or 'default' modes in the config file.")
+
+    async def smart_restart(self, threshold: int):
+        print(f"[PID{self.process_id}] [SERVER] Smart Restart is active and in testing. It will only be sharing readings.")
+        while self.status != "system_clearance":
+            increases: list[int] = []
+            system_logs: list[dict] = deepcopy(self.handler.system_logs)
+            system_logs.reverse()
+
+            for syslog in system_logs[1:12]:
+                ram_percent = syslog['ram_percentage']
+                increases.append(ram_percent - system_logs[system_logs.index(syslog) - 1]['ram_percentage'])
+
+            print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
+                  f"{increases}")
+            print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
+                  f"Average of increases in the past 12 logs: {sum(increases)/len(increases)}")
+            if sum(increases)/len(increases) >= threshold:
+                print(f"Smart Restart has found that {sum(increases)/len(increases)} is above the {threshold} threshold")
+                # self.status = "system_clearance"
+
+            await asyncio.sleep(60)
 
     async def create_client(self):
         self.client = await asyncio.create_subprocess_shell("cd server/1.19.1 && LD_LIBRARY_PATH=. ./bedrock_server",
@@ -205,8 +236,10 @@ class BedrockServer:
                                             name=f"[PID{self.process_id}] Minecraft Server Console Output"),
                         asyncio.create_task(coro=self.backup_loop(),
                                             name=f"[PID{self.process_id}] Minecraft Server Backup Handler"),
-                        asyncio.create_task(coro=self.restart_timer(),
-                                            name=f"[PID{self.process_id}] Minecraft Server Regular Restart Timer")
+                        asyncio.create_task(coro=self.regular_restart(),
+                                            name=f"[PID{self.process_id}] Minecraft Server Regular Restart"),
+                        asyncio.create_task(coro=self.smart_restart(self.config['regular_restart']['threshold']),
+                                            name="Smart Restart In Testing")
                         ]
 
         for key, val in self.server_properties.items():
@@ -231,8 +264,8 @@ class BedrockServer:
 
 
 class Handler:
-    handler_version: str = "v4.3"
-    system_logs: list[dict]
+    handler_version: str = "v4.4"
+    system_logs: list[dict] = []
     server: BedrockServer
     config: dict
     new_update: str
@@ -249,6 +282,22 @@ class Handler:
             if self.server.status == "server_crashed" and not self.server_running():
                 print(f"[{datetime.now().replace(microsecond=0)} HANDLER] Responding to server crash...")
                 self.server.status = "responding_to_crash"
+
+                increases: list[int] = []
+                system_logs: list[dict] = deepcopy(self.system_logs)
+                system_logs.reverse()
+
+                for syslog in system_logs[1:12]:
+                    ram_percent = syslog['ram_percentage']
+                    increases.append(ram_percent - system_logs[system_logs.index(syslog) - 1]['ram_percentage'])
+
+                print(f"[{datetime.now().replace(microsecond=0)} Crash Responder] "
+                      f"{increases}")
+                print(f"[{datetime.now().replace(microsecond=0)} Crash Responder] "
+                      f"{system_logs[0:12]}")
+                print(f"[{datetime.now().replace(microsecond=0)} Crash Responder] "
+                      f"Average of increases in the past 12 logs: {sum(increases) / len(increases)}")
+
                 await asyncio.sleep(20)
                 await self.start_server()
 
@@ -293,7 +342,7 @@ class Handler:
             async with httpx.AsyncClient() as client:
                 await client.post(f'http://thorny-wbs:8000/<guild_id:{self.config["discord_guild_link"]}>/disconnect/all')
 
-            self.server = BedrockServer()
+            self.server = BedrockServer(self)
             await self.check_for_updates()
             await asyncio.sleep(10)
 
@@ -318,6 +367,16 @@ class Handler:
             soup = BeautifulSoup(server_download_site.text, 'html.parser')
             link = str(soup.find("a", href=re.compile("https://minecraft.azureedge.net/bin-linux/bedrock-server")).get('href'))
 
+            # New command testing.
+            # curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip
+            # unzip server/temp.zip -d server/new_server
+            # cp server/1.19.1/worlds server/new_server/ -r
+            # cp server/1.19.1/allowlist.json server/new_server/
+            # cp server/1.19.1/server.properties server/new_server/
+            # cp server/1.19.1/permissions.json server/new_server/
+            # I should run mv to rename 1.19.1 to 1.19.1-old and the new_server to 1.19.1
+            # But this throws an error right now. Unsure why.
+
             if self.server.version not in link:
                 await asyncio.create_subprocess_shell(
                     f"curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip && "
@@ -330,6 +389,7 @@ class Handler:
                 print(f"[HANDLER] I have updated the server according to the link {link}")
 
                 self.new_update = link.split('-')[3].split('.zip')[0]
+
             elif self.server.version in link and hasattr(self, 'new_update'):
                 self.__delattr__('new_update')
 

@@ -58,6 +58,10 @@ async def send_message(request: Request, msg: str):
     await handler.execute_message(message)
     return json({'message_sent': True})
 
+@app.route('/<gamertag:str>/give/<item:str>/<amount:int>')
+async def give_item(request: Request, gamertag: str, item: str, amount: int):
+    ...
+
 
 @app.route('/<gamertag:str>/give/<item:str>/<amount:int>')
 async def give_item(request: Request, gamertag: str, item: str, amount: int):

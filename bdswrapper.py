@@ -107,6 +107,11 @@ class BedrockServer:
         self.discord_guild_id = self.config['discord_guild_link']
         self.handler = handler
         self.status = ""
+        self.previous_system_log = {'time': f"{datetime.now()}",
+                                    'ram_used': 0,
+                                    'ram_total': 0,
+                                    'ram_percentage': 0,
+                                    'cpu_percent': 0}
         self.start_time = datetime.now().replace(microsecond=0)
 
         print(f'[SERVER] Last saved version loaded as {self.version}')
@@ -203,22 +208,23 @@ class BedrockServer:
 
     async def smart_restart(self, threshold: int):
         print(f"[PID{self.process_id}] [SERVER] Smart Restart is active and in testing. It will only be sharing readings.")
+        system_logs: list[dict] = deepcopy(self.handler.system_logs)
+        system_logs.reverse()
+        previous_log = system_logs[12]['ram_percentage']
         while self.status != "system_clearance":
-            increases: list[int] = []
             system_logs: list[dict] = deepcopy(self.handler.system_logs)
             system_logs.reverse()
 
-            for syslog in system_logs[1:12]:
-                ram_percent = syslog['ram_percentage']
-                increases.append(ram_percent - system_logs[system_logs.index(syslog) - 1]['ram_percentage'])
+            increase = system_logs[0]['ram_percentage'] - previous_log
 
             print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
-                  f"{increases}")
-            print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
-                  f"Average of increases in the past 12 logs: {sum(increases)/len(increases)}")
-            if sum(increases)/len(increases) >= threshold:
-                print(f"Smart Restart has found that {sum(increases)/len(increases)} is above the {threshold} threshold")
+                  f"Current Percent: {system_logs[0]['ram_percentage']}, Previous Percent: {previous_log}, Increase: {increase}")
+            if increase >= threshold:
+                print(f"Smart Restart has found that {increase} is above the {threshold} threshold")
                 # self.status = "system_clearance"
+
+            previous_log = system_logs[0]['ram_percentage']
+            self.previous_system_log = system_logs[0]
 
             await asyncio.sleep(60)
 
@@ -283,20 +289,24 @@ class Handler:
                 print(f"[{datetime.now().replace(microsecond=0)} HANDLER] Responding to server crash...")
                 self.server.status = "responding_to_crash"
 
-                increases: list[int] = []
                 system_logs: list[dict] = deepcopy(self.system_logs)
                 system_logs.reverse()
 
-                for syslog in system_logs[1:12]:
-                    ram_percent = syslog['ram_percentage']
-                    increases.append(ram_percent - system_logs[system_logs.index(syslog) - 1]['ram_percentage'])
+                increase = system_logs[0]['ram_percentage'] - self.server.previous_system_log['ram_percentage']
+
+                try:
+                    log_index = system_logs.index(self.server.previous_system_log)
+                except ValueError:
+                    log_index = 12
+
+                for log in system_logs[0:log_index]:
+                    print(f"[{datetime.now().replace(microsecond=0)} Crash Responder] "
+                          f"{log}")
 
                 print(f"[{datetime.now().replace(microsecond=0)} Crash Responder] "
-                      f"{increases}")
-                print(f"[{datetime.now().replace(microsecond=0)} Crash Responder] "
-                      f"{system_logs[0:12]}")
-                print(f"[{datetime.now().replace(microsecond=0)} Crash Responder] "
-                      f"Average of increases in the past 12 logs: {sum(increases) / len(increases)}")
+                      f"Current Percent: {system_logs[0]['ram_percentage']}, "
+                      f"Previous Percent: {self.server.previous_system_log['ram_percentage']}, "
+                      f"Increase: {increase}")
 
                 await asyncio.sleep(20)
                 await self.start_server()

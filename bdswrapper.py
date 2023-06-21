@@ -326,9 +326,11 @@ class Handler:
             elif self.server.status == "system_clearance" and self.server_running():
                 print(f"[{datetime.now().replace(microsecond=0)} HANDLER] Regular Server Restart...")
                 await self.execute_message("The server will restart in 60 seconds. You can join back straight away!")
-                self.server.set_status("executing_restart")
                 await asyncio.sleep(60)
+
                 await self.stop_server()
+                self.server.set_status("executing_restart")
+
                 await asyncio.sleep(20)
                 await self.start_server()
 

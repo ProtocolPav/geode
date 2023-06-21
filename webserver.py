@@ -34,14 +34,16 @@ async def return_logs(request: Request):
 
 @app.post('/stop')
 async def stop(request: Request):
-    await handler.stop_server()
+    if handler.server_running():
+        await handler.stop_server()
 
     return await status()
 
 
 @app.post('/start')
 async def start(request: Request):
-    await handler.start_server()
+    if not handler.server_running():
+        await handler.start_server()
 
     return await status()
 

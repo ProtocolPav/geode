@@ -217,6 +217,12 @@ class BedrockServer:
 
             increase = system_logs[0]['ram_percentage'] - previous_log
 
+            try:
+                print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
+                      f"The index of the previous log is: {system_logs.index(self.previous_system_log)}")
+            except ValueError:
+                pass
+
             print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
                   f"Current Percent: {system_logs[0]['ram_percentage']}, Previous Percent: {previous_log}, Increase: {increase}")
             if increase >= threshold:

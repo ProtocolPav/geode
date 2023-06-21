@@ -212,6 +212,7 @@ class BedrockServer:
             print(f"[PID{self.process_id}] [SERVER] Regular Restart is not configured. "
                   f"Please choose either 'smart' or 'default' modes in the config file.")
 
+
     async def smart_restart(self, threshold: int):
         print(f"[PID{self.process_id}] [SERVER] Smart Restart is active and in testing. It will only be sharing readings.")
         system_logs: list[dict] = deepcopy(self.handler.system_logs)

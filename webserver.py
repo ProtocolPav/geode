@@ -21,7 +21,7 @@ async def return_uptime(request: Request = None):
 
 @app.route('/status/system_usage')
 async def return_usage(request: Request):
-    return json({'usage': handler.system_logs})
+    return json({'usage': handler.system_logs[-1]})
 
 @app.route('/status/update')
 async def return_update(request: Request):

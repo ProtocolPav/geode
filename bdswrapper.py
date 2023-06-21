@@ -126,6 +126,12 @@ class BedrockServer:
         except AttributeError:
             return False
 
+    def set_status(self, status: str):
+        previous_status = self.status
+        self.status = status
+
+        print(f"[PID{self.process_id}] [SERVER] Server status updated from {previous_status} to {self.status}")
+
     async def execute(self, text: str, sleep=0):
         self.client.stdin.write(f'{text}\n'.encode())
         await self.client.stdin.drain()
@@ -200,7 +206,7 @@ class BedrockServer:
 
             print(f"[PID{self.process_id}] [SERVER] Regular Restart is configured to restart every {interval} seconds")
             await asyncio.sleep(interval)
-            self.status = "system_clearance"
+            self.set_status("system_clearance")
 
         else:
             print(f"[PID{self.process_id}] [SERVER] Regular Restart is not configured. "
@@ -227,7 +233,7 @@ class BedrockServer:
                   f"Current Percent: {system_logs[0]['ram_percentage']}, Previous Percent: {previous_log}, Increase: {increase}")
             if increase >= threshold:
                 print(f"Smart Restart has found that {increase} is above the {threshold} threshold")
-                # self.status = "system_clearance"
+                # self.set_status("system_clearance")
 
             previous_log = system_logs[0]['ram_percentage']
             self.previous_system_log = system_logs[0]
@@ -262,21 +268,21 @@ class BedrockServer:
 
         except ServerStop as e:
             if e.user_stop:
-                self.status = "stopped_by_user"
+                self.set_status("stopped_by_user")
                 print(f"[{datetime.now().replace(microsecond=0)} SERVER] Server stop requested by user")
             else:
+                self.set_status("server_crashed")
                 print(f"[{datetime.now().replace(microsecond=0)} SERVER] Server has crashed")
-                self.status = "server_crashed"
+
             print(f"[{datetime.now().replace(microsecond=0)} SERVER] Canceling all running tasks...")
 
-            await asyncio.sleep(20)
             for task in server_tasks:
                 print(f"[{datetime.now().replace(microsecond=0)} SERVER] Canceling task {task.get_name()}")
                 task.cancel()
 
 
 class Handler:
-    handler_version: str = "v4.4"
+    handler_version: str = "v4.5"
     system_logs: list[dict] = []
     server: BedrockServer
     config: dict
@@ -293,7 +299,7 @@ class Handler:
         while True:
             if self.server.status == "server_crashed" and not self.server_running():
                 print(f"[{datetime.now().replace(microsecond=0)} HANDLER] Responding to server crash...")
-                self.server.status = "responding_to_crash"
+                self.server.set_status("responding_to_crash")
 
                 system_logs: list[dict] = deepcopy(self.system_logs)
                 system_logs.reverse()
@@ -320,14 +326,11 @@ class Handler:
             elif self.server.status == "system_clearance" and self.server_running():
                 print(f"[{datetime.now().replace(microsecond=0)} HANDLER] Regular Server Restart...")
                 await self.execute_message("The server will restart in 60 seconds. You can join back straight away!")
-                self.server.status = "executing_regular_restart"
+                self.server.set_status("executing_restart")
                 await asyncio.sleep(60)
                 await self.stop_server()
                 await asyncio.sleep(20)
                 await self.start_server()
-
-            elif self.server.status != "stopped_by_user" and not self.server_running():
-                print("Status is not stopped by user, but server is not running.")
 
             await asyncio.sleep(1)
 

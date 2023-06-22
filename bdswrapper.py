@@ -107,6 +107,11 @@ class BedrockServer:
         self.discord_guild_id = self.config['discord_guild_link']
         self.handler = handler
         self.status = ""
+        self.previous_system_log = {'time': f"{datetime.now()}",
+                                    'ram_used': 0,
+                                    'ram_total': 0,
+                                    'ram_percentage': 0,
+                                    'cpu_percent': 0}
         self.start_time = datetime.now().replace(microsecond=0)
 
         print(f'[SERVER] Last saved version loaded as {self.version}')
@@ -120,6 +125,12 @@ class BedrockServer:
             return True if self.client.returncode is None else False
         except AttributeError:
             return False
+
+    def set_status(self, status: str):
+        previous_status = self.status
+        self.status = status
+
+        print(f"[PID{self.process_id}] [SERVER] Server status updated from {previous_status} to {self.status}")
 
     async def execute(self, text: str, sleep=0):
         self.client.stdin.write(f'{text}\n'.encode())
@@ -185,40 +196,58 @@ class BedrockServer:
 
     async def regular_restart(self):
         if self.config['regular_restart']['mode'] == 'smart':
-            threshold = self.config['regular_restart']['threshold'] if self.config['regular_restart']['threshold'] > 10 else 25
+            threshold = self.config['regular_restart']['threshold'] if self.config['regular_restart']['threshold'] > 50 else 60
+            trigger_value = self.config['regular_restart']['trigger'] if self.config['regular_restart']['trigger'] > 1 else 4
 
-            print(f"[PID{self.process_id}] [SERVER] Regular Restart is set to smart mode at a threshold of {threshold}")
-            await self.smart_restart(threshold)
+            print(f"[PID{self.process_id}] [SERVER] Regular Restart is set to smart mode")
+            await self.smart_restart(threshold, trigger_value)
 
         elif self.config['regular_restart']['mode'] == 'default':
             interval = self.config['regular_restart']['interval'] if self.config['regular_restart']['interval'] > 0 else 12000
 
             print(f"[PID{self.process_id}] [SERVER] Regular Restart is configured to restart every {interval} seconds")
             await asyncio.sleep(interval)
-            self.status = "system_clearance"
+            self.set_status("system_clearance")
 
         else:
             print(f"[PID{self.process_id}] [SERVER] Regular Restart is not configured. "
                   f"Please choose either 'smart' or 'default' modes in the config file.")
 
-    async def smart_restart(self, threshold: int):
-        print(f"[PID{self.process_id}] [SERVER] Smart Restart is active and in testing. It will only be sharing readings.")
+
+    async def smart_restart(self, threshold: int, trigger_value: int):
+        print(f"[PID{self.process_id}] [SERVER] Smart Restart is active. Trigger Value: {trigger_value}, "
+              f"Threshold: {threshold}%, Maximum Threshold: 92%")
+        system_logs: list[dict] = deepcopy(self.handler.system_logs)
+        system_logs.reverse()
+        previous_log = system_logs[12]['ram_percentage']
         while self.status != "system_clearance":
-            increases: list[int] = []
             system_logs: list[dict] = deepcopy(self.handler.system_logs)
             system_logs.reverse()
 
-            for syslog in system_logs[1:12]:
-                ram_percent = syslog['ram_percentage']
-                increases.append(ram_percent - system_logs[system_logs.index(syslog) - 1]['ram_percentage'])
+            increase = system_logs[0]['ram_percentage'] - previous_log
 
-            print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
-                  f"{increases}")
-            print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
-                  f"Average of increases in the past 12 logs: {sum(increases)/len(increases)}")
-            if sum(increases)/len(increases) >= threshold:
-                print(f"Smart Restart has found that {sum(increases)/len(increases)} is above the {threshold} threshold")
-                # self.status = "system_clearance"
+            # try:
+            #     print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
+            #           f"The index of the previous log is: {system_logs.index(self.previous_system_log)}")
+            # except ValueError:
+            #     pass
+            #
+            # print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
+            #       f"Current Percent: {system_logs[0]['ram_percentage']}, Previous Percent: {previous_log}, Increase: {increase}")
+
+            if increase >= trigger_value and system_logs[0]['ram_percentage'] >= threshold:
+                print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
+                      f"Smart Restart has been triggered by the increase of {increase}! (Trigger Value: {trigger_value})")
+                await asyncio.sleep(1200)
+                self.set_status("system_clearance")
+
+            elif system_logs[0]['ram_percentage'] >= 92:
+                print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
+                      f"Smart Restart has found that {system_logs[0]['ram_percentage']} is very high")
+                self.set_status("system_clearance")
+
+            previous_log = system_logs[0]['ram_percentage']
+            self.previous_system_log = system_logs[0]
 
             await asyncio.sleep(60)
 
@@ -237,9 +266,7 @@ class BedrockServer:
                         asyncio.create_task(coro=self.backup_loop(),
                                             name=f"[PID{self.process_id}] Minecraft Server Backup Handler"),
                         asyncio.create_task(coro=self.regular_restart(),
-                                            name=f"[PID{self.process_id}] Minecraft Server Regular Restart"),
-                        asyncio.create_task(coro=self.smart_restart(self.config['regular_restart']['threshold']),
-                                            name="Smart Restart In Testing")
+                                            name=f"[PID{self.process_id}] Minecraft Server Regular Restart")
                         ]
 
         for key, val in self.server_properties.items():
@@ -250,21 +277,21 @@ class BedrockServer:
 
         except ServerStop as e:
             if e.user_stop:
-                self.status = "stopped_by_user"
+                self.set_status("stopped_by_user")
                 print(f"[{datetime.now().replace(microsecond=0)} SERVER] Server stop requested by user")
             else:
+                self.set_status("server_crashed")
                 print(f"[{datetime.now().replace(microsecond=0)} SERVER] Server has crashed")
-                self.status = "server_crashed"
+
             print(f"[{datetime.now().replace(microsecond=0)} SERVER] Canceling all running tasks...")
 
-            await asyncio.sleep(20)
             for task in server_tasks:
                 print(f"[{datetime.now().replace(microsecond=0)} SERVER] Canceling task {task.get_name()}")
                 task.cancel()
 
 
 class Handler:
-    handler_version: str = "v4.4"
+    handler_version: str = "v4.5"
     system_logs: list[dict] = []
     server: BedrockServer
     config: dict
@@ -281,22 +308,26 @@ class Handler:
         while True:
             if self.server.status == "server_crashed" and not self.server_running():
                 print(f"[{datetime.now().replace(microsecond=0)} HANDLER] Responding to server crash...")
-                self.server.status = "responding_to_crash"
+                self.server.set_status("responding_to_crash")
 
-                increases: list[int] = []
                 system_logs: list[dict] = deepcopy(self.system_logs)
                 system_logs.reverse()
 
-                for syslog in system_logs[1:12]:
-                    ram_percent = syslog['ram_percentage']
-                    increases.append(ram_percent - system_logs[system_logs.index(syslog) - 1]['ram_percentage'])
+                increase = system_logs[0]['ram_percentage'] - self.server.previous_system_log['ram_percentage']
+
+                try:
+                    log_index = system_logs.index(self.server.previous_system_log)
+                except ValueError:
+                    log_index = 12
+
+                for log in system_logs[0:log_index]:
+                    print(f"[{datetime.now().replace(microsecond=0)} Crash Responder] "
+                          f"{log}")
 
                 print(f"[{datetime.now().replace(microsecond=0)} Crash Responder] "
-                      f"{increases}")
-                print(f"[{datetime.now().replace(microsecond=0)} Crash Responder] "
-                      f"{system_logs[0:12]}")
-                print(f"[{datetime.now().replace(microsecond=0)} Crash Responder] "
-                      f"Average of increases in the past 12 logs: {sum(increases) / len(increases)}")
+                      f"Current Percent: {system_logs[0]['ram_percentage']}, "
+                      f"Previous Percent: {self.server.previous_system_log['ram_percentage']}, "
+                      f"Increase: {increase}")
 
                 await asyncio.sleep(20)
                 await self.start_server()
@@ -304,14 +335,13 @@ class Handler:
             elif self.server.status == "system_clearance" and self.server_running():
                 print(f"[{datetime.now().replace(microsecond=0)} HANDLER] Regular Server Restart...")
                 await self.execute_message("The server will restart in 60 seconds. You can join back straight away!")
-                self.server.status = "executing_regular_restart"
                 await asyncio.sleep(60)
+
                 await self.stop_server()
+                self.server.set_status("executing_restart")
+
                 await asyncio.sleep(20)
                 await self.start_server()
-
-            elif self.server.status != "stopped_by_user" and not self.server_running():
-                print("Status is not stopped by user, but server is not running.")
 
             await asyncio.sleep(1)
 

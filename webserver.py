@@ -21,7 +21,7 @@ async def return_uptime(request: Request = None):
 
 @app.route('/status/system_usage')
 async def return_usage(request: Request):
-    return json({'usage': handler.system_logs})
+    return json({'usage': handler.system_logs[-1]})
 
 @app.route('/status/update')
 async def return_update(request: Request):
@@ -34,14 +34,16 @@ async def return_logs(request: Request):
 
 @app.post('/stop')
 async def stop(request: Request):
-    await handler.stop_server()
+    if handler.server_running():
+        await handler.stop_server()
 
     return await status()
 
 
 @app.post('/start')
 async def start(request: Request):
-    await handler.start_server()
+    if not handler.server_running():
+        await handler.start_server()
 
     return await status()
 

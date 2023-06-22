@@ -4,10 +4,11 @@
         "s3_bucket": "everthorn-backups-sto"
     },
     "regular_restart": {
-        "mode": "default",
+        "mode": "smart",
         "interval": 120,
-        "threshold": 20
+        "threshold": 60,
+        "trigger": 3
     },
-    "last_saved_version": "1.20.0.01",
+    "last_saved_version": "1.20.1.02",
     "discord_guild_link": 1023300252805103626
 }

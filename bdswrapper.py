@@ -196,10 +196,11 @@ class BedrockServer:
 
     async def regular_restart(self):
         if self.config['regular_restart']['mode'] == 'smart':
-            threshold = self.config['regular_restart']['threshold'] if self.config['regular_restart']['threshold'] > 10 else 25
+            threshold = self.config['regular_restart']['threshold'] if self.config['regular_restart']['threshold'] > 50 else 60
+            trigger_value = self.config['regular_restart']['trigger'] if self.config['regular_restart']['trigger'] > 1 else 4
 
-            print(f"[PID{self.process_id}] [SERVER] Regular Restart is set to smart mode at a threshold of {threshold}")
-            await self.smart_restart(threshold)
+            print(f"[PID{self.process_id}] [SERVER] Regular Restart is set to smart mode")
+            await self.smart_restart(threshold, trigger_value)
 
         elif self.config['regular_restart']['mode'] == 'default':
             interval = self.config['regular_restart']['interval'] if self.config['regular_restart']['interval'] > 0 else 12000
@@ -213,8 +214,9 @@ class BedrockServer:
                   f"Please choose either 'smart' or 'default' modes in the config file.")
 
 
-    async def smart_restart(self, threshold: int):
-        print(f"[PID{self.process_id}] [SERVER] Smart Restart is active and in testing. It will only be sharing readings.")
+    async def smart_restart(self, threshold: int, trigger_value: int):
+        print(f"[PID{self.process_id}] [SERVER] Smart Restart is active. Trigger Value: {trigger_value}, "
+              f"Threshold: {threshold}%, Maximum Threshold: 92%")
         system_logs: list[dict] = deepcopy(self.handler.system_logs)
         system_logs.reverse()
         previous_log = system_logs[12]['ram_percentage']
@@ -224,17 +226,25 @@ class BedrockServer:
 
             increase = system_logs[0]['ram_percentage'] - previous_log
 
-            try:
-                print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
-                      f"The index of the previous log is: {system_logs.index(self.previous_system_log)}")
-            except ValueError:
-                pass
+            # try:
+            #     print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
+            #           f"The index of the previous log is: {system_logs.index(self.previous_system_log)}")
+            # except ValueError:
+            #     pass
+            #
+            # print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
+            #       f"Current Percent: {system_logs[0]['ram_percentage']}, Previous Percent: {previous_log}, Increase: {increase}")
 
-            print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
-                  f"Current Percent: {system_logs[0]['ram_percentage']}, Previous Percent: {previous_log}, Increase: {increase}")
-            if increase >= threshold:
-                print(f"Smart Restart has found that {increase} is above the {threshold} threshold")
-                # self.set_status("system_clearance")
+            if increase >= trigger_value and system_logs[0]['ram_percentage'] >= threshold:
+                print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
+                      f"Smart Restart has been triggered by the increase of {increase}! (Trigger Value: {trigger_value})")
+                await asyncio.sleep(1200)
+                self.set_status("system_clearance")
+
+            elif system_logs[0]['ram_percentage'] >= 92:
+                print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
+                      f"Smart Restart has found that {system_logs[0]['ram_percentage']} is very high")
+                self.set_status("system_clearance")
 
             previous_log = system_logs[0]['ram_percentage']
             self.previous_system_log = system_logs[0]
@@ -256,9 +266,7 @@ class BedrockServer:
                         asyncio.create_task(coro=self.backup_loop(),
                                             name=f"[PID{self.process_id}] Minecraft Server Backup Handler"),
                         asyncio.create_task(coro=self.regular_restart(),
-                                            name=f"[PID{self.process_id}] Minecraft Server Regular Restart"),
-                        asyncio.create_task(coro=self.smart_restart(self.config['regular_restart']['threshold']),
-                                            name="Smart Restart In Testing")
+                                            name=f"[PID{self.process_id}] Minecraft Server Regular Restart")
                         ]
 
         for key, val in self.server_properties.items():

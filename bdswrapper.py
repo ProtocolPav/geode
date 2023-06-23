@@ -318,7 +318,7 @@ class BedrockServer:
 
 
 class Handler:
-    handler_version: str = "v4.6"
+    handler_version: str = "v4.6-nexuscore"
     system_logs: list[dict] = []
     server: BedrockServer
     config: dict

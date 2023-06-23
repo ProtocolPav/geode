@@ -56,7 +56,7 @@ async def backup(request: Request):
 
 @app.route('/message/<msg:str>')
 async def send_message(request: Request, msg: str):
-    message = msg[5:-3].replace("%20", " ")
+    message = msg[7:-3].replace("%20", " ")
     await handler.execute_message(message)
     return json({'message_sent': True})
 

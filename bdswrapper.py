@@ -151,13 +151,37 @@ class BedrockServer:
             elif 'Player connected: ' in line:
                 async with AsyncClient() as client:
                     gamertag = line[line.index(': ') + 2 : line.index(',')]
-                    await client.post(f"http://thorny-wbs:8000/<guild_id:{self.discord_guild_id}>/<gamertag:{gamertag}>/connect")
+                    sent_successfully = False
+                    while not sent_successfully:
+                        try:
+                            await client.post(f"http://thorny-wbs:8000/"
+                                              f"<guild_id:{self.discord_guild_id}>/"
+                                              f"<gamertag:{gamertag}>/connect")
+                            sent_successfully = True
+
+                        except httpx.PoolTimeout:
+                            print(f"[PID{self.process_id}] [SERVER] "
+                                  f"Failed to connect to webserver to send 'connect'. Retrying in 60 seconds.")
+                            await asyncio.sleep(60)
+
                     yield line
 
             elif 'Player disconnected: ' in line:
                 async with AsyncClient() as client:
                     gamertag = line[line.index(': ') + 2: line.index(',')]
-                    await client.post(f"http://thorny-wbs:8000/<guild_id:{self.discord_guild_id}>/<gamertag:{gamertag}>/disconnect")
+                    sent_successfully = False
+                    while not sent_successfully:
+                        try:
+                            await client.post(f"http://thorny-wbs:8000/"
+                                              f"<guild_id:{self.discord_guild_id}>/"
+                                              f"<gamertag:{gamertag}>/disconnect")
+                            sent_successfully = True
+
+                        except httpx.PoolTimeout:
+                            print(f"[PID{self.process_id}] [SERVER] "
+                                  f"Failed to connect to webserver to send 'disconnect'. Retrying in 60 seconds.")
+                            await asyncio.sleep(60)
+
                     yield line
 
             elif "Version: " in line:
@@ -173,6 +197,9 @@ class BedrockServer:
             elif line == "Killed":
                 yield line
                 raise ServerStop(requested_by_user=False)
+
+            elif line == "":
+                pass
 
             else:
                 yield line
@@ -226,14 +253,14 @@ class BedrockServer:
 
             increase = system_logs[0]['ram_percentage'] - previous_log
 
-            # try:
-            #     print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
-            #           f"The index of the previous log is: {system_logs.index(self.previous_system_log)}")
-            # except ValueError:
-            #     pass
-            #
-            # print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
-            #       f"Current Percent: {system_logs[0]['ram_percentage']}, Previous Percent: {previous_log}, Increase: {increase}")
+            try:
+                print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
+                      f"The index of the previous log is: {system_logs.index(self.previous_system_log)}")
+            except ValueError:
+                pass
+
+            print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
+                  f"Current Percent: {system_logs[0]['ram_percentage']}, Previous Percent: {previous_log}, Increase: {increase}")
 
             if increase >= trigger_value and system_logs[0]['ram_percentage'] >= threshold:
                 print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
@@ -291,7 +318,7 @@ class BedrockServer:
 
 
 class Handler:
-    handler_version: str = "v4.5"
+    handler_version: str = "v4.6"
     system_logs: list[dict] = []
     server: BedrockServer
     config: dict
@@ -369,8 +396,18 @@ class Handler:
 
         if not self.server_running():
             print(f'HANDLER VERSION {self.handler_version}')
+            sent_successfully = False
             async with httpx.AsyncClient() as client:
-                await client.post(f'http://thorny-wbs:8000/<guild_id:{self.config["discord_guild_link"]}>/disconnect/all')
+                while not sent_successfully:
+                    try:
+                        await client.post(f"http://thorny-wbs:8000/"
+                                          f"<guild_id:{self.config['discord_guild_link']}>/"
+                                          f"disconnect/all")
+                        sent_successfully = True
+
+                    except httpx.PoolTimeout:
+                        print(f"[HANDLER] Failed to connect to webserver to send 'disconnect/all'. Retrying in 60 seconds.")
+                        await asyncio.sleep(60)
 
             self.server = BedrockServer(self)
             await self.check_for_updates()
@@ -381,8 +418,18 @@ class Handler:
 
     async def stop_server(self):
         if self.server_running():
+            sent_successfully = False
             async with httpx.AsyncClient() as client:
-                await client.post(f'http://thorny-wbs:8000/<guild_id:{self.config["discord_guild_link"]}>/disconnect/all')
+                while not sent_successfully:
+                    try:
+                        await client.post(f"http://thorny-wbs:8000/"
+                                          f"<guild_id:{self.config['discord_guild_link']}>/"
+                                          f"disconnect/all")
+                        sent_successfully = True
+
+                    except httpx.PoolTimeout:
+                        print(f"[HANDLER] Failed to connect to webserver to send 'disconnect/all'. Retrying in 60 seconds.")
+                        await asyncio.sleep(60)
 
             await self.server.execute('stop')
 

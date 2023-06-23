@@ -194,7 +194,7 @@ class BedrockServer:
                 yield line
                 raise ServerStop(requested_by_user=True)
 
-            elif line == "Killed":
+            elif line in ["Killed", "Crash"]:
                 yield line
                 raise ServerStop(requested_by_user=False)
 
@@ -317,7 +317,7 @@ class BedrockServer:
 
 
 class Handler:
-    handler_version: str = "v4.6-nexuscore"
+    handler_version: str = "v4.7-nexus-core"
     system_logs: list[dict] = []
     server: BedrockServer
     config: dict

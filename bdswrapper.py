@@ -240,7 +240,6 @@ class BedrockServer:
             print(f"[PID{self.process_id}] [SERVER] Regular Restart is not configured. "
                   f"Please choose either 'smart' or 'default' modes in the config file.")
 
-
     async def smart_restart(self, threshold: int, trigger_value: int):
         print(f"[PID{self.process_id}] [SERVER] Smart Restart is active. Trigger Value: {trigger_value}, "
               f"Threshold: {threshold}%, Maximum Threshold: 92%")

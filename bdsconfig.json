@@ -7,7 +7,9 @@
         "mode": "smart",
         "interval": 120,
         "threshold": 60,
-        "trigger": 3
+        "max_threshold": 84,
+        "trigger": 3,
+        "ignore_time": 1800
     },
     "last_saved_version": "1.20.1.02",
     "discord_guild_link": 1023300252805103626

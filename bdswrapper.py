@@ -159,7 +159,7 @@ class BedrockServer:
                                               f"<gamertag:{gamertag}>/connect")
                             sent_successfully = True
 
-                        except httpx.PoolTimeout:
+                        except httpx.TimeoutException:
                             print(f"[PID{self.process_id}] [SERVER] "
                                   f"Failed to connect to webserver to send 'connect'. Retrying in 60 seconds.")
                             await asyncio.sleep(60)
@@ -177,7 +177,7 @@ class BedrockServer:
                                               f"<gamertag:{gamertag}>/disconnect")
                             sent_successfully = True
 
-                        except httpx.PoolTimeout:
+                        except httpx.TimeoutException:
                             print(f"[PID{self.process_id}] [SERVER] "
                                   f"Failed to connect to webserver to send 'disconnect'. Retrying in 60 seconds.")
                             await asyncio.sleep(60)
@@ -409,7 +409,7 @@ class Handler:
                                           f"disconnect/all")
                         sent_successfully = True
 
-                    except httpx.PoolTimeout:
+                    except httpx.TimeoutException:
                         print(f"[HANDLER] Failed to connect to webserver to send 'disconnect/all'. Retrying in 60 seconds.")
                         await asyncio.sleep(60)
 
@@ -431,7 +431,7 @@ class Handler:
                                           f"disconnect/all")
                         sent_successfully = True
 
-                    except httpx.PoolTimeout:
+                    except httpx.TimeoutException:
                         print(f"[HANDLER] Failed to connect to webserver to send 'disconnect/all'. Retrying in 60 seconds.")
                         await asyncio.sleep(60)
 

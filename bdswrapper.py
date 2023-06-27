@@ -159,7 +159,7 @@ class BedrockServer:
                                               f"<gamertag:{gamertag}>/connect")
                             sent_successfully = True
 
-                        except httpx.PoolTimeout:
+                        except httpx.TimeoutException:
                             print(f"[PID{self.process_id}] [SERVER] "
                                   f"Failed to connect to webserver to send 'connect'. Retrying in 60 seconds.")
                             await asyncio.sleep(60)
@@ -177,7 +177,7 @@ class BedrockServer:
                                               f"<gamertag:{gamertag}>/disconnect")
                             sent_successfully = True
 
-                        except httpx.PoolTimeout:
+                        except httpx.TimeoutException:
                             print(f"[PID{self.process_id}] [SERVER] "
                                   f"Failed to connect to webserver to send 'disconnect'. Retrying in 60 seconds.")
                             await asyncio.sleep(60)
@@ -194,7 +194,7 @@ class BedrockServer:
                 yield line
                 raise ServerStop(requested_by_user=True)
 
-            elif line == "Killed":
+            elif line in ["Killed", "Crash"]:
                 yield line
                 raise ServerStop(requested_by_user=False)
 
@@ -225,9 +225,14 @@ class BedrockServer:
         if self.config['regular_restart']['mode'] == 'smart':
             threshold = self.config['regular_restart']['threshold'] if self.config['regular_restart']['threshold'] > 50 else 60
             trigger_value = self.config['regular_restart']['trigger'] if self.config['regular_restart']['trigger'] > 1 else 4
+            max_threshold = self.config['regular_restart']['max_threshold']
+            wait_before_enable = self.config['regular_restart']['ignore_time']
 
             print(f"[PID{self.process_id}] [SERVER] Regular Restart is set to smart mode")
-            await self.smart_restart(threshold, trigger_value)
+            print(f"[PID{self.process_id}] [SERVER] It will be enabled in {wait_before_enable} seconds to ensure server does not "
+                  f"constantly restart.")
+            await asyncio.sleep(wait_before_enable)
+            await self.smart_restart(threshold, trigger_value, max_threshold)
 
         elif self.config['regular_restart']['mode'] == 'default':
             interval = self.config['regular_restart']['interval'] if self.config['regular_restart']['interval'] > 0 else 12000
@@ -240,9 +245,9 @@ class BedrockServer:
             print(f"[PID{self.process_id}] [SERVER] Regular Restart is not configured. "
                   f"Please choose either 'smart' or 'default' modes in the config file.")
 
-    async def smart_restart(self, threshold: int, trigger_value: int):
+    async def smart_restart(self, threshold: int, trigger_value: int, max_threshold: int):
         print(f"[PID{self.process_id}] [SERVER] Smart Restart is active. Trigger Value: {trigger_value}, "
-              f"Threshold: {threshold}%, Maximum Threshold: 92%")
+              f"Threshold: {threshold}%, Maximum Threshold: {max_threshold}%")
         system_logs: list[dict] = deepcopy(self.handler.system_logs)
         system_logs.reverse()
         previous_log = system_logs[12]['ram_percentage']
@@ -267,9 +272,9 @@ class BedrockServer:
                 await asyncio.sleep(1200)
                 self.set_status("system_clearance")
 
-            elif system_logs[0]['ram_percentage'] >= 92:
+            elif system_logs[0]['ram_percentage'] >= max_threshold:
                 print(f"[PID{self.process_id}] [{datetime.now().replace(microsecond=0)} SERVER] "
-                      f"Smart Restart has found that {system_logs[0]['ram_percentage']} is very high")
+                      f"Smart Restart has found that {system_logs[0]['ram_percentage']} is very high (>={max_threshold}%)")
                 self.set_status("system_clearance")
 
             previous_log = system_logs[0]['ram_percentage']
@@ -317,7 +322,7 @@ class BedrockServer:
 
 
 class Handler:
-    handler_version: str = "v4.6-nexuscore"
+    handler_version: str = "v4.7-nexus-core"
     system_logs: list[dict] = []
     server: BedrockServer
     config: dict
@@ -404,7 +409,7 @@ class Handler:
                                           f"disconnect/all")
                         sent_successfully = True
 
-                    except httpx.PoolTimeout:
+                    except httpx.TimeoutException:
                         print(f"[HANDLER] Failed to connect to webserver to send 'disconnect/all'. Retrying in 60 seconds.")
                         await asyncio.sleep(60)
 
@@ -426,7 +431,7 @@ class Handler:
                                           f"disconnect/all")
                         sent_successfully = True
 
-                    except httpx.PoolTimeout:
+                    except httpx.TimeoutException:
                         print(f"[HANDLER] Failed to connect to webserver to send 'disconnect/all'. Retrying in 60 seconds.")
                         await asyncio.sleep(60)
 

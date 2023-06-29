@@ -55,8 +55,32 @@ class NexusCore:
                              )
         log("core", "NexusCore Looper started successfully")
 
-    async def
+    async def update_checker(self):
+        ...
+
+    async def start_server(self):
+        ...
+
+    async def stop_server(self):
+        ...
+
 
 
 class BedrockServer:
-    ...
+    """
+    All possible statuses:
+    not_running: The server is not running. This is only set during class initialization.
+
+    """
+    def __init__(self):
+        self.server: asyncio.subprocess.Process
+        self.start: datetime = datetime.now().replace(microsecond=0)
+        self.status: str = 'not_running'
+        self.config: dict = json.load(open("bdsconfig.json", "r"))
+        self.version: str = self.config['last_saved_version']
+        self.discord_guild_id: int = self.config['discord_guild_link']
+        self.process_id: int
+
+        prop_file = Properties()
+        prop_file.load(open("server/1.19.1/server.properties", 'rb'))
+        self.server_properties = prop_file.properties

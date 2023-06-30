@@ -1,6 +1,6 @@
 {
     "backup": {
-        "enabled": false,
+        "enabled": true,
         "s3_bucket": "everthorn-backups-sto"
     },
     "regular_restart": {

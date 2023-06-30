@@ -4,7 +4,7 @@
         "s3_bucket": "everthorn-backups-sto"
     },
     "regular_restart": {
-        "mode": "default",
+        "mode": "smart",
         "interval": 120,
         "threshold": 60,
         "max_threshold": 84,

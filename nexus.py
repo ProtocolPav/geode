@@ -98,6 +98,8 @@ class NexusCore:
         system_logs: list[dict] = deepcopy(self.system_logs)
         system_logs.reverse()
         previous_log = system_logs[12]['ram_percentage']
+        minutes_waited = 0
+
         while self.server.status != "system_clearance":
             system_logs: list[dict] = deepcopy(self.system_logs)
             system_logs.reverse()
@@ -251,7 +253,6 @@ class NexusCore:
         if self.server.running():
             await self.server.disconnect_all()
             await self.server.send_command('stop')
-
 
 
 class BedrockServer:

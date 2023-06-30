@@ -20,11 +20,3 @@ class UserRequestedStop(ServerStopped):
     """
     def __init__(self):
         super().__init__()
-
-
-class ServerRestart(Exception):
-    """
-    Raised when NexusCore orders a server restart
-    """
-    def __init__(self):
-        super().__init__()

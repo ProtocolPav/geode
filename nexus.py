@@ -106,6 +106,18 @@ class NexusCore:
                              )
         log("core", "NexusCore Looper started successfully")
 
+    async def server_backup(self):
+        backup_complete = False
+        while not backup_complete:
+            if self.server_running() and self.server_status_check():
+                log('core', 'Launching startup backup')
+                await self.server.send_command('save hold', sleep=5)
+                await self.server.send_command('save query', sleep=10)
+                await self.server.send_command('save resume')
+                backup_complete = True
+            else:
+                await asyncio.sleep(10)
+
     async def start_server(self, start_status: str = 'started_by_user'):
         if self.server_count == 0:
             asyncio.get_event_loop().create_task(coro=self.nexus_looper(),
@@ -118,18 +130,10 @@ class NexusCore:
             self.server = BedrockServer()
 
             try:
-                await asyncio.gather(asyncio.create_task(coro=self.server.create_server(start_status),
-                                                         name=f"Minecraft Server"))
-                backup_complete = False
-                while not backup_complete:
-                    if self.server_running() and self.server_status_check():
-                        log('core', 'Launching startup backup')
-                        await self.server.send_command('save hold', sleep=5)
-                        await self.server.send_command('save query', sleep=10)
-                        await self.server.send_command('save resume')
-                        backup_complete = True
-                    else:
-                        await asyncio.sleep(10)
+                asyncio.get_event_loop().create_task(coro=self.server.create_server(start_status),
+                                                     name=f"Minecraft Server")
+                asyncio.get_event_loop().create_task(coro=self.server_backup(),
+                                                     name=f"Minecraft Server Startup Backup")
 
             except errors.ServerStopped as e:
                 if type(e) == errors.ServerCrash:

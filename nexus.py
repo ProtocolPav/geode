@@ -25,6 +25,11 @@ class NexusCore:
         self.version = 'v5.0'
         self.server: BedrockServer = BedrockServer()
         self.system_logs: list[dict] = []
+        self.previous_system_log = {'time': f"{datetime.now()}",
+                                    'ram_used': 0,
+                                    'ram_total': 0,
+                                    'ram_percentage': 0,
+                                    'cpu_percent': 0}
         self.config = json.load(open('bdsconfig.json', 'r'))
         self.server_count = 0
 
@@ -88,10 +93,83 @@ class NexusCore:
                     await asyncio.sleep(3600)
 
     async def restart_loop(self):
-        log("looper", "Starting NexusCore Restart Handler...")
+        while True:
+            log("looper", "Starting NexusCore Restart Handler...")
+            self.config = json.load(open('bdsconfig.json', 'r'))
+            restart_config = self.config['regular_restart']
 
-    async def crash_loop(self):
-        log("looper", "Starting NexusCore Crash Handler...")
+            if self.config['regular_restart']['mode'] == 'default':
+                interval = restart_config['interval'] if restart_config['interval'] > 0 else 12000
+
+                log('restart handler', 'Restart handler is set to default mode.')
+                log('restart handler', f'Server will restart in {interval} seconds')
+                await asyncio.sleep(interval)
+                if self.server_running() and self.server_status_check():
+                    self.server.set_status("system_clearance")
+                else:
+                    log('restart handler', f'Server is not in an appropriate state to restart. '
+                                           f'(running:{self.server.running()}, status:{self.server.status}, '
+                                           f'status_check:{self.server_status_check()})')
+
+            elif self.config['regular_restart']['mode'] == 'smart':
+                threshold = restart_config['threshold'] if restart_config['threshold'] > 50 else 70
+                trigger_value = restart_config['trigger'] if restart_config['trigger'] > 3 else 4
+                max_threshold = restart_config['max_threshold']
+                wait_before_enable = restart_config['ignore_time']
+
+                log('restart handler', 'Restart handler is set to smart mode.')
+                log('restart handler', f'Handler will ignore logs for {wait_before_enable} seconds to ensure the server does not '
+                                       f'enter a restart loop.')
+                await asyncio.sleep(wait_before_enable)
+                await self.smart_restart(threshold, trigger_value, max_threshold)
+
+            else:
+                log('restart handler', "Handler is not configured properly. Please set the mode to either 'default' or 'smart'.")
+
+    async def responder_loop(self):
+        log("looper", "Starting NexusCore Crash/Restart Responder...")
+
+        while True:
+            if self.server.status == "server_crashed" and not self.server_running():
+                log('nexus responder', 'Responding to server crash')
+                self.server.set_status("responding_to_crash")
+
+                system_logs: list[dict] = deepcopy(self.system_logs)
+                system_logs.reverse()
+
+                increase = system_logs[0]['ram_percentage'] - self.previous_system_log['ram_percentage']
+
+                try:
+                    log_index = system_logs.index(self.previous_system_log)
+                except ValueError:
+                    log_index = 12
+
+                log('nexus responder', 'Sending last minute of logs:')
+
+                for syslog in system_logs[0:log_index]:
+                    log('nexus responder', f'{syslog}')
+
+                log('nexus responder', f"Current Percent: {system_logs[0]['ram_percentage']}, "
+                                       f"Previous Percent: {self.previous_system_log['ram_percentage']}, "
+                                       f"Increase: {increase}")
+
+                await asyncio.sleep(20)
+                await self.start_server('started_by_system')
+
+            elif self.server.status == "system_clearance" and self.server_running():
+                log('nexus responder', 'Regular server restart in progress...')
+                await self.server.send_announce('The server will restart in §l§e60 seconds§r')
+                await asyncio.sleep(30)
+                await self.server.send_announce('The server will restart in §l§e30 seconds§r')
+                await asyncio.sleep(30)
+
+                await self.stop_server()
+                self.server.set_status("executing_restart")
+
+                await asyncio.sleep(20)
+                await self.start_server('started_by_system')
+
+            await asyncio.sleep(1)
 
     async def nexus_looper(self):
         log("core", "Starting NexusCore Looper...")
@@ -101,8 +179,8 @@ class NexusCore:
                                                  name='NexusCore Loop Backup Handler'),
                              asyncio.create_task(coro=self.restart_loop(),
                                                  name='NexusCore Loop Restart Handler'),
-                             asyncio.create_task(coro=self.crash_loop(),
-                                                 name='NexusCore Loop Crash Handler')
+                             asyncio.create_task(coro=self.responder_loop(),
+                                                 name='NexusCore Loop Crash/Restart Responder')
                              )
         log("core", "NexusCore Looper started successfully")
 
@@ -194,6 +272,13 @@ class BedrockServer:
         self.server.stdin.write(f'{command}\n'.encode())
         await self.server.stdin.drain()
         await asyncio.sleep(sleep)
+
+    async def send_message(self, message: str):
+        await self.send_command(f"say {message}")
+
+    async def send_announce(self, message: str):
+        await self.send_command('execute at @a run playsound random.toast @a ~ ~3 ~ 100 0.2')
+        await self.send_command(f'title @a actionbar {message}')
 
     async def check_for_updates(self):
         async with httpx.AsyncClient() as client:

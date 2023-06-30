@@ -92,6 +92,34 @@ class NexusCore:
                                   f'status_check:{self.server_status_check()})')
                     await asyncio.sleep(3600)
 
+    async def smart_restart(self, threshold: int, trigger_value: int, max_threshold: int):
+        log('restart handler', f"Handler is set to smart mode. Trigger Value: {trigger_value}, "
+                               f"Threshold: {threshold}%, Maximum Threshold: {max_threshold}%")
+        system_logs: list[dict] = deepcopy(self.system_logs)
+        system_logs.reverse()
+        previous_log = system_logs[12]['ram_percentage']
+        while self.server.status != "system_clearance":
+            system_logs: list[dict] = deepcopy(self.system_logs)
+            system_logs.reverse()
+
+            increase = system_logs[0]['ram_percentage'] - previous_log
+
+            if increase >= trigger_value and system_logs[0]['ram_percentage'] >= threshold:
+                log('restart handler', f'Handler has been triggered by the increase of {increase}! '
+                                       f'(Trigger Value: {trigger_value})')
+                await asyncio.sleep(1200)
+                self.server.set_status("system_clearance")
+
+            elif system_logs[0]['ram_percentage'] >= max_threshold:
+                log('restart handler', f"Handler has been triggered by the threshold {system_logs[0]['ram_percentage']}! "
+                                       f'(>={max_threshold}%)')
+                self.server.set_status("system_clearance")
+
+            previous_log = system_logs[0]['ram_percentage']
+            self.previous_system_log = system_logs[0]
+
+            await asyncio.sleep(60)
+
     async def restart_loop(self):
         while True:
             log("looper", "Starting NexusCore Restart Handler...")

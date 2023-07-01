@@ -251,7 +251,7 @@ class NexusCore:
                                         name='NexusCore Loop Crash/Restart Responder')
         debug = asyncio.create_task(coro=self.debug_loop(),
                                     name='NexusCore Loop Debug Loop')
-        await asyncio.gather(system_logger, restart_handler, responder, debug)
+        await asyncio.gather(system_logger, restart_handler, responder)
         log("core", "NexusCore Looper started successfully")
 
     async def start_server(self, start_status: str = 'started_by_user'):

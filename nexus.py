@@ -32,7 +32,7 @@ class NexusCore:
                                     'cpu_percent': 0}
         self.config = json.load(open('bdsconfig.json', 'r'))
         self.server_count = 0
-        self.hibernation_restart_valid = True
+        self.hibernation_restart_valid = False
 
         print(self.config['title'])
         log("core", f"NexusCore Version: {self.version}")
@@ -125,6 +125,8 @@ class NexusCore:
                 log('restart handler', 'Server has been empty for 20 minutes. Hibernation Restart has been triggered')
                 self.hibernation_restart_valid = False
                 self.server.set_status('system_clearance')
+
+            await asyncio.sleep(60)
 
         log('restart handler', 'Exiting Hibernation Restart')
         raise errors.ServerStopped
@@ -227,6 +229,18 @@ class NexusCore:
 
             await asyncio.sleep(1)
 
+    async def debug_loop(self):
+        while True:
+            try:
+                for i in asyncio.all_tasks():
+                    log('debug', f'Task: {i.get_name()}, {i.get_coro()}')
+
+                await self.server.send_command('tell @a test message!')
+            except AttributeError:
+                await asyncio.sleep(10)
+            finally:
+                await asyncio.sleep(60)
+
     async def nexus_looper(self):
         log("core", "Starting NexusCore Looper...")
         system_logger = asyncio.create_task(coro=self.system_log_loop(),
@@ -235,7 +249,9 @@ class NexusCore:
                                               name='NexusCore Loop Restart Handler')
         responder = asyncio.create_task(coro=self.responder_loop(),
                                         name='NexusCore Loop Crash/Restart Responder')
-        await asyncio.gather(system_logger, restart_handler, responder)
+        debug = asyncio.create_task(coro=self.debug_loop(),
+                                    name='NexusCore Loop Debug Loop')
+        await asyncio.gather(system_logger, restart_handler, responder, debug)
         log("core", "NexusCore Looper started successfully")
 
     async def start_server(self, start_status: str = 'started_by_user'):
@@ -569,3 +585,5 @@ class BedrockServer:
     async def console_output(self):
         async for line in aiter(self.bds_stdout_processor()):
             print(line)
+
+        log("server", 'exiting console output')

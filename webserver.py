@@ -42,14 +42,13 @@ async def start(request: Request):
 
 @app.route('/backup')
 async def backup(request: Request):
-    await handler.execute_backup()
     return json({"backup_successful": True})
 
 
 @app.route('/message/<msg:str>')
 async def send_message(request: Request, msg: str):
     message = msg[7:-3].replace("%20", " ")
-    await handler.execute_message(message)
+    await handler.server.send_message(message)
     return json({'message_sent': True})
 
 @app.route('/<gamertag:str>/give/<item:str>/<amount:int>')
@@ -60,14 +59,14 @@ async def give_item(request: Request, gamertag: str, item: str, amount: int):
 @app.post('/<gamertag:str>/whitelist/add')
 async def whitelist_add(request: Request, gamertag: str):
     gamertag = gamertag[12:-3].replace("%20", " ")
-    await handler.execute_whitelist(gamertag, 'add')
+    await handler.server.send_command(f'whitelist add "{gamertag}"')
     return json({"gamertag_added": True})
 
 
 @app.post('/<gamertag:str>/whitelist/remove')
 async def whitelist_remove(request: Request, gamertag: str):
     gamertag = gamertag[12:-3].replace("%20", " ")
-    await handler.execute_whitelist(gamertag, 'remove')
+    await handler.server.send_command(f'whitelist remove "{gamertag}"')
     return json({"gamertag_removed": True})
 
 
@@ -88,7 +87,7 @@ async def whitelist_remove(request: Request, gamertag: str):
 @app.post('/<gamertag:str>/kick')
 async def kick(request: Request, gamertag: str):
     gamertag = gamertag[12:-3].replace("%20", " ")
-    await handler.execute_kick(gamertag)
+    await handler.server.send_command(f'kick {gamertag}')
     return json({"kicked": True})
 
 

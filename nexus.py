@@ -336,41 +336,44 @@ class BedrockServer:
         async with httpx.AsyncClient() as client:
             log('server', 'Checking for updates...')
 
-            server_download_site = await client.get("https://www.minecraft.net/en-us/download/server/bedrock",
-                                                    follow_redirects=True,
-                                                    headers={"Accept-Encoding": "identity", "Accept-Language": "en",
-                                                             "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+            try:
+                server_download_site = await client.get("https://www.minecraft.net/en-us/download/server/bedrock",
+                                                        follow_redirects=True,
+                                                        headers={"Accept-Encoding": "identity", "Accept-Language": "en",
+                                                                 "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
 
-            soup = BeautifulSoup(server_download_site.text, 'html.parser')
-            link = str(soup.find("a", href=re.compile("https://minecraft.azureedge.net/bin-linux/bedrock-server")).get('href'))
+                soup = BeautifulSoup(server_download_site.text, 'html.parser')
+                link = str(soup.find("a", href=re.compile("https://minecraft.azureedge.net/bin-linux/bedrock-server")).get('href'))
 
-            # New command testing.
-            # curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip
-            # unzip server/temp.zip -d server/new_server
-            # cp server/1.19.1/worlds server/new_server/ -r
-            # cp server/1.19.1/allowlist.json server/new_server/
-            # cp server/1.19.1/server.properties server/new_server/
-            # cp server/1.19.1/permissions.json server/new_server/
-            # I should run mv to rename 1.19.1 to 1.19.1-old and the new_server to 1.19.1
-            # But this throws an error right now. Unsure why.
+                # New command testing.
+                # curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip
+                # unzip server/temp.zip -d server/new_server
+                # cp server/1.19.1/worlds server/new_server/ -r
+                # cp server/1.19.1/allowlist.json server/new_server/
+                # cp server/1.19.1/server.properties server/new_server/
+                # cp server/1.19.1/permissions.json server/new_server/
+                # I should run mv to rename 1.19.1 to 1.19.1-old and the new_server to 1.19.1
+                # But this throws an error right now. Unsure why.
 
-            if self.version not in link:
-                await asyncio.create_subprocess_shell(
-                    f"curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip && "
-                    f"unzip -o server/temp.zip bedrock_server -d server/temp && "
-                    f"cp server/temp/bedrock_server server/1.19.1/bedrock_server",
-                    stdin=asyncio.subprocess.PIPE,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.STDOUT,
-                )
-                log('server', f"Server updated according to the link: {link}")
+                if self.version not in link:
+                    await asyncio.create_subprocess_shell(
+                        f"curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip && "
+                        f"unzip -o server/temp.zip bedrock_server -d server/temp && "
+                        f"cp server/temp/bedrock_server server/1.19.1/bedrock_server",
+                        stdin=asyncio.subprocess.PIPE,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.STDOUT,
+                    )
+                    log('server', f"Server updated according to the link: {link}")
 
-                self.update = link.split('-')[3].split('.zip')[0]
+                    self.update = link.split('-')[3].split('.zip')[0]
 
-            elif self.version in link:
-                self.update = None
+                elif self.version in link:
+                    self.update = None
 
-            log('server', 'Server is up to date!')
+                log('server', 'Server is up to date!')
+            except httpx.TimeoutException:
+                log('server', 'There was an issue with checking updates')
 
     async def backup_loop(self):
         log("server", "Starting Minecraft Server Backup Handler...")

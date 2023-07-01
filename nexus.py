@@ -69,9 +69,13 @@ class NexusCore:
 
                 await asyncio.sleep(10)
 
-    async def smart_restart(self, threshold: int, trigger_value: int, max_threshold: int):
+    async def smart_restart(self, threshold: int, trigger_value: int, max_threshold: int,
+                            wait_before_enable: int):
         log('restart handler', f"Handler is set to smart mode. Trigger Value: {trigger_value}, "
                                f"Threshold: {threshold}%, Maximum Threshold: {max_threshold}%")
+
+        await asyncio.sleep(wait_before_enable)
+
         system_logs: list[dict] = deepcopy(self.system_logs)
         system_logs.reverse()
         previous_log = system_logs[12]['ram_percentage']
@@ -101,9 +105,11 @@ class NexusCore:
         log('restart handler', 'Exiting Smart Restart')
         raise errors.ServerStopped
 
-    async def hibernation_restart(self):
+    async def hibernation_restart(self, wait_before_enable: int):
         log('restart handler', 'Handler will restart the server if nobody has been online for 20 minutes')
         trigger = False
+
+        await asyncio.sleep(wait_before_enable)
 
         while self.server_status_check():
             if self.server.online != 0:
@@ -151,11 +157,11 @@ class NexusCore:
                 log('restart handler', 'Restart handler is set to smart mode.')
                 log('restart handler', f'Handler will ignore logs for {wait_before_enable} seconds to ensure the server does not '
                                        f'enter a restart loop.')
-                await asyncio.sleep(wait_before_enable)
 
-                smart_restart_tasks = [asyncio.create_task(coro=self.smart_restart(threshold, trigger_value, max_threshold),
+                smart_restart_tasks = [asyncio.create_task(coro=self.smart_restart(threshold, trigger_value, max_threshold,
+                                                                                   wait_before_enable),
                                                            name="Restart Handler Smart Restart"),
-                                       asyncio.create_task(coro=self.hibernation_restart(),
+                                       asyncio.create_task(coro=self.hibernation_restart(wait_before_enable),
                                                            name="Restart Handler Hibernation Restart")]
 
                 try:

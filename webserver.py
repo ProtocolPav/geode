@@ -1,35 +1,27 @@
 from sanic import Sanic, Request
 from sanic.response import json
 from datetime import datetime
-from bdswrapper import Handler
+from nexus import NexusCore
 import asyncio
 
 app = Sanic("bedrock_server_app")
-handler = Handler()
+handler = NexusCore()
 
 
 @app.route('/status')
 async def status(request: Request = None):
     return json({'server_online': handler.server_running(),
-                 'server_status': handler.server.status,
-                 'update': handler.new_update if hasattr(handler, 'new_update') else None})
+                 'server_status': handler.server.status[0],
+                 'update': handler.server.update})
 
 @app.route('/status/uptime')
 async def return_uptime(request: Request = None):
-    return json({'server_start': f"{handler.server.start_time}",
-                 'uptime': f"{datetime.now() - handler.server.start_time}"})
+    return json({'server_start': f"{handler.server.start}",
+                 'uptime': f"{datetime.now() - handler.server.start}"})
 
 @app.route('/status/system_usage')
 async def return_usage(request: Request):
     return json({'usage': handler.system_logs[-1]})
-
-@app.route('/status/update')
-async def return_update(request: Request):
-    return json({'update': handler.new_update if hasattr(handler, 'new_update') else None})
-
-@app.route('/status/logs')
-async def return_logs(request: Request):
-    return json({'logs': handler.server.logs})
 
 
 @app.post('/stop')
@@ -103,11 +95,7 @@ async def kick(request: Request, gamertag: str):
 @app.listener('after_server_start')
 async def init_bdswrapper(application, loop: asyncio.AbstractEventLoop):
     await asyncio.sleep(10)
-    await handler.start_server()
-    await asyncio.gather(asyncio.create_task(coro=handler.check_for_crash(),
-                                             name="Handler AutoRestart"),
-                         asyncio.create_task(coro=handler.log_system_usage(),
-                                             name="Handler SystemLogger"))
+    await handler.start_server('started_by_system')
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0")

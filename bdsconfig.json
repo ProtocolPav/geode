@@ -1,6 +1,6 @@
 {
     "backup": {
-        "enabled": false,
+        "enabled": true,
         "s3_bucket": "everthorn-backups-sto"
     },
     "regular_restart": {
@@ -9,8 +9,10 @@
         "threshold": 60,
         "max_threshold": 84,
         "trigger": 3,
-        "ignore_time": 1800
+        "ignore_time": 1200
     },
     "last_saved_version": "1.20.1.02",
-    "discord_guild_link": 1023300252805103626
+    "discord_guild_link": 1023300252805103626,
+    "title": "\n _   _                     _____                \n| \\ | |                   /  __ \\               \n|  \\| | _____  ___   _ ___| /  \\/ ___  _ __ ___ \n| . ` |/ _ \\ \\/ / | | / __| |    / _ \\| '__/ _ \\\n| |\\  |  __/>  <| |_| \\__ \\ \\__/\\ (_) | | |  __/\n\\_| \\_/\\___/_/\\_\\\\__,_|___/\\____/\\___/|_|  \\___|\n                                                \n                                                \n",
+    "aaa": "a"
 }

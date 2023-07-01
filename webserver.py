@@ -11,7 +11,7 @@ handler = NexusCore()
 @app.route('/status')
 async def status(request: Request = None):
     return json({'server_online': handler.server_running(),
-                 'server_status': handler.server.status,
+                 'server_status': handler.server.status[0],
                  'update': handler.server.update})
 
 @app.route('/status/uptime')

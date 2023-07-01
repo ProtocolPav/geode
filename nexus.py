@@ -32,6 +32,7 @@ class NexusCore:
                                     'cpu_percent': 0}
         self.config = json.load(open('bdsconfig.json', 'r'))
         self.server_count = 0
+        self.hibernation_restart_valid = True
 
         print(self.config['title'])
         log("core", f"NexusCore Version: {self.version}")
@@ -44,14 +45,8 @@ class NexusCore:
             return False
 
     def server_status_check(self) -> bool:
-        """
-        Returns True only if the server status is in an acceptable state to perform actions
-        """
         try:
-            if self.server.status in ['started_by_user', 'started_by_system']:
-                return True
-
-            return False
+            return self.server.status_check()
         except AttributeError:
             return False
 
@@ -74,33 +69,14 @@ class NexusCore:
 
                 await asyncio.sleep(10)
 
-    async def backup_loop(self):
-        log("looper", "Starting NexusCore Backup Handler...")
-        log('backup', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
-
-        if self.config['backup']['enabled']:
-            log('backup', 'Backups will happen every hour')
-            while True:
-                log('backup', "Beginning backup")
-                if self.server_running() and self.server_status_check():
-                    await self.server.send_command('save hold', sleep=5)
-                    await self.server.send_command('save query', sleep=10)
-                    await self.server.send_command('save resume', sleep=3580)
-                else:
-                    log('backup', f'Server is not in an acceptable state to backup. Aborting. '
-                                  f'(running:{self.server.running()}, status:{self.server.status}, '
-                                  f'status_check:{self.server_status_check()})')
-                    await asyncio.sleep(3600)
-
     async def smart_restart(self, threshold: int, trigger_value: int, max_threshold: int):
         log('restart handler', f"Handler is set to smart mode. Trigger Value: {trigger_value}, "
                                f"Threshold: {threshold}%, Maximum Threshold: {max_threshold}%")
         system_logs: list[dict] = deepcopy(self.system_logs)
         system_logs.reverse()
         previous_log = system_logs[12]['ram_percentage']
-        minutes_waited = 0
 
-        while self.server.status != "system_clearance":
+        while self.server_status_check():
             system_logs: list[dict] = deepcopy(self.system_logs)
             system_logs.reverse()
 
@@ -122,13 +98,38 @@ class NexusCore:
 
             await asyncio.sleep(60)
 
+        log('restart handler', 'Exiting Smart Restart')
+        raise errors.ServerStopped
+
+    async def hibernation_restart(self):
+        log('restart handler', 'Handler will restart the server if nobody has been online for 20 minutes')
+        trigger = False
+
+        while self.server_status_check():
+            if self.server.online != 0:
+                self.hibernation_restart_valid = True
+                trigger = False
+
+            elif self.server.online == 0 and not trigger and self.hibernation_restart_valid:
+                log('restart handler', 'Server is empty. Waiting for 20 minutes')
+                trigger = True
+                await asyncio.sleep(1200)
+
+            elif self.server.online == 0 and trigger:
+                log('restart handler', 'Server has been empty for 20 minutes. Hibernation Restart has been triggered')
+                self.hibernation_restart_valid = False
+                self.server.set_status('system_clearance')
+
+        log('restart handler', 'Exiting Hibernation Restart')
+        raise errors.ServerStopped
+
     async def restart_loop(self):
         while True:
             log("looper", "Starting NexusCore Restart Handler...")
             self.config = json.load(open('bdsconfig.json', 'r'))
             restart_config = self.config['regular_restart']
 
-            if self.config['regular_restart']['mode'] == 'default':
+            if self.config['regular_restart']['mode'] == 'default' and self.server_running():
                 interval = restart_config['interval'] if restart_config['interval'] > 0 else 12000
 
                 log('restart handler', 'Restart handler is set to default mode.')
@@ -138,29 +139,47 @@ class NexusCore:
                     self.server.set_status("system_clearance")
                 else:
                     log('restart handler', f'Server is not in an appropriate state to restart. '
-                                           f'(running:{self.server.running()}, status:{self.server.status}, '
+                                           f'(running:{self.server.running()}, status:{self.server.status[0]}, '
                                            f'status_check:{self.server_status_check()})')
 
-            elif self.config['regular_restart']['mode'] == 'smart':
+            elif self.config['regular_restart']['mode'] == 'smart' and self.server_running():
                 threshold = restart_config['threshold'] if restart_config['threshold'] > 50 else 70
                 trigger_value = restart_config['trigger'] if restart_config['trigger'] > 3 else 4
                 max_threshold = restart_config['max_threshold']
-                wait_before_enable = restart_config['ignore_time']
+                wait_before_enable = restart_config['ignore_time'] if restart_config['ignore_time'] > 120 else 1200
 
                 log('restart handler', 'Restart handler is set to smart mode.')
                 log('restart handler', f'Handler will ignore logs for {wait_before_enable} seconds to ensure the server does not '
                                        f'enter a restart loop.')
                 await asyncio.sleep(wait_before_enable)
-                await self.smart_restart(threshold, trigger_value, max_threshold)
 
-            else:
+                smart_restart_tasks = [asyncio.create_task(coro=self.smart_restart(threshold, trigger_value, max_threshold),
+                                                           name="Restart Handler Smart Restart"),
+                                       asyncio.create_task(coro=self.hibernation_restart(),
+                                                           name="Restart Handler Hibernation Restart")]
+
+                try:
+                    await asyncio.gather(*smart_restart_tasks)
+
+                except errors.ServerStopped:
+                    log('restart handler', 'Handler canceling Smart Restart Tasks')
+                    for restart_task in smart_restart_tasks:
+                        log('restart handler', f'Canceling {restart_task.get_name()}')
+                        restart_task.cancel()
+
+            elif self.config['regular_restart']['mode'] not in ['smart', 'default']:
                 log('restart handler', "Handler is not configured properly. Please set the mode to either 'default' or 'smart'.")
+                await asyncio.sleep(1200)
+
+            elif not self.server_running():
+                log('restart handler', 'Waiting for server to go online...')
+                await asyncio.sleep(30)
 
     async def responder_loop(self):
         log("looper", "Starting NexusCore Crash/Restart Responder...")
 
         while True:
-            if self.server.status == "server_crashed" and not self.server_running():
+            if self.server.status[0] == "server_crashed" and not self.server_running():
                 log('nexus responder', 'Responding to server crash')
                 self.server.set_status("responding_to_crash")
 
@@ -186,15 +205,16 @@ class NexusCore:
                 await asyncio.sleep(20)
                 await self.start_server('started_by_system')
 
-            elif self.server.status == "system_clearance" and self.server_running():
+            elif self.server.status[0] == "system_clearance" and self.server_running():
                 log('nexus responder', 'Regular server restart in progress...')
                 await self.server.send_announce('The server will restart in §l§e60 seconds§r')
                 await asyncio.sleep(30)
                 await self.server.send_announce('The server will restart in §l§e30 seconds§r')
-                await asyncio.sleep(30)
+                await asyncio.sleep(25)
+                await self.server.send_command('kick @a')
+                await asyncio.sleep(5)
 
-                await self.stop_server()
-                self.server.set_status("executing_restart")
+                await self.stop_server('executing_restart')
 
                 await asyncio.sleep(20)
                 await self.start_server('started_by_system')
@@ -203,34 +223,16 @@ class NexusCore:
 
     async def nexus_looper(self):
         log("core", "Starting NexusCore Looper...")
-        await asyncio.gather(asyncio.create_task(coro=self.system_log_loop(),
-                                                 name='NexusCore Loop System Logger'),
-                             asyncio.create_task(coro=self.backup_loop(),
-                                                 name='NexusCore Loop Backup Handler'),
-                             asyncio.create_task(coro=self.restart_loop(),
-                                                 name='NexusCore Loop Restart Handler'),
-                             asyncio.create_task(coro=self.responder_loop(),
-                                                 name='NexusCore Loop Crash/Restart Responder')
-                             )
+        system_logger = asyncio.create_task(coro=self.system_log_loop(),
+                                            name='NexusCore Loop System Logger')
+        restart_handler = asyncio.create_task(coro=self.restart_loop(),
+                                              name='NexusCore Loop Restart Handler')
+        responder = asyncio.create_task(coro=self.responder_loop(),
+                                        name='NexusCore Loop Crash/Restart Responder')
+        await asyncio.gather(system_logger, restart_handler, responder)
         log("core", "NexusCore Looper started successfully")
 
-    async def server_backup(self):
-        backup_complete = False
-        while not backup_complete:
-            if self.server_running() and self.server_status_check():
-                log('core', 'Launching startup backup')
-                await self.server.send_command('save hold', sleep=5)
-                await self.server.send_command('save query', sleep=10)
-                await self.server.send_command('save resume')
-                backup_complete = True
-            else:
-                await asyncio.sleep(10)
-
     async def start_server(self, start_status: str = 'started_by_user'):
-        if self.server_count == 0:
-            asyncio.get_event_loop().create_task(coro=self.nexus_looper(),
-                                                 name=f"NexusCore Loop Handler")
-
         if not self.server_running():
             self.server_count += 1
             await self.server.disconnect_all()
@@ -240,8 +242,10 @@ class NexusCore:
             try:
                 asyncio.get_event_loop().create_task(coro=self.server.create_server(start_status),
                                                      name=f"Minecraft Server")
-                asyncio.get_event_loop().create_task(coro=self.server_backup(),
-                                                     name=f"Minecraft Server Startup Backup")
+
+                if self.server_count == 1:
+                    asyncio.get_event_loop().create_task(coro=self.nexus_looper(),
+                                                         name=f"NexusCore Loop Handler")
 
             except errors.ServerStopped as e:
                 if type(e) == errors.ServerCrash:
@@ -249,10 +253,11 @@ class NexusCore:
                 elif type(e) == errors.UserRequestedStop:
                     self.server.set_status('stopped_by_user')
 
-    async def stop_server(self):
+    async def stop_server(self, stop_status: str = 'stopped_by_user'):
         if self.server.running():
             await self.server.disconnect_all()
             await self.server.send_command('stop')
+            self.server.set_status(stop_status)
 
 
 class BedrockServer:
@@ -273,7 +278,7 @@ class BedrockServer:
 
     def __init__(self):
         self.start: datetime = datetime.now().replace(microsecond=0)
-        self.status: str = 'not_running'
+        self.status: list[str] = ['not_running']
         self.config: dict = json.load(open("bdsconfig.json", "r"))
         self.version: str = self.config['last_saved_version']
         self.update = None
@@ -293,9 +298,21 @@ class BedrockServer:
         except AttributeError:
             return False
 
+    def status_check(self) -> bool:
+        """
+        Returns True only if the server status is in an acceptable state to perform actions
+        """
+        try:
+            if self.status[0] in ['started_by_user', 'started_by_system']:
+                return True
+
+            return False
+        except AttributeError:
+            return False
+
     def set_status(self, new_status: str):
-        log('server', f'Status updated from {self.status} to {new_status}')
-        self.status = new_status
+        log('server', f'Status updated from {self.status[0]} to {new_status}')
+        self.status.insert(0, new_status)
 
     async def send_command(self, command: str, sleep: int = 0):
         self.server.stdin.write(f'{command}\n'.encode())
@@ -349,6 +366,25 @@ class BedrockServer:
 
             log('server', 'Server is up to date!')
 
+    async def backup_loop(self):
+        log("server", "Starting Minecraft Server Backup Handler...")
+        log('backup', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
+
+        if self.config['backup']['enabled']:
+            log('backup', 'Backups will happen every hour')
+            await asyncio.sleep(80)
+            while True:
+                log('backup', "Beginning backup")
+                if self.running() and self.status_check():
+                    await self.send_command('save hold', sleep=5)
+                    await self.send_command('save query', sleep=10)
+                    await self.send_command('save resume', sleep=3580)
+                else:
+                    log('backup', f'Server is not in an acceptable state to backup. Aborting. '
+                                  f'(running:{self.running()}, status:{self.status[0]}, '
+                                  f'status_check:{self.status_check()})')
+                    await asyncio.sleep(3600)
+
     async def create_server(self, start_status: str = 'started_by_user'):
         await self.check_for_updates()
 
@@ -366,7 +402,9 @@ class BedrockServer:
             log('server info', f"{key}: {val}")
 
         server_tasks = [asyncio.create_task(coro=self.console_output(),
-                                            name=f"[PID{self.process_id}] Minecraft Server Console Output")
+                                            name=f"[PID{self.process_id}] Minecraft Server Console Output"),
+                        asyncio.create_task(coro=self.backup_loop(),
+                                            name=f"[PID{self.process_id}] Minecraft Server Backup Loop")
                         ]
 
         try:

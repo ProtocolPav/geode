@@ -61,7 +61,8 @@ class NexusCore:
                                          'ram_used': ram_usage.used,
                                          'ram_total': ram_usage.total,
                                          'ram_percentage': ram_usage.percent,
-                                         'cpu_percent': cpu_usage})
+                                         'cpu_percent': cpu_usage,
+                                         'online_players': self.server.online})
 
                 usage_file.seek(0)
                 json.dump(self.system_logs, usage_file, indent=4)

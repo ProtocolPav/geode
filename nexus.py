@@ -66,6 +66,14 @@ class NexusCore:
                                          'cpu_percent': cpu_usage,
                                          'online_players': self.server.online})
 
+                if len(self.system_logs) > 140000:
+                    log('looper', 'Truncating system logs to 120000')
+                    copy_logs = deepcopy(self.system_logs)
+                    copy_logs.reverse()
+                    copy_logs = copy_logs[0:120000]
+                    copy_logs.reverse()
+                    self.system_logs = copy_logs
+
                 usage_file.seek(0)
                 json.dump(self.system_logs, usage_file, indent=4)
                 usage_file.truncate()
@@ -352,6 +360,7 @@ class BedrockServer:
     def __init__(self):
         self.start: datetime = datetime.now().replace(microsecond=0)
         self.status: list[str] = ['not_running']
+        # self.data: dict = json.load(open("nexusdata.json", "r"))
         self.config: dict = json.load(open("bdsconfig.json", "r"))
         self.version: str = self.config['last_saved_version']
         self.update = None

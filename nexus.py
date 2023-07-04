@@ -30,7 +30,9 @@ class NexusCore:
                                     'ram_total': 0,
                                     'ram_percentage': 0,
                                     'cpu_percent': 0}
-        self.config = json.load(open('bdsconfig.json', 'r'))
+        file = open('bdsconfig.json', 'r')
+        self.config = json.load(file)
+        file.close()
         self.server_count = 0
         self.hibernation_restart_valid = False
 
@@ -135,7 +137,6 @@ class NexusCore:
     async def restart_loop(self):
         while True:
             log("looper", "Starting NexusCore Restart Handler...")
-            self.config = json.load(open('bdsconfig.json', 'r'))
             restart_config = self.config['regular_restart']
 
             if self.config['regular_restart']['mode'] == 'default' and self.server_running():
@@ -231,15 +232,15 @@ class NexusCore:
             await asyncio.sleep(1)
 
     async def backup_loop(self):
-        log("looper", "Starting NexusLooper Backup Handler...")
-        log('backup', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
+        while True:
+            log("looper", "Starting NexusLooper Backup Handler...")
+            log('backup', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
 
-        if self.config['backup']['enabled']:
-            log('backup', 'Backups will happen every hour')
-            await asyncio.sleep(80)
-            while True:
-                log('backup', "Beginning backup")
-                if self.server_running() and self.server_status_check():
+            if self.config['backup']['enabled']:
+                log('backup', 'Backups will happen every hour')
+                await asyncio.sleep(80)
+                while self.server_running() and self.server_status_check():
+                    log('backup', "Beginning backup")
                     await self.server.send_command('save hold', sleep=5)
                     await self.server.send_command('save query', sleep=10)
                     await self.server.send_command('save resume', sleep=3580)
@@ -263,13 +264,22 @@ class NexusCore:
 
         log('core', 'Startup backup complete')
 
+    async def config_loader(self):
+        log('looper', 'Starting up Config Reloader')
+        while True:
+            log('core', 'Updating config file')
+            file = open('bdsconfig.json', 'r')
+            self.config = json.load(file)
+            file.close()
+            await asyncio.sleep(1200)
+
     async def debug_loop(self):
         while True:
             try:
                 for i in asyncio.all_tasks():
                     log('debug', f'Task: {i.get_name()}, {i.get_coro()}')
 
-                await self.server.send_command('tell @a test message!')
+                await self.server.send_command('tell @r [DEBUG] Debug Message')
             except AttributeError:
                 await asyncio.sleep(10)
             finally:
@@ -285,9 +295,11 @@ class NexusCore:
                                         name='NexusCore Loop Crash/Restart Responder')
         backup = asyncio.create_task(coro=self.backup_loop(),
                                      name='NexusCore Loop Backup Handler')
+        config_loader = asyncio.create_task(coro=self.config_loader(),
+                                            name='NexusCore Loop Config Reloader')
         # debug = asyncio.create_task(coro=self.debug_loop(),
         #                             name='NexusCore Loop Debug Loop')
-        await asyncio.gather(system_logger, restart_handler, responder)
+        await asyncio.gather(system_logger, restart_handler, responder, backup, config_loader)
         log("core", "NexusCore Looper started successfully")
 
     async def start_server(self, start_status: str = 'started_by_user'):

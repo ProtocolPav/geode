@@ -230,6 +230,39 @@ class NexusCore:
 
             await asyncio.sleep(1)
 
+    async def backup_loop(self):
+        log("looper", "Starting NexusLooper Backup Handler...")
+        log('backup', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
+
+        if self.config['backup']['enabled']:
+            log('backup', 'Backups will happen every hour')
+            await asyncio.sleep(80)
+            while True:
+                log('backup', "Beginning backup")
+                if self.server_running() and self.server_status_check():
+                    await self.server.send_command('save hold', sleep=5)
+                    await self.server.send_command('save query', sleep=10)
+                    await self.server.send_command('save resume', sleep=3580)
+                else:
+                    log('backup', f'Server is not in an acceptable state to backup. Aborting. '
+                                  f'(running:{self.server_running()}, status:{self.server.status[0]}, '
+                                  f'status_check:{self.server_status_check()})')
+                    await asyncio.sleep(3600)
+
+    async def startup_backup(self):
+        backup_complete = False
+        while not backup_complete:
+            if self.server_running() and self.server_status_check():
+                log('core', 'Launching startup backup')
+                await self.server.send_command('save hold', sleep=5)
+                await self.server.send_command('save query', sleep=10)
+                await self.server.send_command('save resume')
+                backup_complete = True
+            else:
+                await asyncio.sleep(10)
+
+        log('core', 'Startup backup complete')
+
     async def debug_loop(self):
         while True:
             try:
@@ -250,8 +283,10 @@ class NexusCore:
                                               name='NexusCore Loop Restart Handler')
         responder = asyncio.create_task(coro=self.responder_loop(),
                                         name='NexusCore Loop Crash/Restart Responder')
-        debug = asyncio.create_task(coro=self.debug_loop(),
-                                    name='NexusCore Loop Debug Loop')
+        backup = asyncio.create_task(coro=self.backup_loop(),
+                                     name='NexusCore Loop Backup Handler')
+        # debug = asyncio.create_task(coro=self.debug_loop(),
+        #                             name='NexusCore Loop Debug Loop')
         await asyncio.gather(system_logger, restart_handler, responder)
         log("core", "NexusCore Looper started successfully")
 
@@ -265,6 +300,9 @@ class NexusCore:
             try:
                 asyncio.get_event_loop().create_task(coro=self.server.create_server(start_status),
                                                      name=f"Minecraft Server")
+
+                asyncio.get_event_loop().create_task(coro=self.startup_backup(),
+                                                     name=f"Minecraft Server Startup Backup")
 
                 if self.server_count == 1:
                     asyncio.get_event_loop().create_task(coro=self.nexus_looper(),
@@ -392,25 +430,6 @@ class BedrockServer:
             except httpx.TimeoutException:
                 log('server', 'There was an issue with checking updates')
 
-    async def backup_loop(self):
-        log("server", "Starting Minecraft Server Backup Handler...")
-        log('backup', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
-
-        if self.config['backup']['enabled']:
-            log('backup', 'Backups will happen every hour')
-            await asyncio.sleep(80)
-            while True:
-                log('backup', "Beginning backup")
-                if self.running() and self.status_check():
-                    await self.send_command('save hold', sleep=5)
-                    await self.send_command('save query', sleep=10)
-                    await self.send_command('save resume', sleep=3580)
-                else:
-                    log('backup', f'Server is not in an acceptable state to backup. Aborting. '
-                                  f'(running:{self.running()}, status:{self.status[0]}, '
-                                  f'status_check:{self.status_check()})')
-                    await asyncio.sleep(3600)
-
     async def create_server(self, start_status: str = 'started_by_user'):
         await self.check_for_updates()
 
@@ -428,9 +447,7 @@ class BedrockServer:
             log('server info', f"{key}: {val}")
 
         server_tasks = [asyncio.create_task(coro=self.console_output(),
-                                            name=f"[PID{self.process_id}] Minecraft Server Console Output"),
-                        asyncio.create_task(coro=self.backup_loop(),
-                                            name=f"[PID{self.process_id}] Minecraft Server Backup Loop")
+                                            name=f"[PID{self.process_id}] Minecraft Server Console Output")
                         ]
 
         try:

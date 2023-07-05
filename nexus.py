@@ -1,5 +1,6 @@
 import asyncio
 import json
+import sys
 from typing import AsyncIterable
 import shutil
 import psutil
@@ -424,18 +425,25 @@ class BedrockServer:
                 # New command testing.
                 # curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip
                 # unzip server/temp.zip -d server/new_server
-                # cp server/1.19.1/worlds server/new_server/ -r
+                # cp -r server/1.19.1/worlds server/new_server/
                 # cp server/1.19.1/allowlist.json server/new_server/
                 # cp server/1.19.1/server.properties server/new_server/
                 # cp server/1.19.1/permissions.json server/new_server/
-                # I should run mv to rename 1.19.1 to 1.19.1-old and the new_server to 1.19.1
-                # But this throws an error right now. Unsure why.
+                # cp -a 1.19.1/. 1.19.1-old/
+                # rm -r 1.19.1/*
+                # cp -a new_server/. 1.19.1/
 
                 if self.version not in link:
                     await asyncio.create_subprocess_shell(
                         f"curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip && "
-                        f"unzip -o server/temp.zip bedrock_server -d server/temp && "
-                        f"cp server/temp/bedrock_server server/1.19.1/bedrock_server",
+                        f"unzip server/temp.zip -d server/new_server && "
+                        f"cp -r server/1.19.1/worlds server/new_server/ &&"
+                        f"cp server/1.19.1/allowlist.json server/new_server/ &&"
+                        f"cp server/1.19.1/server.properties server/new_server/ &&"
+                        f"cp server/1.19.1/permissions.json server/new_server/ &&"
+                        f"cp -a 1.19.1/. 1.19.1-old/ &&"
+                        f"rm -r 1.19.1/* &&"
+                        f"cp -a new_server/. 1.19.1/",
                         stdin=asyncio.subprocess.PIPE,
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.STDOUT,

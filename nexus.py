@@ -247,7 +247,6 @@ class NexusCore:
 
             if self.config['backup']['enabled']:
                 log('backup', 'Backups will happen every hour')
-                await asyncio.sleep(80)
                 while self.server_running() and self.server_status_check():
                     log('backup', "Beginning backup")
                     await self.server.send_command('save hold', sleep=5)

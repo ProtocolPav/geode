@@ -23,7 +23,7 @@ def log(name: str, message: str):
 
 class NexusCore:
     def __init__(self):
-        self.version = 'v5.0'
+        self.version = 'v5.1-gcloud'
         self.server: BedrockServer = BedrockServer()
         self.system_logs: list[dict] = []
         self.previous_system_log = {'time': f"{datetime.now()}",

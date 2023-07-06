@@ -4,6 +4,8 @@ RUN apt install libssl1.1 && rm -rf /var/cache/apt/*
 
 FROM ubuntu:22.04
 
+SHELL ["/bin/bash", "-c"]
+
 COPY --from=build /usr/lib/x86_64-linux-gnu/libssl.so.1.1 /usr/lib/x86_64-linux-gnu/libssl.so.1.1
 COPY --from=build /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1 /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1
 

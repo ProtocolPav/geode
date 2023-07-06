@@ -1,10 +1,27 @@
+# Config updates may take as long as 20 minutes to process and register in NexusCore.
+# You do not have to restart NexusCore unless you wish the updates to be applied immediately.
+
 # Backup configuration
 backup:
   enabled: True
-  # Put the name of the s3 bucket where backups will be uploaded to
-  s3_bucket: "everthorn-backups-sto"
+  # The name of the cloud platform to use for backups. Must be either 's3' or 'gcloud'. Default: s3
+  cloud_platform: 'gcloud'
+  # Put the name of the bucket where backups go into.
+  cloud_bucket: 'everthorn-backups'
   # The interval (in seconds) for the backups to happen. Must be higher than 120.
+  # The Backup Handler will try to ensure that backups happen in this interval.
+  # Any backups that happen before the interval will be ignored, except for startup backups
   interval: 3600
+  # Choose whether to enable backups on server startup
+  # Backup will be ignored if a backup was made less than half the interval ago
+  # e.g. Interval=3600. If a backup was made 1200s ago, a startup backup will not be made.
+  startup_backup_enabled: True
+
+  # The hour of the day when Daily Backups will be uploaded. Default: 18
+  daily_backup_hour: 18
+  # The day of the month when a Monthly Backup gets uploaded. Default: 28
+  # This happens on the daily_backup_hour at this day
+  monthly_backup_day: 28
 
 # Restart Handler Configuration
 restart_handler:
@@ -13,7 +30,7 @@ restart_handler:
   # - Smart mode checks the system usage to determine when to restart
   mode: 'smart'
 
-  # Interval for default mode
+  # Interval (in seconds) for default mode
   interval: 120
 
   # Smart mode configuration

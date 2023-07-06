@@ -576,7 +576,7 @@ class BedrockServer:
         # )
 
         process = await asyncio.create_subprocess_shell(
-            f"gcloud storage cp server/1.19.1/backup/*.zip gs://{s3_bucket}/{backup_type}/",
+            f"gcloud storage cp server/1.19.1/backup/*.zip gs://{s3_bucket}/{backup_type}",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,

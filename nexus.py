@@ -557,7 +557,7 @@ class BedrockServer:
 
         log('backup', 'Finished backup')
         log('backup', f'This backup is {round(size / 1000 / 1000, 2)}MB')
-        log('backup', f'Beginning upload to s3 bucket: {s3_bucket}')
+        log('backup', f'Beginning upload to gcp bucket: {s3_bucket}')
 
         if datetime.now().hour == daily_backup_hour:
             if datetime.now().day == monthly_backup_day:
@@ -567,8 +567,16 @@ class BedrockServer:
         else:
             backup_type = "hourly"
 
+        # process = await asyncio.create_subprocess_shell(
+        #     f"aws s3 sync server/1.19.1/backup/ s3://{s3_bucket}/{backup_type}/",
+        #     stdin=asyncio.subprocess.PIPE,
+        #     stdout=asyncio.subprocess.PIPE,
+        #     stderr=asyncio.subprocess.STDOUT,
+        #     limit=1024 * 512
+        # )
+
         process = await asyncio.create_subprocess_shell(
-            f"aws s3 sync server/1.19.1/backup/ s3://{s3_bucket}/{backup_type}/",
+            f"gcloud storage cp server/1.19.1/backup/*.zip gs://{s3_bucket}/{backup_type}/",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
@@ -582,8 +590,12 @@ class BedrockServer:
                 if line == '':
                     log('backup', 'got EOL - aborting s3 upload')
                     break
-                elif f'upload: {path_to_backup}/{world_name} {file_date}.zip' in line:
-                    log('backup', 's3 upload successful!')
+                # elif f'upload: {path_to_backup}/{world_name} {file_date}.zip' in line:
+                #     log('backup', 's3 upload successful!')
+                #     os.remove(f"{path_to_backup}/{world_name} {file_date}.zip")
+                #     break
+                elif f'Completed files' in line:
+                    log('backup', 'Google GCS upload successful!')
                     os.remove(f"{path_to_backup}/{world_name} {file_date}.zip")
                     break
         except asyncio.LimitOverrunError:

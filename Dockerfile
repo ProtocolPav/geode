@@ -18,6 +18,10 @@ COPY requirements.txt /requirements.txt
 RUN pip install -r /requirements.txt
 
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip && sudo ./aws/install
+RUN curl -O "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-437.0.1-linux-x86_64.tar.gz"  \
+    && tar -xf google-cloud-cli-437.0.1-linux-x86_64.tar.gz \
+    && ./google-cloud-sdk/install.sh --quiet \
+    && source source /google-cloud-sdk/path.bash.inc
 
 # Set port environment variables
 ENV PortIPV4=19132

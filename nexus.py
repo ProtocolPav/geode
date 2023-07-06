@@ -576,7 +576,7 @@ class BedrockServer:
         # )
 
         process = await asyncio.create_subprocess_shell(
-            f"gcloud storage cp server/1.19.1/backup/*.zip gs://{s3_bucket}/{backup_type}",
+            f"./google-cloud-sdk/bin/gcloud storage cp server/1.19.1/backup/*.zip gs://{s3_bucket}/{backup_type}",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
@@ -594,7 +594,7 @@ class BedrockServer:
                 #     log('backup', 's3 upload successful!')
                 #     os.remove(f"{path_to_backup}/{world_name} {file_date}.zip")
                 #     break
-                elif f'Completed files' in line:
+                elif f'Copying file://{path_to_backup}/{world_name} {file_date}.zip' in line:
                     log('backup', 'Google GCS upload successful!')
                     os.remove(f"{path_to_backup}/{world_name} {file_date}.zip")
                     break

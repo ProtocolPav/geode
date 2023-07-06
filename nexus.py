@@ -4,7 +4,7 @@ import sys
 from typing import AsyncIterable
 import shutil
 import psutil
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
 import httpx
@@ -36,6 +36,7 @@ class NexusCore:
         file.close()
         self.server_count = 0
         self.hibernation_restart_valid = False
+        self.previous_backup = datetime.now().replace(year=1999)
 
         print(self.config['title'])
         log("core", f"NexusCore Version: {self.version}")
@@ -52,6 +53,9 @@ class NexusCore:
             return self.server.status_check()
         except AttributeError:
             return False
+
+    def backup_check(self) -> bool:
+        return True if datetime.now() - self.previous_backup >= timedelta(hours=1) else False
 
     async def system_log_loop(self):
         log("looper", "Starting NexusCore System Logger...")
@@ -247,26 +251,33 @@ class NexusCore:
 
             if self.config['backup']['enabled']:
                 log('backup', 'Backups will happen every hour')
-                while self.server_running() and self.server_status_check():
+                while self.server_running() and self.server_status_check() and self.backup_check():
                     log('backup', "Beginning backup")
+                    self.previous_backup = datetime.now()
                     await self.server.send_command('save hold', sleep=5)
                     await self.server.send_command('save query', sleep=10)
                     await self.server.send_command('save resume', sleep=3580)
                 else:
                     log('backup', f'Server is not in an acceptable state to backup. Aborting. '
                                   f'(running:{self.server_running()}, status:{self.server.status[0]}, '
-                                  f'status_check:{self.server_status_check()})')
-                    await asyncio.sleep(3600)
+                                  f'status_check:{self.server_status_check()}, backup_check:{self.backup_check()})')
+                    if not self.backup_check():
+                        extra_seconds = datetime.now() - self.previous_backup
+                        await asyncio.sleep(3600 - extra_seconds.total_seconds())
+                    else:
+                        await asyncio.sleep(3600)
 
     async def startup_backup(self):
         backup_complete = False
         while not backup_complete:
-            if self.server_running() and self.server_status_check():
+            if self.server_running() and self.server_status_check() and self.backup_check():
                 log('core', 'Launching startup backup')
                 await self.server.send_command('save hold', sleep=5)
                 await self.server.send_command('save query', sleep=10)
                 await self.server.send_command('save resume')
                 backup_complete = True
+            elif not self.backup_check():
+                log('core', 'Startup backup aborted. There was already a backup less than an hour ago')
             else:
                 await asyncio.sleep(10)
 

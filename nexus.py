@@ -258,10 +258,15 @@ class NexusCore:
             elif self.server.status[0] == "system_clearance" and self.server_running():
                 log('nexus responder', 'Regular server restart in progress...')
                 await self.server.send_announce('The server will restart in §l§e60 seconds§r')
+                await self.server.send_message('All players will be §4kicked§r before server restart. '
+                                               'You do not have to leave and §5will not lose any progress.§r')
                 await asyncio.sleep(30)
                 await self.server.send_announce('The server will restart in §l§e30 seconds§r')
                 await asyncio.sleep(25)
-                await self.server.send_command('kick @a')
+                await self.server.send_announce('All players will now be kicked')
+                for i in self.server.online:
+                    await self.server.send_command(f'kick "{i}" Kicked by NexusCore Responder: Server Restart occurred.')
+                    await asyncio.sleep(0.5)
                 await asyncio.sleep(5)
 
                 await self.stop_server('executing_restart')
@@ -376,7 +381,7 @@ class NexusCore:
                     self.server.set_status('stopped_by_user')
 
     async def stop_server(self, stop_status: str = 'stopped_by_user'):
-        if self.server.running():
+        if self.server_running():
             await self.server.disconnect_all()
             await self.server.send_command('stop')
             self.server.set_status(stop_status)
@@ -407,7 +412,7 @@ class BedrockServer:
         self.update = None
         self.discord_guild_id: int = self.config['discord_guild_id']
         self.process_id: int = 0
-        self.online: int = 0
+        self.online: list = []
 
         log('server', f'Last loaded version: {self.version}')
 
@@ -523,9 +528,12 @@ class BedrockServer:
 
     async def player_event(self, gamertag: str, event: str):
         if event == 'connect':
-            self.online += 1
+            self.online.append(gamertag)
         else:
-            self.online -= 1
+            try:
+                self.online.remove(gamertag)
+            except ValueError:
+                pass
 
         async with AsyncClient() as client:
             sent_successfully = False
@@ -539,6 +547,8 @@ class BedrockServer:
                     await asyncio.sleep(30)
 
     async def disconnect_all(self):
+        self.online = []
+
         async with httpx.AsyncClient() as client:
             sent_successfully = False
             while not sent_successfully:

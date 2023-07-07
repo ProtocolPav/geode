@@ -308,6 +308,7 @@ class NexusCore:
             elif not self.backup_check():
                 backup_interval = self.config['backup']['interval']
                 log('core', f'Startup backup aborted. There was already a backup less than {backup_interval//60}m ago')
+                break
             else:
                 await asyncio.sleep(10)
 

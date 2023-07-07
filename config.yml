@@ -1,0 +1,50 @@
+# Config updates may take as long as 20 minutes to process and register in NexusCore.
+# You do not have to restart NexusCore unless you wish the updates to be applied immediately.
+
+# Backup configuration
+backup:
+  enabled: True
+  # The name of the cloud platform to use for backups. Must be either 's3' or 'gcloud'. Default: s3
+  cloud_platform: 'gcloud'
+  # Put the name of the bucket where backups go into.
+  cloud_bucket: 'everthorn-backups'
+  # The interval (in seconds) for the backups to happen. Must be higher than 120.
+  # The Backup Handler will try to ensure that backups happen in this interval.
+  # Any backups that happen before the interval will be ignored, except for startup backups
+  interval: 3600
+  # Choose whether to enable backups on server startup
+  # Backup will be ignored if a backup was made less than half the interval ago
+  # e.g. Interval=3600. If a backup was made 1200s ago, a startup backup will not be made.
+  startup_backup_enabled: True
+
+  # The hour of the day when Daily Backups will be uploaded. Default: 18
+  daily_backup_hour: 18
+  # The day of the month when a Monthly Backup gets uploaded. Default: 28
+  # This happens on the daily_backup_hour at this day
+  monthly_backup_day: 28
+
+# Restart Handler Configuration
+restart_handler:
+  # Mode is either 'default' or 'smart'.
+  # - Default mode just waits the given interval and then restarts
+  # - Smart mode checks the system usage to determine when to restart
+  mode: 'smart'
+
+  # Interval (in seconds) for default mode
+  interval: 120
+
+  # Smart mode configuration
+  # - Threshold is the RAM% where Smart Restart begins checking for a high increase
+  # - Max Threshold is the RAM% when Smart Restart restarts anyway
+  # - Trigger is the increase in % in the last minute which will trigger a restart
+  # - Ignore Time is how long the Handler should wait before Smart Restart activates. This is so it does not enter
+  # a loop where it is constantly restarting. Must be higher than 120
+  # - Empty Time is how long the server has to be empty for before the Handler restarts it
+  threshold: 60
+  max_threshold: 84
+  trigger: 4
+  ignore_time: 120
+  empty_time: 1200
+
+# The ID of the discord guild. Used to send thorny the activity logs
+discord_guild_id: 1023300252805103626

@@ -1,5 +1,5 @@
 from sanic import Sanic, Request
-from sanic.response import json
+from sanic.response import json, text
 from datetime import datetime
 from nexus import NexusCore
 import asyncio
@@ -8,35 +8,30 @@ app = Sanic("bedrock_server_app")
 handler = NexusCore()
 
 
-@app.route('/status')
+@app.route('/<text_test:str>')
+async def default(request: Request, text_test: str):
+    return text(f"Webserver ok. Text send: {text_test}")
+
+@app.route('/server/details')
 async def status(request: Request = None):
     return json({'server_online': handler.server_running(),
                  'server_status': handler.server.status[0],
-                 'update': handler.server.update})
-
-@app.route('/status/uptime')
-async def return_uptime(request: Request = None):
-    return json({'server_start': f"{handler.server.start}",
-                 'uptime': f"{datetime.now() - handler.server.start}"})
-
-@app.route('/status/system_usage')
-async def return_usage(request: Request):
-    return json({'usage': handler.system_logs[-1]})
-
+                 'status_check': handler.server_status_check(),
+                 'update': handler.server.update,
+                 'server_start': f"{handler.server.start}",
+                 'uptime': f"{datetime.now() - handler.server.start}",
+                 'usage': handler.system_logs[-1],
+                 'last_backup': handler.previous_backup})
 
 @app.post('/stop')
 async def stop(request: Request):
-    if handler.server_running():
-        await handler.stop_server()
-
+    await handler.stop_server()
     return await status()
 
 
 @app.post('/start')
 async def start(request: Request):
-    if not handler.server_running():
-        await handler.start_server()
-
+    await handler.start_server()
     return await status()
 
 
@@ -94,7 +89,7 @@ async def kick(request: Request, gamertag: str):
 @app.listener('after_server_start')
 async def init_bdswrapper(application, loop: asyncio.AbstractEventLoop):
     await asyncio.sleep(10)
-    await handler.start_server('started_by_system')
+    # await handler.start_server('started_by_system')
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0")
+    app.run(host="0.0.0.0", access_log=False)

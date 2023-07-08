@@ -454,6 +454,12 @@ class BedrockServer:
         await self.send_command('execute at @a run playsound random.toast @a ~ ~3 ~ 100 0.2')
         await self.send_command(f'title @a actionbar {message}')
 
+    async def send_test_for(self, gamertag: str, selectors: str = None):
+        if selectors is None:
+            await self.send_command(f'testfor "{gamertag}"')
+        else:
+            await self.send_command(f'testfor "{gamertag}"[{selectors}]')
+
     async def check_for_updates(self):
         async with httpx.AsyncClient() as client:
             log('server', 'Checking for updates...')

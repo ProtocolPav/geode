@@ -37,14 +37,32 @@ async def start(request: Request):
 
 @app.route('/backup')
 async def backup(request: Request):
+    await handler.server.send_command('save hold', sleep=5)
+    await handler.server.send_command('save query', sleep=5)
+    await handler.server.send_command('save resume')
     return json({"backup_successful": True})
 
 
-@app.route('/message/<msg:str>')
-async def send_message(request: Request, msg: str):
-    message = msg[7:-3].replace("%20", " ").replace("%C2%A7", "§")
-    await handler.server.send_message(message)
+@app.route('/commands/message/<msg:str>')
+async def message(request: Request, msg: str):
+    content = msg.replace("%20", " ").replace("%C2%A7", "§")
+    await handler.server.send_message(content)
     return json({'message_sent': True})
+
+
+@app.route('/commands/announce/<msg:str>')
+async def announce(request: Request, msg: str):
+    content = msg.replace("%20", " ").replace("%C2%A7", "§")
+    await handler.server.send_announce(content)
+    return json({'message_sent': True})
+
+
+@app.route('/commands/testfor/<gamertag:str>')
+async def announce(request: Request, gamertag: str):
+    gamertag = gamertag.replace("%20", " ")
+    await handler.server.send_test_for(gamertag, request.args.get('selectors', default=[None])[0])
+    return json({'message_sent': True})
+
 
 @app.route('/<gamertag:str>/give/<item:str>/<amount:int>')
 async def give_item(request: Request, gamertag: str, item: str, amount: int):

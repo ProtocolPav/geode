@@ -655,7 +655,9 @@ class BedrockServer:
                 self.version = line.split("Version: ")[1]
                 self.data['last_loaded_version'] = self.version
                 with open('nexusdata.json', "w") as f:
+                    f.seek(0)
                     json.dump(self.data, f, indent=4)
+                    f.truncate()
                 yield line
 
             elif "Quit correctly" in line:

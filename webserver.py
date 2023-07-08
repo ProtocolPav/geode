@@ -8,7 +8,7 @@ app = Sanic("bedrock_server_app")
 handler = NexusCore()
 
 
-@app.route('/<text_test:str>')
+@app.route('/<text_test:strorempty>')
 async def default(request: Request, text_test: str):
     return text(f"Webserver ok. Text send: {text_test}")
 
@@ -21,15 +21,15 @@ async def status(request: Request = None):
                  'server_start': f"{handler.server.start}",
                  'uptime': f"{datetime.now() - handler.server.start}",
                  'usage': handler.system_logs[-1],
-                 'last_backup': handler.previous_backup})
+                 'last_backup': f"{handler.previous_backup}"})
 
-@app.post('/stop')
+@app.route('/stop')
 async def stop(request: Request):
     await handler.stop_server()
     return await status()
 
 
-@app.post('/start')
+@app.route('/start')
 async def start(request: Request):
     await handler.start_server()
     return await status()
@@ -58,10 +58,15 @@ async def announce(request: Request, msg: str):
 
 
 @app.route('/commands/testfor/<gamertag:str>')
-async def announce(request: Request, gamertag: str):
+async def testfor(request: Request, gamertag: str):
     gamertag = gamertag.replace("%20", " ")
-    await handler.server.send_test_for(gamertag, request.args.get('selectors', default=[None])[0])
-    return json({'message_sent': True})
+    message = await handler.server.send_test_for(gamertag, request.args.get('selectors', default=[None])[0])
+    return json({'return': message})
+
+
+@app.route('/commands/response')
+async def server_response(request: Request):
+    return json({'response': handler.server.console_logs[-1]})
 
 
 @app.route('/<gamertag:str>/give/<item:str>/<amount:int>')
@@ -107,7 +112,7 @@ async def kick(request: Request, gamertag: str):
 @app.listener('after_server_start')
 async def init_bdswrapper(application, loop: asyncio.AbstractEventLoop):
     await asyncio.sleep(10)
-    # await handler.start_server('started_by_system')
+    await handler.start_server('started_by_system')
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", access_log=False)

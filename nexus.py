@@ -413,6 +413,7 @@ class BedrockServer:
         self.discord_guild_id: int = self.config['discord_guild_id']
         self.process_id: int = 0
         self.online: list = []
+        self.console_logs = []
 
         log('server', f'Last loaded version: {self.version}')
 
@@ -650,7 +651,9 @@ class BedrockServer:
                   f"{cloud_service} upload aborted")
 
     async def bds_stdout_processor(self) -> AsyncIterable[str]:
-        """Processes the raw BDS output before passing it"""
+        """
+        Checks BDS output for any lines which require action to be taken
+        """
         while True:
             line = (await self.server.stdout.readline()).decode().rstrip()
 
@@ -697,5 +700,9 @@ class BedrockServer:
                 console_log = line
 
             log('console', console_log)
+            self.console_logs.append(console_log)
+
+            if len(self.console_logs) >= 100:
+                self.console_logs = self.console_logs[len(self.console_logs) - 50: len(self.console_logs)]
 
         log("server", 'exiting console output')

@@ -91,14 +91,14 @@ async def clear(request: Request, gamertag: str, item: str, amount: int):
     return await server_response()
 
 
-@app.post('/whitelist/add/<gamertag:str>')
+@app.route('/whitelist/add/<gamertag:str>')
 async def whitelist_add(request: Request, gamertag: str):
     gamertag = gamertag.replace("%20", " ")
     await handler.server.send_command(f'whitelist add "{gamertag}"')
     return await server_response()
 
 
-@app.post('/whitelist/remove/<gamertag:str>')
+@app.route('/whitelist/remove/<gamertag:str>')
 async def whitelist_remove(request: Request, gamertag: str):
     gamertag = gamertag.replace("%20", " ")
     await handler.server.send_command(f'whitelist remove "{gamertag}"')
@@ -119,7 +119,7 @@ async def whitelist_remove(request: Request, gamertag: str):
 #     return json({"demoted": True})
 
 
-@app.post('/kick/<gamertag:str>')
+@app.route('/kick/<gamertag:str>')
 async def kick(request: Request, gamertag: str):
     gamertag = gamertag.replace("%20", " ")
     await handler.server.send_command(f'kick "{gamertag}"')

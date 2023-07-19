@@ -67,16 +67,9 @@ async def announce(request: Request, msg: str):
     return json({'message_sent': True})
 
 
-@app.route('/commands/testfor/<gamertag:str>')
-async def testfor(request: Request, gamertag: str):
-    gamertag = gamertag.replace("%20", " ")
-    await handler.server.send_test_for(gamertag, request.args.get('selectors', default=[None])[0])
-    return await server_response()
-
-
 @app.route('/commands/response')
 async def server_response(request: Request = None):
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(0.3)
     return json({'response': handler.server.console_logs[-1]})
 
 
@@ -84,6 +77,17 @@ async def server_response(request: Request = None):
 async def give_item(request: Request, gamertag: str, item: str, amount: int):
     gamertag = gamertag.replace("%20", " ")
     await handler.server.send_command(f'give "{gamertag}" {item} {amount}')
+    return await server_response()
+
+
+@app.route('/commands/clear/<gamertag:str>/<item:str>/<amount:int>')
+async def clear(request: Request, gamertag: str, item: str, amount: int):
+    gamertag = gamertag.replace("%20", " ")
+    await handler.server.send_test_for('name="%s", hasitem={item=%s, amount=%s..}' % (gamertag, item, amount))
+
+    if gamertag in await server_response():
+        await handler.server.send_command(f'clear "{gamertag}" {item} {amount}')
+
     return await server_response()
 
 

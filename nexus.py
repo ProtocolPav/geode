@@ -58,7 +58,8 @@ class NexusCore:
             return False
 
     def backup_check(self) -> bool:
-        return True if datetime.now() - self.previous_backup >= timedelta(hours=1) else False
+        backup_interval = self.config['backup']['interval']
+        return True if datetime.now() - self.previous_backup >= timedelta(seconds=backup_interval) else False
 
     @staticmethod
     def load_config_file() -> dict:
@@ -446,6 +447,7 @@ class BedrockServer:
         self.status.insert(0, new_status)
 
     async def send_command(self, command: str, sleep: int = 0):
+        log('command', f'Sending {command}')
         self.server.stdin.write(f'{command}\n'.encode())
         await self.server.stdin.drain()
         await asyncio.sleep(sleep)
@@ -457,11 +459,8 @@ class BedrockServer:
         await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')
         await self.send_command(f'title @a actionbar {message}')
 
-    async def send_test_for(self, gamertag: str, selectors: str = None):
-        if selectors is None:
-            await self.send_command(f'testfor "{gamertag}"')
-        else:
-            await self.send_command(f'testfor "{gamertag}"[{selectors}]')
+    async def send_test_for(self, selectors: str):
+        await self.send_command(f'testfor @a[{selectors}]')
 
     async def check_for_updates(self):
         async with httpx.AsyncClient() as client:

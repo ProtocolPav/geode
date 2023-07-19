@@ -35,12 +35,22 @@ async def start(request: Request):
     return await status()
 
 
-@app.route('/backup')
+@app.route('/server/backup')
 async def backup(request: Request):
     await handler.server.send_command('save hold', sleep=5)
     await handler.server.send_command('save query', sleep=5)
     await handler.server.send_command('save resume')
     return json({"backup_successful": True})
+
+
+@app.route('/server/update')
+async def update(request: Request):
+    if handler.server_running():
+        return json({'response': 'Error. Server is running!'})
+
+    else:
+        await handler.server.check_for_updates()
+        return json({'response': handler.server.update})
 
 
 @app.route('/commands/message/<msg:str>')
@@ -60,32 +70,35 @@ async def announce(request: Request, msg: str):
 @app.route('/commands/testfor/<gamertag:str>')
 async def testfor(request: Request, gamertag: str):
     gamertag = gamertag.replace("%20", " ")
-    message = await handler.server.send_test_for(gamertag, request.args.get('selectors', default=[None])[0])
-    return json({'return': message})
+    await handler.server.send_test_for(gamertag, request.args.get('selectors', default=[None])[0])
+    return await server_response()
 
 
 @app.route('/commands/response')
-async def server_response(request: Request):
+async def server_response(request: Request = None):
+    await asyncio.sleep(0.5)
     return json({'response': handler.server.console_logs[-1]})
 
 
-@app.route('/<gamertag:str>/give/<item:str>/<amount:int>')
+@app.route('/commands/give/<gamertag:str>/<item:str>/<amount:int>')
 async def give_item(request: Request, gamertag: str, item: str, amount: int):
-    ...
+    gamertag = gamertag.replace("%20", " ")
+    await handler.server.send_command(f'give "{gamertag}" {item} {amount}')
+    return await server_response()
 
 
-@app.post('/<gamertag:str>/whitelist/add')
+@app.post('/whitelist/add/<gamertag:str>')
 async def whitelist_add(request: Request, gamertag: str):
-    gamertag = gamertag[12:-3].replace("%20", " ")
+    gamertag = gamertag.replace("%20", " ")
     await handler.server.send_command(f'whitelist add "{gamertag}"')
-    return json({"gamertag_added": True})
+    return await server_response()
 
 
-@app.post('/<gamertag:str>/whitelist/remove')
+@app.post('/whitelist/remove/<gamertag:str>')
 async def whitelist_remove(request: Request, gamertag: str):
-    gamertag = gamertag[12:-3].replace("%20", " ")
+    gamertag = gamertag.replace("%20", " ")
     await handler.server.send_command(f'whitelist remove "{gamertag}"')
-    return json({"gamertag_removed": True})
+    return await server_response()
 
 
 # @app.post('/<gamertag:str>/promote')
@@ -102,15 +115,15 @@ async def whitelist_remove(request: Request, gamertag: str):
 #     return json({"demoted": True})
 
 
-@app.post('/<gamertag:str>/kick')
+@app.post('/kick/<gamertag:str>')
 async def kick(request: Request, gamertag: str):
-    gamertag = gamertag[12:-3].replace("%20", " ")
-    await handler.server.send_command(f'kick {gamertag}')
-    return json({"kicked": True})
+    gamertag = gamertag.replace("%20", " ")
+    await handler.server.send_command(f'kick "{gamertag}"')
+    return await server_response()
 
 
 @app.listener('after_server_start')
-async def init_bdswrapper(application, loop: asyncio.AbstractEventLoop):
+async def init_core(application, loop: asyncio.AbstractEventLoop):
     await asyncio.sleep(10)
     await handler.start_server('started_by_system')
 

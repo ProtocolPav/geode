@@ -265,9 +265,9 @@ class NexusCore:
                 await asyncio.sleep(25)
                 await self.server.send_announce('All players will now be kicked')
                 for i in self.server.online:
-                    await self.server.send_command(f'kick "{i}" Kicked by NexusCore Responder')
+                    await self.server.send_command(f'kick "{i}" Server Restart In Progress...')
                     await asyncio.sleep(0.5)
-                await asyncio.sleep(5)
+                await asyncio.sleep(3)
 
                 await self.stop_server('executing_restart')
 
@@ -278,10 +278,10 @@ class NexusCore:
 
     async def backup_loop(self):
         while True:
-            log("looper", "Starting NexusLooper Backup Handler...")
-            log('backup', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
-
             if self.config['backup']['enabled']:
+                log("looper", "Starting NexusLooper Backup Handler...")
+                log('backup', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
+
                 backup_interval = self.config['backup']['interval']
                 log('backup', f'Backups will happen every {backup_interval//60} minutes')
                 while self.server_running() and self.server_status_check() and self.backup_check():
@@ -299,6 +299,8 @@ class NexusCore:
                         await asyncio.sleep(backup_interval - extra_seconds.total_seconds())
                     else:
                         await asyncio.sleep(backup_interval)
+            else:
+                await asyncio.sleep(1600)
 
     async def startup_backup(self):
         backup_complete = False
@@ -452,7 +454,7 @@ class BedrockServer:
         await self.send_command(f"say {message}")
 
     async def send_announce(self, message: str):
-        await self.send_command('execute at @a run playsound random.toast @a ~ ~3 ~ 100 0.2')
+        await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')
         await self.send_command(f'title @a actionbar {message}')
 
     async def send_test_for(self, gamertag: str, selectors: str = None):

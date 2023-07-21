@@ -544,6 +544,8 @@ class BedrockServer:
             except ValueError:
                 pass
 
+        log('debug', f'{self.online}')
+
         async with AsyncClient() as client:
             sent_successfully = False
             while not sent_successfully:

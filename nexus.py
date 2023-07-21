@@ -327,6 +327,7 @@ class NexusCore:
         while True:
             log('core', 'Updating config file')
             self.config = self.load_config_file()
+            log('debug', f'{self.config}')
             await asyncio.sleep(1200)
 
     async def debug_loop(self):

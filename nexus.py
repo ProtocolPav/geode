@@ -35,6 +35,7 @@ class NexusCore:
             self.data = json.load(f)
 
         self.config = self.load_config_file()
+        self.messages: list[dict] = []
 
         self.server_count = 0
         self.hibernation_restart_valid = False
@@ -329,6 +330,19 @@ class NexusCore:
             self.config = self.load_config_file()
             log('debug', f'{self.config}')
             await asyncio.sleep(1200)
+
+    async def message_scheduler(self):
+        log('looper', 'Starting Message Scheduler')
+        while True:
+            message = self.messages[0]
+            if message['time'] <= datetime.now().replace(microsecond=0, second=0):
+                self.messages.remove(message)
+                if message['type'] == 'announce':
+                    await self.server.send_announce(message['content'])
+                else:
+                    await self.server.send_message(message['content'])
+
+            await asyncio.sleep(120)
 
     async def debug_loop(self):
         while True:

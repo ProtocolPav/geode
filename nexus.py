@@ -58,7 +58,8 @@ class NexusCore:
             return False
 
     def backup_check(self) -> bool:
-        return True if datetime.now() - self.previous_backup >= timedelta(hours=1) else False
+        backup_interval = self.config['backup']['interval']
+        return True if datetime.now() - self.previous_backup >= timedelta(seconds=backup_interval) else False
 
     @staticmethod
     def load_config_file() -> dict:
@@ -265,9 +266,9 @@ class NexusCore:
                 await asyncio.sleep(25)
                 await self.server.send_announce('All players will now be kicked')
                 for i in self.server.online:
-                    await self.server.send_command(f'kick "{i}" Kicked by NexusCore Responder')
+                    await self.server.send_command(f'kick "{i}" Server Restart In Progress...')
                     await asyncio.sleep(0.5)
-                await asyncio.sleep(5)
+                await asyncio.sleep(3)
 
                 await self.stop_server('executing_restart')
 
@@ -278,10 +279,10 @@ class NexusCore:
 
     async def backup_loop(self):
         while True:
-            log("looper", "Starting NexusLooper Backup Handler...")
-            log('backup', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
-
             if self.config['backup']['enabled']:
+                log("looper", "Starting NexusLooper Backup Handler...")
+                log('backup', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
+
                 backup_interval = self.config['backup']['interval']
                 log('backup', f'Backups will happen every {backup_interval//60} minutes')
                 while self.server_running() and self.server_status_check() and self.backup_check():
@@ -299,6 +300,8 @@ class NexusCore:
                         await asyncio.sleep(backup_interval - extra_seconds.total_seconds())
                     else:
                         await asyncio.sleep(backup_interval)
+            else:
+                await asyncio.sleep(1600)
 
     async def startup_backup(self):
         backup_complete = False
@@ -324,6 +327,7 @@ class NexusCore:
         while True:
             log('core', 'Updating config file')
             self.config = self.load_config_file()
+            log('debug', f'{self.config}')
             await asyncio.sleep(1200)
 
     async def debug_loop(self):
@@ -413,6 +417,7 @@ class BedrockServer:
         self.discord_guild_id: int = self.config['discord_guild_id']
         self.process_id: int = 0
         self.online: list = []
+        self.console_logs = []
 
         log('server', f'Last loaded version: {self.version}')
 
@@ -443,6 +448,7 @@ class BedrockServer:
         self.status.insert(0, new_status)
 
     async def send_command(self, command: str, sleep: int = 0):
+        log('command', f'Sending {command}')
         self.server.stdin.write(f'{command}\n'.encode())
         await self.server.stdin.drain()
         await asyncio.sleep(sleep)
@@ -451,8 +457,11 @@ class BedrockServer:
         await self.send_command(f"say {message}")
 
     async def send_announce(self, message: str):
-        await self.send_command('execute at @a run playsound random.toast @a ~ ~3 ~ 100 0.2')
+        await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')
         await self.send_command(f'title @a actionbar {message}')
+
+    async def send_test_for(self, selectors: str):
+        await self.send_command(f'testfor @a[{selectors}]')
 
     async def check_for_updates(self):
         async with httpx.AsyncClient() as client:
@@ -534,6 +543,8 @@ class BedrockServer:
                 self.online.remove(gamertag)
             except ValueError:
                 pass
+
+        log('debug', f'{self.online}')
 
         async with AsyncClient() as client:
             sent_successfully = False
@@ -644,7 +655,9 @@ class BedrockServer:
                   f"{cloud_service} upload aborted")
 
     async def bds_stdout_processor(self) -> AsyncIterable[str]:
-        """Processes the raw BDS output before passing it"""
+        """
+        Checks BDS output for any lines which require action to be taken
+        """
         while True:
             line = (await self.server.stdout.readline()).decode().rstrip()
 
@@ -691,5 +704,9 @@ class BedrockServer:
                 console_log = line
 
             log('console', console_log)
+            self.console_logs.append(console_log)
+
+            if len(self.console_logs) >= 100:
+                self.console_logs = self.console_logs[len(self.console_logs) - 50: len(self.console_logs)]
 
         log("server", 'exiting console output')

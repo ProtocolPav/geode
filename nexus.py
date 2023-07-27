@@ -160,16 +160,16 @@ class NexusCore:
         await asyncio.sleep(wait_before_enable)
 
         while self.server_status_check():
-            if self.server.online != 0:
+            if len(self.server.online) != 0:
                 self.hibernation_restart_valid = True
                 trigger = False
 
-            elif self.server.online == 0 and not trigger and self.hibernation_restart_valid:
+            elif len(self.server.online) == 0 and not trigger and self.hibernation_restart_valid:
                 log('restart handler', f'Server is empty. Waiting for {empty_time//60} minutes')
                 trigger = True
                 await asyncio.sleep(empty_time)
 
-            elif self.server.online == 0 and trigger:
+            elif len(self.server.online) == 0 and trigger:
                 log('restart handler', f'Server has been empty for {empty_time//60} minutes. '
                                        f'Hibernation Restart has been triggered')
                 self.hibernation_restart_valid = False
@@ -227,6 +227,8 @@ class NexusCore:
                 log('restart handler', 'Waiting for server to go online...')
                 await asyncio.sleep(30)
 
+            await asyncio.sleep(60)
+
     async def responder_loop(self):
         log("looper", "Starting NexusCore Crash/Restart Responder...")
 
@@ -279,9 +281,10 @@ class NexusCore:
             await asyncio.sleep(1)
 
     async def backup_loop(self):
+        log("looper", "Starting NexusLooper Backup Handler...")
+
         while True:
             if self.config['backup']['enabled']:
-                log("looper", "Starting NexusLooper Backup Handler...")
                 log('backup', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
 
                 backup_interval = self.config['backup']['interval']

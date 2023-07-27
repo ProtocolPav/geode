@@ -67,17 +67,16 @@ async def announce(request: Request, msg: str):
     return json({'message_sent': True})
 
 
-@app.route('/commands/response')
 async def server_response(request: Request = None):
     await asyncio.sleep(0.3)
-    return json({'response': handler.server.console_logs[-1]})
+    return {'response': handler.server.console_logs[-1]}
 
 
 @app.route('/commands/give/<gamertag:str>/<item:str>/<amount:int>')
 async def give_item(request: Request, gamertag: str, item: str, amount: int):
     gamertag = gamertag.replace("%20", " ")
     await handler.server.send_command(f'give "{gamertag}" {item} {amount}')
-    return await server_response()
+    return json(await server_response())
 
 
 @app.route('/commands/clear/<gamertag:str>/<item:str>/<amount:int>')
@@ -85,24 +84,26 @@ async def clear(request: Request, gamertag: str, item: str, amount: int):
     gamertag = gamertag.replace("%20", " ")
     await handler.server.send_test_for('name="%s", hasitem={item=%s, quantity=%s..}' % (gamertag, item, amount))
 
-    if gamertag in await server_response():
-        await handler.server.send_command(f'clear "{gamertag}" {item} {amount}')
+    response = await server_response()
 
-    return await server_response()
+    if gamertag in response['response']:
+        await handler.server.send_command(f'clear "{gamertag}" {item} 0 {amount}')
+
+    return json(await server_response())
 
 
 @app.route('/whitelist/add/<gamertag:str>')
 async def whitelist_add(request: Request, gamertag: str):
     gamertag = gamertag.replace("%20", " ")
     await handler.server.send_command(f'whitelist add "{gamertag}"')
-    return await server_response()
+    return json(await server_response())
 
 
 @app.route('/whitelist/remove/<gamertag:str>')
 async def whitelist_remove(request: Request, gamertag: str):
     gamertag = gamertag.replace("%20", " ")
     await handler.server.send_command(f'whitelist remove "{gamertag}"')
-    return await server_response()
+    return json(await server_response())
 
 
 # @app.post('/<gamertag:str>/promote')
@@ -123,7 +124,7 @@ async def whitelist_remove(request: Request, gamertag: str):
 async def kick(request: Request, gamertag: str):
     gamertag = gamertag.replace("%20", " ")
     await handler.server.send_command(f'kick "{gamertag}"')
-    return await server_response()
+    return json(await server_response())
 
 
 @app.listener('after_server_start')

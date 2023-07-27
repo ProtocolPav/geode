@@ -492,7 +492,7 @@ class BedrockServer:
                                      href=re.compile("https://minecraft.azureedge.net/bin-linux/bedrock-server")).get('href'))
 
                 if self.version not in link:
-                    await asyncio.create_subprocess_shell(
+                    proc = await asyncio.create_subprocess_shell(
                         f"curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip && "
                         f"unzip -o server/temp.zip -d server/new_server && "
                         f"cp -r server/1.19.1/worlds server/new_server/ &&"
@@ -506,6 +506,14 @@ class BedrockServer:
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.STDOUT,
                     )
+                    while True:
+                        line = await proc.stdout.readline()
+                        line = line.decode().rstrip()
+                        if line == '':
+                            log('debug', f'Aborting  due to EOL')
+                            break
+                        log('debug', f'{line}')
+
                     log('server', f"Server updated according to the link: {link}")
 
                     self.update = link.split('-')[3].split('.zip')[0]

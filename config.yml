@@ -48,3 +48,9 @@ restart_handler:
 
 # The ID of the discord guild. Used to send thorny the activity logs
 discord_guild_id: 1023300252805103626
+
+# Check for updates each time the server starts.
+# This could increase network costs if Smart Restart is on.
+# You can still check for updates manually using the /server/update route
+# This value currently is unused
+check_for_updates: True

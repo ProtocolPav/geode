@@ -83,7 +83,7 @@ async def give_item(request: Request, gamertag: str, item: str, amount: int):
 @app.route('/commands/clear/<gamertag:str>/<item:str>/<amount:int>')
 async def clear(request: Request, gamertag: str, item: str, amount: int):
     gamertag = gamertag.replace("%20", " ")
-    await handler.server.send_test_for('name="%s", hasitem={item=%s, amount=%s..}' % (gamertag, item, amount))
+    await handler.server.send_test_for('name="%s", hasitem={item=%s, quantity=%s..}' % (gamertag, item, amount))
 
     if gamertag in await server_response():
         await handler.server.send_command(f'clear "{gamertag}" {item} {amount}')

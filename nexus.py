@@ -468,7 +468,11 @@ class BedrockServer:
         await asyncio.sleep(sleep)
 
     async def send_message(self, message: str):
-        await self.send_command(f"say {message}")
+        json_message = {"rawtext": [
+                                    {"text": message}
+                                    ]}
+
+        await self.send_command(f'tellraw @a {json_message}')
 
     async def send_announce(self, message: str):
         await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')

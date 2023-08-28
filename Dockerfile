@@ -11,15 +11,23 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install apt-utils -
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install apt-utils -yqq && DEBIAN_FRONTEND=noninteractive apt-get install python3 pip sudo curl unzip screen net-tools gawk openssl findutils pigz libcurl4 libc6 libcrypt1 libcurl4-openssl-dev ca-certificates binfmt-support -yqq && rm -rf /var/cache/apt/*
 
-RUN mkdir server
-    # && curl -H 'Cache-Control: no-cache, no-store' https://minecraft.azureedge.net/bin-linux/bedrock-server-1.19.1.01.zip --output server/1.19.1.zip && unzip server/1.19.1.zip -d server/1.19.1
+RUN if test -f "server/1.19.1/bedrock_server"; then \
+          RUN echo "Bedrock Server is already installed." \
+    else  \
+        RUN echo "Bedrock Server is not installed. Installing an older version. NexusCore will automatically update to the latest version." \
+        RUN mkdir server \
+        RUN curl -H 'Cache-Control: no-cache, no-store' https://minecraft.azureedge.net/bin-linux/bedrock-server-1.19.1.01.zip --output server/1.19.1.zip \
+            && unzip server/1.19.1.zip -d server/1.19.1 \
+    fi
 
 COPY requirements.txt /requirements.txt
 RUN pip install -r /requirements.txt
 
 SHELL ["/bin/bash", "-c"]
 
+RUN echo "Installing AWS CLI for backups to s3"
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip && sudo ./aws/install
+RUN echo "Installing gcloud CLI for backups to gcloud"
 RUN curl -O "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-437.0.1-linux-x86_64.tar.gz"  \
     && tar -xf google-cloud-cli-437.0.1-linux-x86_64.tar.gz \
     && ./google-cloud-sdk/install.sh --quiet \

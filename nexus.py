@@ -700,8 +700,8 @@ class BedrockServer:
                 await self.player_event(gamertag, 'disconnect')
                 yield line
 
-            elif "Version: " in line:
-                self.version = line.split("Version: ")[1]
+            elif "Version" in line:
+                self.version = line.split('Version')[-1].partition(' ')[-1]
                 self.data['last_loaded_version'] = self.version
                 with open('nexusdata.json', "w") as f:
                     f.seek(0)

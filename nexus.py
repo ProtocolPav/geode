@@ -338,15 +338,18 @@ class NexusCore:
     async def message_scheduler(self):
         log('looper', 'Starting Message Scheduler')
         while True:
-            message = self.messages[0]
-            if message['time'] <= datetime.now().replace(microsecond=0, second=0):
-                self.messages.remove(message)
-                if message['type'] == 'announce':
-                    await self.server.send_announce(message['content'])
-                else:
-                    await self.server.send_message(message['content'])
+            try:
+                message = self.messages[0]
+                if message['time'] <= datetime.now().replace(microsecond=0, second=0):
+                    self.messages.remove(message)
+                    if message['type'] == 'announce':
+                        await self.server.send_announce(message['content'])
+                    else:
+                        await self.server.send_message(message['content'])
+            except IndexError:
+                pass
 
-            await asyncio.sleep(120)
+            await asyncio.sleep(30)
 
     async def debug_loop(self):
         while True:
@@ -474,11 +477,7 @@ class BedrockServer:
         await asyncio.sleep(sleep)
 
     async def send_message(self, message: str):
-        json_message = {"rawtext": [
-                                    {"text": message}
-                                    ]}
-
-        await self.send_command(f'tellraw @a {json_message}')
+        await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{message}"}}]}}')
 
     async def send_announce(self, message: str):
         await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')

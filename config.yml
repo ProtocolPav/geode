@@ -3,7 +3,7 @@
 
 # Backup configuration
 backup:
-  enabled: True
+  enabled: False
   # The name of the cloud platform to use for backups. Must be either 's3' or 'gcloud'. Default: s3
   cloud_platform: 'gcloud'
   # Put the name of the bucket where backups go into.

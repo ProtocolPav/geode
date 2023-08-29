@@ -1,6 +1,6 @@
 from sanic import Sanic, Request
 from sanic.response import json, text
-from datetime import datetime
+from datetime import datetime, timedelta
 from nexus import NexusCore
 import asyncio
 
@@ -10,7 +10,8 @@ handler = NexusCore()
 
 @app.route('/<text_test:strorempty>')
 async def default(request: Request, text_test: str):
-    return text(f"Webserver ok. Text send: {text_test}")
+    return text(f"Webserver ok. Text send: {text_test}. {request.args}")
+
 
 @app.route('/server/details')
 async def status(request: Request = None):
@@ -22,6 +23,7 @@ async def status(request: Request = None):
                  'uptime': f"{datetime.now() - handler.server.start}",
                  'usage': handler.system_logs[-1],
                  'last_backup': f"{handler.previous_backup}"})
+
 
 @app.route('/stop')
 async def stop(request: Request):
@@ -53,18 +55,43 @@ async def update(request: Request):
         return json({'response': handler.server.update})
 
 
-@app.route('/commands/message/<msg:str>')
-async def message(request: Request, msg: str):
-    content = msg.replace("%20", " ").replace("%C2%A7", "§")
-    await handler.server.send_message(content)
-    return json({'message_sent': True})
+@app.route('/commands/message')
+async def message(request: Request):
+    if request.args.get('msg', None):
+        await handler.server.send_message(request.args['msg'])
+        return text('Message has been sent!')
+    else:
+        return text('Please include msg as an argument. Example: thorny-bds:8000/commands/message?msg=Hello!!!!')
 
 
-@app.route('/commands/announce/<msg:str>')
-async def announce(request: Request, msg: str):
-    content = msg.replace("%20", " ").replace("%C2%A7", "§")
-    await handler.server.send_announce(content)
-    return json({'message_sent': True})
+@app.route('/commands/message/schedule')
+async def schedule_message(request: Request):
+    interval = int(request.args.get('interval', '7200'))
+    count = int(request.args.get('count', '5'))
+
+    if request.args.get('msg', None):
+        handler.messages.append({'content': request.args['msg'][0],
+                                 'type': 'message',
+                                 'time': datetime.now()})
+        for i in range(1, count-1):
+            handler.messages.append({'content': request.args['msg'][0],
+                                     'type': 'message',
+                                     'time': datetime.now() + timedelta(seconds=interval*i)})
+
+        handler.messages.sort(key=lambda x: x['time'])
+
+        return text(f'Message has been scheduled to be sent {count} times. Once every {interval} seconds.')
+    else:
+        return text('Please include msg as an argument. Example: thorny-bds:8000/commands/message/schedule?msg=Hello!!!!')
+
+
+@app.route('/commands/announce')
+async def announce(request: Request):
+    if request.args.get('msg', None):
+        await handler.server.send_announce(request.args['msg'])
+        return text('Announcement has been sent!')
+    else:
+        return text('Please include msg as an argument. Example: thorny-bds:8000/commands/announce?msg=Hello!!!!')
 
 
 async def server_response(request: Request = None):

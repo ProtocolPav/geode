@@ -372,9 +372,11 @@ class NexusCore:
                                      name='NexusCore Loop Backup Handler')
         config_loader = asyncio.create_task(coro=self.config_reloader(),
                                             name='NexusCore Loop Config Reloader')
+        message_scheduler = asyncio.create_task(coro=self.message_scheduler(),
+                                            name='NexusCore Loop Message Scheduler')
         # debug = asyncio.create_task(coro=self.debug_loop(),
         #                             name='NexusCore Loop Debug Loop')
-        await asyncio.gather(system_logger, restart_handler, responder, backup, config_loader)
+        await asyncio.gather(system_logger, restart_handler, responder, backup, config_loader, message_scheduler)
         log("core", "NexusCore Looper started successfully")
 
     async def start_server(self, start_status: str = 'started_by_user'):

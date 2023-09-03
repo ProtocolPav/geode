@@ -23,7 +23,7 @@ def log(name: str, message: str):
 
 class NexusCore:
     def __init__(self):
-        self.version = 'v5.2'
+        self.version = 'v5.3'
         self.system_logs: list[dict] = []
         self.previous_system_log = {'time': f"{datetime.now()}",
                                     'ram_used': 0,
@@ -338,6 +338,7 @@ class NexusCore:
     async def message_scheduler(self):
         log('looper', 'Starting Message Scheduler')
         while True:
+            print(self.messages, len(self.messages))
             try:
                 message = self.messages[0]
                 if message['time'] <= datetime.now().replace(microsecond=0, second=0):
@@ -348,6 +349,7 @@ class NexusCore:
                         await self.server.send_message(message['content'])
             except IndexError:
                 pass
+            print(self.messages, len(self.messages))
 
             await asyncio.sleep(30)
 

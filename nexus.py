@@ -338,18 +338,17 @@ class NexusCore:
     async def message_scheduler(self):
         log('looper', 'Starting Message Scheduler')
         while True:
-            print(self.messages, len(self.messages))
             try:
                 message = self.messages[0]
                 if message['time'] <= datetime.now().replace(microsecond=0, second=0):
                     self.messages.remove(message)
+                    log('message scheduler', f'Sending message. There are now {len(self.messages)} remaining.')
                     if message['type'] == 'announce':
                         await self.server.send_announce(message['content'])
                     else:
                         await self.server.send_message(message['content'])
             except IndexError:
                 pass
-            print(self.messages, len(self.messages))
 
             await asyncio.sleep(30)
 

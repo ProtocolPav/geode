@@ -138,20 +138,6 @@ async def whitelist_remove(request: Request, gamertag: str):
     return json(await server_response())
 
 
-# @app.post('/<gamertag:str>/promote')
-# async def promote_to_operator(request: Request, gamertag: str):
-#     gamertag = gamertag[12:-3].replace("%20", " ")
-#     await handler.execute(f'op "{gamertag}"')
-#     return json({"promoted": True})
-#
-#
-# @app.post('/<gamertag:str>/demote')
-# async def demote_to_member(request: Request, gamertag: str):
-#     gamertag = gamertag[12:-3].replace("%20", " ")
-#     await handler.execute(f'deop "{gamertag}"')
-#     return json({"demoted": True})
-
-
 @app.route('/kick/<gamertag:str>')
 async def kick(request: Request, gamertag: str):
     gamertag = gamertag.replace("%20", " ")

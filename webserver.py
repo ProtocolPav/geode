@@ -13,6 +13,11 @@ async def default(request: Request, text_test: str):
     return text(f"Webserver ok. Text send: {text_test}. {request.args}")
 
 
+@app.route('/nexus/version')
+async def version(request: Request):
+    return text(f"{handler.version}")
+
+
 @app.route('/server/details')
 async def status(request: Request = None):
     return json({'server_online': handler.server_running(),
@@ -25,13 +30,13 @@ async def status(request: Request = None):
                  'last_backup': f"{handler.previous_backup}"})
 
 
-@app.route('/stop')
+@app.route('/server/stop')
 async def stop(request: Request):
     await handler.stop_server()
     return await status()
 
 
-@app.route('/start')
+@app.route('/server/start')
 async def start(request: Request):
     await handler.start_server()
     return await status()

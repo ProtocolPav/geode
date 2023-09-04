@@ -75,11 +75,11 @@ async def schedule_message(request: Request):
     count = int(request.args.get('count', '5'))
 
     if request.args.get('msg', None):
-        handler.messages.append({'content': request.args['msg'][0],
+        handler.messages.append({'content': request.args['msg'],
                                  'type': 'message',
                                  'time': datetime.now()})
         for i in range(1, count-1):
-            handler.messages.append({'content': request.args['msg'][0],
+            handler.messages.append({'content': request.args['msg'],
                                      'type': 'message',
                                      'time': datetime.now() + timedelta(seconds=interval*i)})
 

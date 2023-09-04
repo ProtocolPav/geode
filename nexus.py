@@ -482,11 +482,11 @@ class BedrockServer:
         await asyncio.sleep(sleep)
 
     async def send_message(self, message: str):
-        await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{message}"}}]}}')
+        await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{message[0]}"}}]}}')
 
     async def send_announce(self, message: str):
         await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')
-        await self.send_command(f'title @a actionbar {message}')
+        await self.send_command(f'title @a actionbar {message[0]}')
 
     async def send_test_for(self, selectors: str):
         await self.send_command(f'testfor @a[{selectors}]')

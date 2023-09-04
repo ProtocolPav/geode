@@ -23,7 +23,7 @@ def log(name: str, message: str):
 
 class NexusCore:
     def __init__(self):
-        self.version = 'v5.2'
+        self.version = 'v6.0'
         self.system_logs: list[dict] = []
         self.previous_system_log = {'time': f"{datetime.now()}",
                                     'ram_used': 0,
@@ -45,22 +45,6 @@ class NexusCore:
         log("core", f"NexusCore Version: {self.version}")
         log("core", "Starting up NexusCore...")
         self.server: BedrockServer = BedrockServer(self.config, self.data)
-
-    def server_running(self) -> bool:
-        try:
-            return self.server.running()
-        except AttributeError:
-            return False
-
-    def server_status_check(self) -> bool:
-        try:
-            return self.server.status_check()
-        except AttributeError:
-            return False
-
-    def backup_check(self) -> bool:
-        backup_interval = self.config['backup']['interval']
-        return True if datetime.now() - self.previous_backup >= timedelta(seconds=backup_interval) else False
 
     @staticmethod
     def load_config_file() -> dict:
@@ -88,6 +72,27 @@ class NexusCore:
             discord_config = config.get('discord_guild_id', 0)
 
             return {'backup': backup_config, 'restart_handler': restart_config, 'discord_guild_id': discord_config}
+
+    def server_running(self) -> bool:
+        try:
+            return self.server.running()
+        except AttributeError:
+            return False
+
+    def server_status_check(self) -> bool:
+        try:
+            return self.server.status_check()
+        except AttributeError:
+            return False
+
+    def backup_check(self, startup: bool = False) -> bool:
+        backup_interval = self.config['backup']['interval']
+        if not startup and datetime.now() - self.previous_backup >= timedelta(seconds=backup_interval):
+            return True
+        elif startup and datetime.now() - self.previous_backup >= timedelta(seconds=backup_interval//2):
+            return True
+        else:
+            return False
 
     async def system_log_loop(self):
         log("looper", "Starting NexusCore System Logger...")
@@ -285,7 +290,7 @@ class NexusCore:
 
         while True:
             if self.config['backup']['enabled']:
-                log('backup', 'Backups ENABLED' if self.config['backup']['enabled'] else 'Backups DISABLED')
+                log("looper", "Starting NexusLooper Backup Handler...")
 
                 backup_interval = self.config['backup']['interval']
                 log('backup', f'Backups will happen every {backup_interval//60} minutes')
@@ -310,7 +315,7 @@ class NexusCore:
     async def startup_backup(self):
         backup_complete = False
         while not backup_complete:
-            if self.server_running() and self.server_status_check() and self.backup_check():
+            if self.server_running() and self.server_status_check() and self.backup_check(startup=True):
                 log('core', 'Launching startup backup')
                 self.previous_backup = datetime.now()
                 await self.server.send_command('save hold', sleep=5)
@@ -319,7 +324,7 @@ class NexusCore:
                 backup_complete = True
             elif not self.backup_check():
                 backup_interval = self.config['backup']['interval']
-                log('core', f'Startup backup aborted. There was already a backup less than {backup_interval//60}m ago')
+                log('core', f'Startup backup aborted. There was already a backup less than {backup_interval//2//60}m ago')
                 break
             else:
                 await asyncio.sleep(10)
@@ -337,15 +342,19 @@ class NexusCore:
     async def message_scheduler(self):
         log('looper', 'Starting Message Scheduler')
         while True:
-            message = self.messages[0]
-            if message['time'] <= datetime.now().replace(microsecond=0, second=0):
-                self.messages.remove(message)
-                if message['type'] == 'announce':
-                    await self.server.send_announce(message['content'])
-                else:
-                    await self.server.send_message(message['content'])
+            try:
+                message = self.messages[0]
+                if message['time'] <= datetime.now().replace(microsecond=0, second=0):
+                    self.messages.remove(message)
+                    log('message scheduler', f'Sending message. There are now {len(self.messages)} remaining.')
+                    if message['type'] == 'announce':
+                        await self.server.send_announce(message['content'])
+                    else:
+                        await self.server.send_message(message['content'])
+            except IndexError:
+                pass
 
-            await asyncio.sleep(120)
+            await asyncio.sleep(30)
 
     async def debug_loop(self):
         while True:
@@ -371,9 +380,11 @@ class NexusCore:
                                      name='NexusCore Loop Backup Handler')
         config_loader = asyncio.create_task(coro=self.config_reloader(),
                                             name='NexusCore Loop Config Reloader')
+        message_scheduler = asyncio.create_task(coro=self.message_scheduler(),
+                                            name='NexusCore Loop Message Scheduler')
         # debug = asyncio.create_task(coro=self.debug_loop(),
         #                             name='NexusCore Loop Debug Loop')
-        await asyncio.gather(system_logger, restart_handler, responder, backup, config_loader)
+        await asyncio.gather(system_logger, restart_handler, responder, backup, config_loader, message_scheduler)
         log("core", "NexusCore Looper started successfully")
 
     async def start_server(self, start_status: str = 'started_by_user'):
@@ -387,7 +398,7 @@ class NexusCore:
                 asyncio.get_event_loop().create_task(coro=self.server.create_server(start_status),
                                                      name=f"Minecraft Server")
 
-                if self.config['backup']['startup_backup_enabled']:
+                if self.config['backup']['startup_backup_enabled'] and self.config['backup']['enabled']:
                     asyncio.get_event_loop().create_task(coro=self.startup_backup(),
                                                          name=f"Minecraft Server Startup Backup")
 
@@ -471,7 +482,7 @@ class BedrockServer:
         await asyncio.sleep(sleep)
 
     async def send_message(self, message: str):
-        await self.send_command(f"say {message}")
+        await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{message}"}}]}}')
 
     async def send_announce(self, message: str):
         await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')
@@ -561,16 +572,6 @@ class BedrockServer:
             raise e
 
     async def player_event(self, gamertag: str, event: str):
-        if event == 'connect':
-            self.online.append(gamertag)
-        else:
-            try:
-                self.online.remove(gamertag)
-            except ValueError:
-                pass
-
-        log('debug', f'{self.online}')
-
         async with AsyncClient() as client:
             sent_successfully = False
             while not sent_successfully:
@@ -581,6 +582,14 @@ class BedrockServer:
                 except httpx.TimeoutException:
                     log('server', f"TimeoutException raised while sending '{event}' event. Retrying in 30 seconds.")
                     await asyncio.sleep(30)
+
+        if event == 'connect' and gamertag not in self.online:
+            self.online.append(gamertag)
+        elif event =='disconnect' and gamertag in self.online:
+            self.online.remove(gamertag)
+        else:
+            log('warn', f'An issue occured when trying to process the {event} event with gamertag {gamertag}.')
+        log('debug', f'{self.online}')
 
     async def disconnect_all(self):
         self.online = []
@@ -699,8 +708,8 @@ class BedrockServer:
                 await self.player_event(gamertag, 'disconnect')
                 yield line
 
-            elif "Version: " in line:
-                self.version = line.split("Version: ")[1]
+            elif "Version" in line:
+                self.version = line.split('Version')[-1].partition(' ')[-1]
                 self.data['last_loaded_version'] = self.version
                 with open('nexusdata.json', "w") as f:
                     f.seek(0)

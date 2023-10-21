@@ -106,7 +106,7 @@ class NexusCore:
                                          'ram_total': ram_usage.total,
                                          'ram_percentage': ram_usage.percent,
                                          'cpu_percent': cpu_usage,
-                                         'online_players': self.server.online})
+                                         'online_players': len(self.server.online)})
                 log('system logs', f'{self.system_logs[-1]}')
 
                 if len(self.system_logs) > 140000:

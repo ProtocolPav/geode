@@ -674,14 +674,14 @@ class BedrockServer:
             while True:
                 line = await process.stdout.readline()
                 line = line.decode().rstrip()
-                if line == '':
+                if line == '' and cloud_service == 's3':
                     log('backup', f'Aborting {cloud_service} upload due to EOL')
                     break
                 elif cloud_service == 's3' and f'upload: {path_to_backup}/{world_name} {file_date}.zip' in line:
                     log('backup', 's3 upload successful!')
                     os.remove(f"{path_to_backup}/{world_name} {file_date}.zip")
                     break
-                elif cloud_service == 'gcloud' and f'Copying file://{path_to_backup}/{world_name} {file_date}.zip' in line:
+                elif cloud_service == 'gcloud' and f'Average throughput:' in line:
                     log('backup', 'gcloud upload successful!')
                     os.remove(f"{path_to_backup}/{world_name} {file_date}.zip")
                     break

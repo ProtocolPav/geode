@@ -696,7 +696,7 @@ class BedrockServer:
         while True:
             line = (await self.server.stdout.readline()).decode().rstrip()
 
-            if f'{self.server_properties["level-name"]}/db/' in line:
+            if f'{self.server_properties["level-name"]}/db/' in line and 'Opening' not in line:
                 await self.initiate_backup(line.split(', '))
 
             elif 'Player connected: ' in line:

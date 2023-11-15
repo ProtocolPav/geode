@@ -229,6 +229,10 @@ class NexusCore:
                                            f'(running:{self.server.running()}, status:{self.server.status[0]}, '
                                            f'status_check:{self.server_status_check()})')
 
+            elif restart_config['mode'] == 'disabled' and self.server_running():
+                log('restart handler', 'Restart handler is disabled. Checking again in 6 hours.')
+                await asyncio.sleep(21600)
+
             elif not self.server_running():
                 log('restart handler', 'Waiting for server to go online...')
                 await asyncio.sleep(30)
@@ -291,7 +295,7 @@ class NexusCore:
 
         while True:
             if self.config['backup']['enabled']:
-                log("looper", "Starting NexusLooper Backup Handler...")
+                log("looper", "Backups are enabled.")
 
                 backup_interval = self.config['backup']['interval']
                 log('backup', f'Backups will happen every {backup_interval//60} minutes')
@@ -590,7 +594,7 @@ class BedrockServer:
             self.online.remove(gamertag)
         else:
             log('warn', f'An issue occured when trying to process the {event} event with gamertag {gamertag}.')
-        log('debug', f'{self.online}')
+        log('debug', f'Current online players: {self.online}')
 
     async def disconnect_all(self):
         self.online = []

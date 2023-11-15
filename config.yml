@@ -25,9 +25,10 @@ backup:
 
 # Restart Handler Configuration
 restart_handler:
-  # Mode is either 'default' or 'smart'.
+  # Mode is either 'default' or 'smart' or 'disabled'
   # - Default mode just waits the given interval and then restarts
   # - Smart mode checks the system usage to determine when to restart
+  # - Disabled will not do anything, and will check again in 6 hours to see if it is enabled.
   mode: 'smart'
 
   # Interval (in seconds) for default mode
@@ -48,9 +49,3 @@ restart_handler:
 
 # The ID of the discord guild. Used to send thorny the activity logs
 discord_guild_id: 1023300252805103626
-
-# Check for updates each time the server starts.
-# This could increase network costs if Smart Restart is on.
-# You can still check for updates manually using the /server/update route
-# This value currently is unused
-check_for_updates: True

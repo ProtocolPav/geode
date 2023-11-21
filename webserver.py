@@ -43,7 +43,7 @@ async def start(request: Request):
 
 
 @app.route('/server/preempt')
-async def start(request: Request):
+async def preempt(request: Request):
     await handler.server.set_status('preemption')
     return await status()
 

@@ -106,7 +106,8 @@ class NexusCore:
                                          'ram_total': ram_usage.total,
                                          'ram_percentage': ram_usage.percent,
                                          'cpu_percent': cpu_usage,
-                                         'online_players': self.server.online})
+                                         'online_players': len(self.server.online)})
+                log('system logs', f'{self.system_logs[-1]}')
 
                 if len(self.system_logs) > 140000:
                     log('looper', 'Truncating system logs to 120000')
@@ -228,6 +229,10 @@ class NexusCore:
                                            f'(running:{self.server.running()}, status:{self.server.status[0]}, '
                                            f'status_check:{self.server_status_check()})')
 
+            elif restart_config['mode'] == 'disabled' and self.server_running():
+                log('restart handler', 'Restart handler is disabled. Checking again in 6 hours.')
+                await asyncio.sleep(21600)
+
             elif not self.server_running():
                 log('restart handler', 'Waiting for server to go online...')
                 await asyncio.sleep(30)
@@ -235,11 +240,11 @@ class NexusCore:
             await asyncio.sleep(60)
 
     async def responder_loop(self):
-        log("looper", "Starting NexusCore Crash/Restart Responder...")
+        log("looper", "Starting NexusCore Status Responder...")
 
         while True:
             if self.server.status[0] == "server_crashed" and not self.server_running():
-                log('nexus responder', 'Responding to server crash')
+                log('nexus responder', 'Responding to server crash...')
                 self.server.set_status("responding_to_crash")
 
                 system_logs: list[dict] = deepcopy(self.system_logs)
@@ -269,6 +274,8 @@ class NexusCore:
                 await self.server.send_announce('The server will restart in §l§e60 seconds§r')
                 await self.server.send_message('All players will be §4kicked§r before server restart. '
                                                'You do not have to leave and §5will not lose any progress.§r')
+                await self.server.send_message('[Server Restart] The server should be back in a few minutes. '
+                                               'Remember to use /online to check the status of the server.')
                 await asyncio.sleep(30)
                 await self.server.send_announce('The server will restart in §l§e30 seconds§r')
                 await asyncio.sleep(25)
@@ -283,6 +290,24 @@ class NexusCore:
                 await asyncio.sleep(20)
                 await self.start_server('started_by_system')
 
+            elif self.server.status[0] == "preemption":
+                log('nexus responder', 'Preemption response in progress...')
+                await self.server.send_announce('The server will restart in §l§e20 seconds§r')
+                await self.server.send_message('[Server Restart] All players will be §4kicked§r before server restart. '
+                                               'You do not have to leave and §5will not lose any progress.§r')
+                await self.server.send_message('[Server Restart] The server should be back in a few minutes. '
+                                               'Remember to use /online to check the status of the server.')
+                await self.server.send_message('[Server Restart] Thorny will be down as well during this time.')
+                await asyncio.sleep(10)
+                await self.server.send_announce('The server will restart in §l§e10 seconds§r')
+                await asyncio.sleep(5)
+                await self.server.send_announce('All players will now be kicked')
+                for i in self.server.online:
+                    await self.server.send_command(f'kick "{i}" Server Restart In Progress...')
+                await asyncio.sleep(3)
+
+                await self.stop_server('preemption_complete')
+
             await asyncio.sleep(1)
 
     async def backup_loop(self):
@@ -290,7 +315,7 @@ class NexusCore:
 
         while True:
             if self.config['backup']['enabled']:
-                log("looper", "Starting NexusLooper Backup Handler...")
+                log("looper", "Backups are enabled.")
 
                 backup_interval = self.config['backup']['interval']
                 log('backup', f'Backups will happen every {backup_interval//60} minutes')
@@ -589,7 +614,8 @@ class BedrockServer:
             self.online.remove(gamertag)
         else:
             log('warn', f'An issue occured when trying to process the {event} event with gamertag {gamertag}.')
-        log('debug', f'{self.online}')
+
+        log('debug', f'Current online players: {self.online}')
 
     async def disconnect_all(self):
         self.online = []
@@ -673,14 +699,14 @@ class BedrockServer:
             while True:
                 line = await process.stdout.readline()
                 line = line.decode().rstrip()
-                if line == '':
+                if line == '' and cloud_service == 's3':
                     log('backup', f'Aborting {cloud_service} upload due to EOL')
                     break
                 elif cloud_service == 's3' and f'upload: {path_to_backup}/{world_name} {file_date}.zip' in line:
                     log('backup', 's3 upload successful!')
                     os.remove(f"{path_to_backup}/{world_name} {file_date}.zip")
                     break
-                elif cloud_service == 'gcloud' and f'Copying file://{path_to_backup}/{world_name} {file_date}.zip' in line:
+                elif cloud_service == 'gcloud' and f'Average throughput:' in line:
                     log('backup', 'gcloud upload successful!')
                     os.remove(f"{path_to_backup}/{world_name} {file_date}.zip")
                     break
@@ -695,7 +721,7 @@ class BedrockServer:
         while True:
             line = (await self.server.stdout.readline()).decode().rstrip()
 
-            if f'{self.server_properties["level-name"]}/db/' in line:
+            if f'{self.server_properties["level-name"]}/db/' in line and 'Opening' not in line:
                 await self.initiate_backup(line.split(', '))
 
             elif 'Player connected: ' in line:

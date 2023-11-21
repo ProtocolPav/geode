@@ -42,6 +42,12 @@ async def start(request: Request):
     return await status()
 
 
+@app.route('/server/preempt')
+async def preempt(request: Request):
+    await handler.server.set_status('preemption')
+    return await status()
+
+
 @app.route('/server/backup')
 async def backup(request: Request):
     await handler.server.send_command('save hold', sleep=5)
@@ -93,7 +99,7 @@ async def schedule_message(request: Request):
 @app.route('/commands/announce')
 async def announce(request: Request):
     if request.args.get('msg', None):
-        await handler.server.send_announce(request.args['msg'])
+        await handler.server.send_announce(request.args['msg'][0])
         return text('Announcement has been sent!')
     else:
         return text('Please include msg as an argument. Example: thorny-bds:8000/commands/announce?msg=Hello!!!!')

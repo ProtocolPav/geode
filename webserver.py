@@ -42,6 +42,12 @@ async def start(request: Request):
     return await status()
 
 
+@app.route('/server/preempt')
+async def start(request: Request):
+    await handler.server.set_status('preemption')
+    return await status()
+
+
 @app.route('/server/backup')
 async def backup(request: Request):
     await handler.server.send_command('save hold', sleep=5)
@@ -75,11 +81,11 @@ async def schedule_message(request: Request):
     count = int(request.args.get('count', '5'))
 
     if request.args.get('msg', None):
-        handler.messages.append({'content': request.args['msg'],
+        handler.messages.append({'content': request.args['msg'][0],
                                  'type': 'message',
                                  'time': datetime.now()})
         for i in range(1, count-1):
-            handler.messages.append({'content': request.args['msg'],
+            handler.messages.append({'content': request.args['msg'][0],
                                      'type': 'message',
                                      'time': datetime.now() + timedelta(seconds=interval*i)})
 
@@ -93,7 +99,7 @@ async def schedule_message(request: Request):
 @app.route('/commands/announce')
 async def announce(request: Request):
     if request.args.get('msg', None):
-        await handler.server.send_announce(request.args['msg'])
+        await handler.server.send_announce(request.args['msg'][0])
         return text('Announcement has been sent!')
     else:
         return text('Please include msg as an argument. Example: thorny-bds:8000/commands/announce?msg=Hello!!!!')

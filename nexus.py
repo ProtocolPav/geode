@@ -240,11 +240,11 @@ class NexusCore:
             await asyncio.sleep(60)
 
     async def responder_loop(self):
-        log("looper", "Starting NexusCore Crash/Restart Responder...")
+        log("looper", "Starting NexusCore Status Responder...")
 
         while True:
             if self.server.status[0] == "server_crashed" and not self.server_running():
-                log('nexus responder', 'Responding to server crash')
+                log('nexus responder', 'Responding to server crash...')
                 self.server.set_status("responding_to_crash")
 
                 system_logs: list[dict] = deepcopy(self.system_logs)
@@ -274,6 +274,8 @@ class NexusCore:
                 await self.server.send_announce('The server will restart in §l§e60 seconds§r')
                 await self.server.send_message('All players will be §4kicked§r before server restart. '
                                                'You do not have to leave and §5will not lose any progress.§r')
+                await self.server.send_message('[Server Restart] The server should be back in a few minutes. '
+                                               'Remember to use /online to check the status of the server.')
                 await asyncio.sleep(30)
                 await self.server.send_announce('The server will restart in §l§e30 seconds§r')
                 await asyncio.sleep(25)
@@ -287,6 +289,24 @@ class NexusCore:
 
                 await asyncio.sleep(20)
                 await self.start_server('started_by_system')
+
+            elif self.server.status[0] == "preemption":
+                log('nexus responder', 'Preemption response in progress...')
+                await self.server.send_announce('The server will restart in §l§e20 seconds§r')
+                await self.server.send_message('[Server Restart] All players will be §4kicked§r before server restart. '
+                                               'You do not have to leave and §5will not lose any progress.§r')
+                await self.server.send_message('[Server Restart] The server should be back in a few minutes. '
+                                               'Remember to use /online to check the status of the server.')
+                await self.server.send_message('[Server Restart] Thorny will be down as well during this time.')
+                await asyncio.sleep(10)
+                await self.server.send_announce('The server will restart in §l§e10 seconds§r')
+                await asyncio.sleep(5)
+                await self.server.send_announce('All players will now be kicked')
+                for i in self.server.online:
+                    await self.server.send_command(f'kick "{i}" Server Restart In Progress...')
+                await asyncio.sleep(3)
+
+                await self.stop_server('preemption_complete')
 
             await asyncio.sleep(1)
 
@@ -487,11 +507,11 @@ class BedrockServer:
         await asyncio.sleep(sleep)
 
     async def send_message(self, message: str):
-        await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{message[0]}"}}]}}')
+        await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{message}"}}]}}')
 
     async def send_announce(self, message: str):
         await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')
-        await self.send_command(f'title @a actionbar {message[0]}')
+        await self.send_command(f'title @a actionbar {message}')
 
     async def send_test_for(self, selectors: str):
         await self.send_command(f'testfor @a[{selectors}]')
@@ -594,6 +614,7 @@ class BedrockServer:
             self.online.remove(gamertag)
         else:
             log('warn', f'An issue occured when trying to process the {event} event with gamertag {gamertag}.')
+
         log('debug', f'Current online players: {self.online}')
 
     async def disconnect_all(self):

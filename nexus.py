@@ -23,7 +23,7 @@ def log(name: str, message: str):
 
 class NexusCore:
     def __init__(self):
-        self.version = 'v6.0'
+        self.version = 'v6.2'
         self.system_logs: list[dict] = []
         self.previous_system_log = {'time': f"{datetime.now()}",
                                     'ram_used': 0,

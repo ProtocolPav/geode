@@ -156,5 +156,11 @@ async def init_core(application, loop: asyncio.AbstractEventLoop):
     await asyncio.sleep(10)
     await handler.start_server('started_by_system')
 
+
+@app.listener('before_server_stop')
+async def init_core(application, loop: asyncio.AbstractEventLoop):
+    handler.server.set_status('preemption')
+    await asyncio.sleep(10)
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", access_log=False)

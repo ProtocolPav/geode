@@ -107,7 +107,6 @@ class NexusCore:
                                          'ram_percentage': ram_usage.percent,
                                          'cpu_percent': cpu_usage,
                                          'online_players': len(self.server.online)})
-                log('system logs', f'{self.system_logs[-1]}')
 
                 if len(self.system_logs) > 140000:
                     log('looper', 'Truncating system logs to 120000')
@@ -272,9 +271,9 @@ class NexusCore:
             elif self.server.status[0] == "system_clearance" and self.server_running():
                 log('nexus responder', 'Regular server restart in progress...')
                 await self.server.send_announce('The server will restart in §l§e60 seconds§r')
-                await self.server.send_message('All players will be §4kicked§r before server restart. '
+                await self.server.send_message('§e[Server Restart]§r All players will be §4kicked§r before server restart. '
                                                'You do not have to leave and §5will not lose any progress.§r')
-                await self.server.send_message('[Server Restart] The server should be back in a few minutes. '
+                await self.server.send_message('§e[Server Restart]§r The server should be back in a few minutes. '
                                                'Remember to use /online to check the status of the server.')
                 await asyncio.sleep(30)
                 await self.server.send_announce('The server will restart in §l§e30 seconds§r')
@@ -292,19 +291,19 @@ class NexusCore:
 
             elif self.server.status[0] == "preemption":
                 log('nexus responder', 'Preemption response in progress...')
-                await self.server.send_announce('The server will restart in §l§e20 seconds§r')
-                await self.server.send_message('[Server Restart] All players will be §4kicked§r before server restart. '
+                await self.server.send_announce('The server will restart in §l§e5 seconds§r')
+                await self.server.send_message('§e[Server Restart]§r All players will be §4kicked§r before server restart. '
                                                'You do not have to leave and §5will not lose any progress.§r')
-                await self.server.send_message('[Server Restart] The server should be back in a few minutes. '
-                                               'Remember to use /online to check the status of the server.')
-                await self.server.send_message('[Server Restart] Thorny will be down as well during this time.')
-                await asyncio.sleep(10)
-                await self.server.send_announce('The server will restart in §l§e10 seconds§r')
+                await self.server.send_message('§e[Server Restart]§r NexusCore is expecting a server crash and is shutting down '
+                                               'to avoid world corruption.')
+                await self.server.send_message('§e[Server Restart]§r Thorny will be down as well during this time. Use '
+                                               '/ping to check status')
                 await asyncio.sleep(5)
                 await self.server.send_announce('All players will now be kicked')
+                await asyncio.sleep(1)
                 for i in self.server.online:
-                    await self.server.send_command(f'kick "{i}" Server Restart In Progress...')
-                await asyncio.sleep(3)
+                    await self.server.send_command(f'kick "{i}" §eNexusCore§r Status Responder successfully avoided a crash.')
+                await asyncio.sleep(1)
 
                 await self.stop_server('preemption_complete')
 

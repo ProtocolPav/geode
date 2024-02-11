@@ -51,7 +51,7 @@ async def preempt(request: Request):
 @app.route('/server/backup')
 async def backup(request: Request):
     await handler.server.send_command('save hold', sleep=5)
-    await handler.server.send_command('save query', sleep=5)
+    await handler.server.send_command('save query', sleep=10)
     await handler.server.send_command('save resume')
     return json({"backup_successful": True})
 

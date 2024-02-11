@@ -713,6 +713,42 @@ class BedrockServer:
             print("AsyncioLimitOverrunError - Separator not found, and Chunk limit is exceeded!\n"
                   f"{cloud_service} upload aborted")
 
+    async def restore_backup(self, backup_type: str, file_name: str):
+        cloud_service = self.config['backup']['cloud_platform']
+        bucket = self.config['backup']['cloud_bucket']
+
+        if cloud_service == 'gcloud':
+            default_path = f'server/1.19.1/worlds/{self.server_properties["level-name"]}'
+            restoration_path = f'server/1.19.1/worlds/{file_name}'
+
+            process = await asyncio.create_subprocess_shell(
+                f"./google-cloud-sdk/bin/gcloud config set storage/parallel_composite_upload_enabled False "
+                f"&& ./google-cloud-sdk/bin/gcloud storage cp gs://{bucket}/{backup_type}/{file_name} server/1.19.1/worlds",
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                limit=1024 * 512
+            )
+
+            try:
+                while True:
+                    line = await process.stdout.readline()
+                    line = line.decode().rstrip()
+                    log('restore backup', line)
+                    if cloud_service == 'gcloud' and f'Average throughput:' in line:
+                        log('backup', 'gcloud download successful!')
+                        os.remove(f'{default_path}/level.dat')
+                        os.remove(f'{default_path}/level.dat_old')
+                        os.remove(f'{default_path}/db/*')
+
+                        shutil.unpack_archive(restoration_path, f'{default_path}/')
+                        break
+            except asyncio.LimitOverrunError:
+                print("AsyncioLimitOverrunError - Separator not found, and Chunk limit is exceeded!\n"
+                      f"{cloud_service} upload aborted")
+        else:
+            log('restore backup', 'Restore backup only supported for gcloud buckets')
+
     async def bds_stdout_processor(self) -> AsyncIterable[str]:
         """
         Checks BDS output for any lines which require action to be taken

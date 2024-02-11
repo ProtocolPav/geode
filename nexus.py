@@ -23,7 +23,7 @@ def log(name: str, message: str):
 
 class NexusCore:
     def __init__(self):
-        self.version = 'v6.2'
+        self.version = 'v6.3'
         self.system_logs: list[dict] = []
         self.previous_system_log = {'time': f"{datetime.now()}",
                                     'ram_used': 0,
@@ -374,7 +374,7 @@ class NexusCore:
                     if message['type'] == 'announce':
                         await self.server.send_announce(message['content'])
                     else:
-                        await self.server.send_message(message['content'])
+                        await self.server.send_message(f"§e+=+=+=+=+=+=+ Server Message +=+=+=+=+=+=+§r\n{message['content']}")
             except IndexError:
                 pass
 
@@ -411,6 +411,7 @@ class NexusCore:
         await asyncio.gather(system_logger, restart_handler, responder, backup, config_loader, message_scheduler)
         log("core", "NexusCore Looper started successfully")
 
+    # noinspection PyAsyncCall
     async def start_server(self, start_status: str = 'started_by_user'):
         if not self.server_running():
             self.server_count += 1
@@ -420,15 +421,15 @@ class NexusCore:
 
             try:
                 asyncio.get_event_loop().create_task(coro=self.server.create_server(start_status),
-                                                     name=f"Minecraft Server")
+                                                           name=f"Minecraft Server")
 
                 if self.config['backup']['startup_backup_enabled'] and self.config['backup']['enabled']:
                     asyncio.get_event_loop().create_task(coro=self.startup_backup(),
-                                                         name=f"Minecraft Server Startup Backup")
+                                                               name=f"Minecraft Server Startup Backup")
 
                 if self.server_count == 1:
                     asyncio.get_event_loop().create_task(coro=self.nexus_looper(),
-                                                         name=f"NexusCore Loop Handler")
+                                                               name=f"NexusCore Loop Handler")
 
             except errors.ServerStopped as e:
                 if type(e) == errors.ServerCrash:

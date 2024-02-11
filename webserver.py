@@ -68,8 +68,8 @@ async def update(request: Request):
 
 @app.route('/commands/message')
 async def message(request: Request):
-    if request.args.get('msg', None):
-        await handler.server.send_message(request.args['msg'])
+    if request.args.get('msg', []):
+        await handler.server.send_message(request.args['msg'][0])
         return text('Message has been sent!')
     else:
         return text('Please include msg as an argument. Example: thorny-bds:8000/commands/message?msg=Hello!!!!')

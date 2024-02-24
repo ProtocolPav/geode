@@ -23,7 +23,7 @@ def log(name: str, message: str):
 
 class NexusCore:
     def __init__(self):
-        self.version = 'v6.2'
+        self.version = 'v6.3'
         self.system_logs: list[dict] = []
         self.previous_system_log = {'time': f"{datetime.now()}",
                                     'ram_used': 0,
@@ -374,7 +374,7 @@ class NexusCore:
                     if message['type'] == 'announce':
                         await self.server.send_announce(message['content'])
                     else:
-                        await self.server.send_message(message['content'])
+                        await self.server.send_message(f"§e+=+=+=+=+=+=+ Server Message +=+=+=+=+=+=+§r\n{message['content']}")
             except IndexError:
                 pass
 
@@ -411,6 +411,7 @@ class NexusCore:
         await asyncio.gather(system_logger, restart_handler, responder, backup, config_loader, message_scheduler)
         log("core", "NexusCore Looper started successfully")
 
+    # noinspection PyAsyncCall
     async def start_server(self, start_status: str = 'started_by_user'):
         if not self.server_running():
             self.server_count += 1
@@ -420,15 +421,15 @@ class NexusCore:
 
             try:
                 asyncio.get_event_loop().create_task(coro=self.server.create_server(start_status),
-                                                     name=f"Minecraft Server")
+                                                           name=f"Minecraft Server")
 
                 if self.config['backup']['startup_backup_enabled'] and self.config['backup']['enabled']:
                     asyncio.get_event_loop().create_task(coro=self.startup_backup(),
-                                                         name=f"Minecraft Server Startup Backup")
+                                                               name=f"Minecraft Server Startup Backup")
 
                 if self.server_count == 1:
                     asyncio.get_event_loop().create_task(coro=self.nexus_looper(),
-                                                         name=f"NexusCore Loop Handler")
+                                                               name=f"NexusCore Loop Handler")
 
             except errors.ServerStopped as e:
                 if type(e) == errors.ServerCrash:
@@ -713,6 +714,42 @@ class BedrockServer:
             print("AsyncioLimitOverrunError - Separator not found, and Chunk limit is exceeded!\n"
                   f"{cloud_service} upload aborted")
 
+    async def restore_backup(self, backup_type: str, file_name: str):
+        cloud_service = self.config['backup']['cloud_platform']
+        bucket = self.config['backup']['cloud_bucket']
+
+        if cloud_service == 'gcloud':
+            default_path = f'server/1.19.1/worlds/{self.server_properties["level-name"]}'
+            restoration_path = f'server/1.19.1/worlds/{file_name}'
+
+            process = await asyncio.create_subprocess_shell(
+                f"./google-cloud-sdk/bin/gcloud config set storage/parallel_composite_upload_enabled False "
+                f"&& ./google-cloud-sdk/bin/gcloud storage cp gs://{bucket}/{backup_type}/{file_name} server/1.19.1/worlds",
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                limit=1024 * 512
+            )
+
+            try:
+                while True:
+                    line = await process.stdout.readline()
+                    line = line.decode().rstrip()
+                    log('restore backup', line)
+                    if cloud_service == 'gcloud' and f'Average throughput:' in line:
+                        log('backup', 'gcloud download successful!')
+                        os.remove(f'{default_path}/level.dat')
+                        os.remove(f'{default_path}/level.dat_old')
+                        os.remove(f'{default_path}/db/*')
+
+                        shutil.unpack_archive(restoration_path, f'{default_path}/')
+                        break
+            except asyncio.LimitOverrunError:
+                print("AsyncioLimitOverrunError - Separator not found, and Chunk limit is exceeded!\n"
+                      f"{cloud_service} upload aborted")
+        else:
+            log('restore backup', 'Restore backup only supported for gcloud buckets')
+
     async def bds_stdout_processor(self) -> AsyncIterable[str]:
         """
         Checks BDS output for any lines which require action to be taken
@@ -758,7 +795,12 @@ class BedrockServer:
 
     async def console_output(self):
         async for line in aiter(self.bds_stdout_processor()):
-            contents = line.split('] ')
+
+            if "Scripting" in line:
+                contents = line.split('[Scripting] ')
+            else:
+                contents = line.split('] ')
+
             if len(contents) > 1 :
                 console_log = contents[-1]
             else:

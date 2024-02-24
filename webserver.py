@@ -51,7 +51,7 @@ async def preempt(request: Request):
 @app.route('/server/backup')
 async def backup(request: Request):
     await handler.server.send_command('save hold', sleep=5)
-    await handler.server.send_command('save query', sleep=5)
+    await handler.server.send_command('save query', sleep=10)
     await handler.server.send_command('save resume')
     return json({"backup_successful": True})
 
@@ -68,8 +68,8 @@ async def update(request: Request):
 
 @app.route('/commands/message')
 async def message(request: Request):
-    if request.args.get('msg', None):
-        await handler.server.send_message(request.args['msg'])
+    if request.args.get('msg', []):
+        await handler.server.send_message(request.args['msg'][0])
         return text('Message has been sent!')
     else:
         return text('Please include msg as an argument. Example: thorny-bds:8000/commands/message?msg=Hello!!!!')

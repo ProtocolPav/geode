@@ -448,6 +448,7 @@ class BedrockServer:
                         f"cp server/1.19.1/allowlist.json server/new_server/ &&"
                         f"cp server/1.19.1/server.properties server/new_server/ &&"
                         f"cp server/1.19.1/permissions.json server/new_server/ &&"
+                        f"cp -r server/1.19.1/config server/new_server/ &&"
                         f"cp -a server/1.19.1/. server/1.19.1-old/ &&"
                         f"rm -r server/1.19.1/* &&"
                         f"cp -a server/new_server/. server/1.19.1/",

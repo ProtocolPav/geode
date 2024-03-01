@@ -20,9 +20,9 @@ async def version(request: Request):
 
 @app.route('/server/details')
 async def status(request: Request = None):
-    return json({'server_online': handler.server_running(),
+    return json({'server_online': handler.server.running(),
                  'server_status': handler.server.status[0],
-                 'status_check': handler.server_status_check(),
+                 'status_check': handler.server.status_check(),
                  'update': handler.server.update,
                  'server_start': f"{handler.server.start}",
                  'uptime': f"{datetime.now() - handler.server.start}",
@@ -58,7 +58,7 @@ async def backup(request: Request):
 
 @app.route('/server/update')
 async def update(request: Request):
-    if handler.server_running():
+    if handler.server.running():
         return json({'response': 'Error. Server is running!'})
 
     else:

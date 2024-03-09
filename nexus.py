@@ -225,12 +225,11 @@ class NexusCore:
                                                'to avoid world corruption.')
                 await self.server.send_message('§e[Server Restart]§r Thorny will be down as well during this time. Use '
                                                '/ping to check status')
-                await asyncio.sleep(3)
-                await self.server.send_announce('All players will now be kicked')
                 await asyncio.sleep(1)
+                await self.server.send_announce('All players will now be kicked')
                 for i in self.server.online:
-                    await self.server.send_command(f'kick "{i}" §eNexusCore§r Status Responder successfully avoided a crash.')
-                await asyncio.sleep(0.5)
+                    await self.server.send_command(f'kick "{i}" §eNexusCore§r Status Responder successfully avoided a crash. '
+                                                   f'You can expect the server to be up within the next 60 seconds!')
 
                 await self.stop_server('preemption_complete')
 

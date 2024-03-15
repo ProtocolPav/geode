@@ -48,7 +48,7 @@ class NexusCore:
     looper = LoopHandler()
 
     def __init__(self):
-        self.version = 'v7.0'
+        self.version = 'v7.1'
         self.system_logs: list[dict] = []
         self.previous_system_log = {'time': f"{datetime.now()}",
                                     'ram_used': 0,

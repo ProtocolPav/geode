@@ -129,7 +129,7 @@ async def quest_complete(request: Request):
         reward = request.args.get('reward', None)
         reward_count = request.args.get('reward_count', 1)
 
-        await handler.server.send_command(f'title {player.replace('"', '')} title Quest Complete')
+        await handler.server.send_command(f'title {player} title Quest Complete')
         await handler.server.send_command(f'execute at {player} run playsound random.levelup @p ~ ~3 ~ 100 1.5')
         if reward:
             await handler.server.send_command(f'give {player} {reward} {reward_count}')

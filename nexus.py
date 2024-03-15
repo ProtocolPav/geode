@@ -284,7 +284,7 @@ class NexusCore:
                     if message['type'] == 'announce':
                         await self.server.send_announce(message['content'])
                     else:
-                        header = "§e+=+=+=+=+=+=+ Server Message +=+=+=+=+=+=+§r\n"
+                        header = "§e+=+=+=+=+=+=+ Server Message +=+=+=+=+=+=+§r\\n"
                         await self.server.send_message(f"{header}{message['content']}")
             except IndexError:
                 pass

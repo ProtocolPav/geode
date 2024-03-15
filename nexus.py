@@ -675,17 +675,21 @@ class BedrockServer:
     async def console_output(self):
         async for line in aiter(self.bds_stdout_processor()):
 
-            if "Scripting" in line:
-                contents = [line]
+            logname = 'console'
+            if "INFO" in line:
+                contents = line.split('INFO] ')
+            elif 'ERROR' in line:
+                logname = 'console error'
+                contents = line.split('ERROR] ')
             else:
-                contents = line.split('] ')
+                contents = [line]
 
             if len(contents) > 1 :
                 console_log = contents[-1]
             else:
                 console_log = line
 
-            log('console', console_log)
+            log(logname, console_log)
             self.console_logs.append(console_log)
 
             if len(self.console_logs) >= 100:

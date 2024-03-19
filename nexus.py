@@ -48,7 +48,7 @@ class NexusCore:
     looper = LoopHandler()
 
     def __init__(self):
-        self.version = 'v7.0'
+        self.version = 'v7.1'
         self.system_logs: list[dict] = []
         self.previous_system_log = {'time': f"{datetime.now()}",
                                     'ram_used': 0,
@@ -227,11 +227,10 @@ class NexusCore:
                                                '/ping to check status')
                 await asyncio.sleep(3)
                 await self.server.send_announce('All players will now be kicked')
-                await asyncio.sleep(1)
                 for i in self.server.online:
-                    await self.server.send_command(f'kick "{i}" §eNexusCore§r Status Responder successfully avoided a crash.')
+                    await self.server.send_command(f'kick "{i}" §eNexusCore§r Status Responder successfully avoided a crash. '
+                                                   f'You can expect the server to be up within the next 60 seconds!')
                 await asyncio.sleep(0.5)
-
                 await self.stop_server('preemption_complete')
 
             await asyncio.sleep(1)
@@ -270,7 +269,6 @@ class NexusCore:
         while True:
             log('core', 'Updating config file')
             self.config = self.load_config_file()
-            log('debug', f'{self.config}')
             await asyncio.sleep(1200)
 
     @looper.loop_task("Message Scheduler Loop")
@@ -285,7 +283,8 @@ class NexusCore:
                     if message['type'] == 'announce':
                         await self.server.send_announce(message['content'])
                     else:
-                        await self.server.send_message(f"§e+=+=+=+=+=+=+ Server Message +=+=+=+=+=+=+§r\n{message['content']}")
+                        header = "§e+=+=+=+=+=+=+ Server Message +=+=+=+=+=+=+§r\\n"
+                        await self.server.send_message(f"{header}{message['content']}")
             except IndexError:
                 pass
 
@@ -676,17 +675,21 @@ class BedrockServer:
     async def console_output(self):
         async for line in aiter(self.bds_stdout_processor()):
 
-            if "Scripting" in line:
-                contents = [line]
+            logname = 'console'
+            if "INFO" in line:
+                contents = line.split('INFO] ')
+            elif 'ERROR' in line:
+                logname = 'console error'
+                contents = line.split('ERROR] ')
             else:
-                contents = line.split('] ')
+                contents = [line]
 
             if len(contents) > 1 :
                 console_log = contents[-1]
             else:
                 console_log = line
 
-            log('console', console_log)
+            log(logname, console_log)
             self.console_logs.append(console_log)
 
             if len(self.console_logs) >= 100:

@@ -113,7 +113,7 @@ async def quest_progress(request: Request):
 
         await handler.server.send_command(f'title {player} actionbar {progress}')
         await handler.server.send_command(f'execute at {player} run playsound note.pling @p ~ ~3 ~ 100 1.5')
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.2)
         await handler.server.send_command(f'execute at {player} run playsound note.pling @p ~ ~3 ~ 100 2')
 
         return text("OK!")
@@ -133,6 +133,9 @@ async def quest_complete(request: Request):
         await handler.server.send_command(f'execute at {player} run playsound random.levelup @p ~ ~3 ~ 100 1.5')
         if reward:
             await handler.server.send_command(f'give {player} {reward} {reward_count}')
+        await handler.server.send_message(f'§e+=+=+=+=+=+=+ Server Message +=+=+=+=+=+=+§r\\n'
+                                          f'{playername} has just completed a Quest! '
+                                          f'Run §d/quests view§r on the discord to accept and start your own quest!')
         await handler.server.send_announce(f'{playername} has just completed a Quest!')
 
         return text("OK!")

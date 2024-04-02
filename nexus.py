@@ -12,6 +12,7 @@ from httpx import AsyncClient
 from bs4 import BeautifulSoup
 from jproperties import Properties
 import re
+import demoji
 
 from copy import deepcopy
 
@@ -48,7 +49,7 @@ class NexusCore:
     looper = LoopHandler()
 
     def __init__(self):
-        self.version = 'v7.1'
+        self.version = 'v7.2'
         self.system_logs: list[dict] = []
         self.previous_system_log = {'time': f"{datetime.now()}",
                                     'ram_used': 0,
@@ -416,7 +417,13 @@ class BedrockServer:
         await asyncio.sleep(sleep)
 
     async def send_message(self, message: str):
-        await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{message}"}}]}}')
+        processed_message = demoji.replace_with_desc(message)
+        processed_message = processed_message.translate(str.maketrans({'’': "'",
+                                                                       '“': '"',
+                                                                       '”': '"',
+                                                                       '‘': "'"}))
+
+        await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{processed_message}"}}]}}')
 
     async def send_announce(self, message: str):
         await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')

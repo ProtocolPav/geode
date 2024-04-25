@@ -1,3 +1,4 @@
+import httpx
 from sanic import Sanic, Request
 from sanic.response import json, text
 from datetime import datetime, timedelta
@@ -137,6 +138,11 @@ async def quest_complete(request: Request):
                                           f'{playername} has just completed a Quest! '
                                           f'Run §d/quests view§r on the discord to accept and start your own quest!')
         await handler.server.send_announce(f'{playername} has just completed a Quest!')
+
+        async with httpx.AsyncClient() as client:
+            r = await client.post('http://thorny-wbs:8000/chat/event', timeout=None,
+                                  data={'content': f"{playername} has just completed a Quest!",
+                                        'colour': 'yellow'})
 
         return text("OK!")
     else:

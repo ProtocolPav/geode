@@ -21,6 +21,8 @@ import errors
 def log(name: str, message: str):
     print(f"[{datetime.now()}] [{name.upper()}] {message}")
 
+title = "\n █████╗ ███╗   ███╗███████╗████████╗██╗  ██╗██╗   ██╗███████╗████████╗\n██╔══██╗████╗ ████║██╔════╝╚══██╔══╝██║  ██║╚██╗ ██╔╝██╔════╝╚══██╔══╝\n███████║██╔████╔██║█████╗     ██║   ███████║ ╚████╔╝ ███████╗   ██║   \n██╔══██║██║╚██╔╝██║██╔══╝     ██║   ██╔══██║  ╚██╔╝  ╚════██║   ██║   \n██║  ██║██║ ╚═╝ ██║███████╗   ██║   ██║  ██║   ██║   ███████║   ██║   \n╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝   ╚═╝   ╚══════╝   ╚═╝   \n                                                                      \n"
+
 
 class LoopHandler:
     def __init__(self):
@@ -36,7 +38,7 @@ class LoopHandler:
         return decorator
 
     async def start_looper(self, nexuscore):
-        log("core", "Starting NexusCore Looper...")
+        log("core", "Starting Amethyst Looper...")
         self.tasks = []
         for i in self.loops:
             self.tasks.append(asyncio.create_task(coro=i["function"](nexuscore), name=i["name"]))
@@ -45,7 +47,7 @@ class LoopHandler:
         await asyncio.gather(*self.tasks)
 
 
-class NexusCore:
+class Amethyst:
     looper = LoopHandler()
 
     def __init__(self):
@@ -57,7 +59,7 @@ class NexusCore:
                                     'ram_percentage': 0,
                                     'cpu_percent': 0}
 
-        with open('nexusdata.json', 'r') as f:
+        with open('amethystdata.json', 'r') as f:
             self.data = json.load(f)
 
         self.config = self.load_config_file()
@@ -65,9 +67,9 @@ class NexusCore:
 
         self.previous_backup = datetime.now().replace(year=1999)
 
-        print(self.data['title'])
-        log("core", f"NexusCore Version: {self.version}")
-        log("core", "Starting up NexusCore...")
+        print('\033[1;35m' + title + '\033[0m')
+        log("core", f"Amethyst Version: {self.version}")
+        log("core", "Starting up Amethyst...")
         self.server: BedrockServer = BedrockServer(self.config, self.data)
 
     @staticmethod
@@ -108,7 +110,7 @@ class NexusCore:
 
     @looper.loop_task("System Logger")
     async def system_log_loop(self):
-        log("looper", "Starting NexusCore System Logger...")
+        log("looper", "Starting Amethyst System Logger...")
         with open("./system_usage.json", "r+") as usage_file:
             self.system_logs = json.load(usage_file)
             while True:
@@ -138,7 +140,7 @@ class NexusCore:
     @looper.loop_task("Restart Handler")
     async def restart_loop(self):
         while True:
-            log("looper", "Starting NexusCore Restart Handler...")
+            log("looper", "Starting Amethyst Restart Handler...")
             restart_config = self.config['restart_handler']
 
             if restart_config['mode'] == 'default' and self.server.running():
@@ -167,7 +169,7 @@ class NexusCore:
 
     @looper.loop_task("Crash Responder")
     async def responder_loop(self):
-        log("looper", "Starting NexusCore Status Responder...")
+        log("looper", "Starting Amethyst Status Responder...")
 
         while True:
             if self.server.status[0] == "server_crashed" and not self.server.running():
@@ -222,7 +224,7 @@ class NexusCore:
                 await self.server.send_announce('The server will restart in §l§e5 seconds§r')
                 await self.server.send_message('§e[Server Restart]§r All players will be §4kicked§r before server restart. '
                                                'You do not have to leave and §5will not lose any progress.§r')
-                await self.server.send_message('§e[Server Restart]§r NexusCore is expecting a server crash and is shutting down '
+                await self.server.send_message('§e[Server Restart]§r Amethyst is expecting a server crash and is shutting down '
                                                'to avoid world corruption.')
                 await self.server.send_message('§e[Server Restart]§r Thorny will be down as well during this time. Use '
                                                '/ping to check status')
@@ -337,9 +339,9 @@ class NexusCore:
                     asyncio.get_event_loop().create_task(coro=self.startup_backup(),
                                                          name=f"Minecraft Server Startup Backup")
 
-                if not NexusCore.looper.running:
-                    asyncio.get_event_loop().create_task(coro=NexusCore.looper.start_looper(self),
-                                                         name=f"NexusCore Loop Handler")
+                if not Amethyst.looper.running:
+                    asyncio.get_event_loop().create_task(coro=Amethyst.looper.start_looper(self),
+                                                         name=f"Amethyst Loop Handler")
 
             except errors.ServerStopped as e:
                 if type(e) == errors.ServerCrash:
@@ -514,17 +516,19 @@ class BedrockServer:
             raise e
 
     async def disconnect_all(self):
-        self.online = []
-
         async with httpx.AsyncClient() as client:
             sent_successfully = False
             while not sent_successfully:
                 try:
-                    await client.post(f"http://thorny-wbs:8000/disconnect/all?guild_id={self.discord_guild_id}")
+                    log('server', 'Disconnecting all currently online players')
+                    online = await client.get(f"http://nexuscore:8000/api/v0.1/guilds/{self.discord_guild_id}/online")
+                    for user in online.json()['users']:
+                        await client.post(f"http://nexuscore:8000/api/v0.1/events/connection",
+                                          json={'type': 'disconnect', 'thorny_id': user['thorny_id']})
                     sent_successfully = True
 
                 except httpx.TimeoutException:
-                    log('server', f"TimeoutException raised while sending 'disconnect all' event. Retrying in 30 seconds.")
+                    log('server', f"TimeoutException raised while disconnecting all. Retrying in 30 seconds.")
                     await asyncio.sleep(30)
 
     async def initiate_backup(self, file_list: list[str]):
@@ -659,7 +663,7 @@ class BedrockServer:
             elif "Version" in line:
                 self.version = line.split('Version')[-1].partition(' ')[-1]
                 self.data['last_loaded_version'] = self.version
-                with open('nexusdata.json', "w") as f:
+                with open('amethystdata.json', "w") as f:
                     f.seek(0)
                     json.dump(self.data, f, indent=4)
                     f.truncate()

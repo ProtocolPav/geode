@@ -21,9 +21,6 @@ import errors
 def log(name: str, message: str):
     print(f"[{datetime.now()}] [{name.upper()}] {message}")
 
-title = "\n █████╗ ███╗   ███╗███████╗████████╗██╗  ██╗██╗   ██╗███████╗████████╗\n██╔══██╗████╗ ████║██╔════╝╚══██╔══╝██║  ██║╚██╗ ██╔╝██╔════╝╚══██╔══╝\n███████║██╔████╔██║█████╗     ██║   ███████║ ╚████╔╝ ███████╗   ██║   \n██╔══██║██║╚██╔╝██║██╔══╝     ██║   ██╔══██║  ╚██╔╝  ╚════██║   ██║   \n██║  ██║██║ ╚═╝ ██║███████╗   ██║   ██║  ██║   ██║   ███████║   ██║   \n╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝   ╚═╝   ╚══════╝   ╚═╝   \n                                                                      \n"
-
-
 class LoopHandler:
     def __init__(self):
         self.loops = []
@@ -67,7 +64,7 @@ class Amethyst:
 
         self.previous_backup = datetime.now().replace(year=1999)
 
-        print('\033[1;35m' + title + '\033[0m')
+        print('\033[1;35m' + self.data['title'] + '\033[0m')
         log("core", f"Amethyst Version: {self.version}")
         log("core", "Starting up Amethyst...")
         self.server: BedrockServer = BedrockServer(self.config, self.data)

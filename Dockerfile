@@ -14,7 +14,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteract
 RUN if test -f "server/1.19.1/bedrock_server"; then \
           echo "Bedrock Server is already installed." ;\
     else  \
-        echo "Bedrock Server is not installed. Installing an older version. NexusCore will automatically update to the latest version." \
+        echo "Bedrock Server is not installed. Installing an older version. Amethyst will automatically update to the latest version." \
         && mkdir server  \
         && curl -H 'Cache-Control: no-cache, no-store' https://minecraft.azureedge.net/bin-linux/bedrock-server-1.19.1.01.zip --output server/bds.zip && ls -la && unzip server/bds.zip -d server/1.19.1 ;  \
     fi

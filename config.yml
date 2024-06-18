@@ -1,5 +1,5 @@
-# Config updates may take as long as 20 minutes to process and register in NexusCore.
-# You do not have to restart NexusCore unless you wish the updates to be applied immediately.
+# Config updates may take as long as 20 minutes to process and register in Amethyst.
+# You do not have to restart Amethyst unless you wish the updates to be applied immediately.
 
 # Backup configuration
 backup:
@@ -48,4 +48,5 @@ restart_handler:
   empty_time: 1200
 
 # The ID of the discord guild. Used to send thorny the activity logs
-discord_guild_id: 1023300252805103626
+#discord_guild_id: 1023300252805103626
+discord_guild_id: 1213827104945471538

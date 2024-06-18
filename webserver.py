@@ -2,11 +2,11 @@ import httpx
 from sanic import Sanic, Request
 from sanic.response import json, text
 from datetime import datetime, timedelta
-from nexus import NexusCore
+from amethyst import Amethyst
 import asyncio
 
 app = Sanic("bedrock_server_app")
-handler = NexusCore()
+handler = Amethyst()
 
 
 @app.route('/<text_test:strorempty>')
@@ -14,7 +14,7 @@ async def default(request: Request, text_test: str):
     return text(f"Webserver ok. Text send: {text_test}. {request.args}")
 
 
-@app.route('/nexus/version')
+@app.route('/amethyst/version')
 async def version(request: Request):
     return text(f"{handler.version}")
 
@@ -139,10 +139,10 @@ async def quest_complete(request: Request):
                                           f'Run §d/quests view§r on the discord to accept and start your own quest!')
         await handler.server.send_announce(f'{playername} has just completed a Quest!')
 
-        async with httpx.AsyncClient() as client:
-            r = await client.post('http://thorny-wbs:8000/chat/event', timeout=None,
-                                  data={'content': f"{playername} has just completed a Quest!",
-                                        'colour': 'yellow'})
+        # async with httpx.AsyncClient() as client:
+        #     r = await client.post('http://thorny-wbs:8000/chat/event', timeout=None,
+        #                           data={'content': f"{playername} has just completed a Quest!",
+        #                                 'colour': 'yellow'})
 
         return text("OK!")
     else:

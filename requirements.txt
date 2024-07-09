@@ -5,5 +5,5 @@ httpx==0.23.0
 bs4==0.0.1
 jproperties==2.1.1
 psutil==5.9.5
-pyyaml==6.0
+pyyaml==6.0.1
 demoji==1.1.0

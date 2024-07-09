@@ -2,6 +2,7 @@
 /test-bds-server/
 /friendconnect/
 /.idea/
+/venv-old/
 /system_usage.json
 /server/
 /amethystdata.json

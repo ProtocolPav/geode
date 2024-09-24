@@ -443,7 +443,7 @@ class BedrockServer:
 
                 soup = BeautifulSoup(server_download_site.text, 'html.parser')
                 link = str(soup.find("a",
-                                     href=re.compile("https://minecraft.azureedge.net/bin-linux/bedrock-server")).get('href'))
+                                     href=re.compile("https://www.minecraft.net/bedrockdedicatedserver/bin-linux/")).get('href'))
 
                 if self.version not in link:
                     proc = await asyncio.create_subprocess_shell(

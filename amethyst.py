@@ -48,7 +48,7 @@ class Amethyst:
     looper = LoopHandler()
 
     def __init__(self):
-        self.version = 'v7.2'
+        self.version = 'v7.4'
         self.system_logs: list[dict] = []
         self.previous_system_log = {'time': f"{datetime.now()}",
                                     'ram_used': 0,

@@ -446,32 +446,35 @@ class BedrockServer:
                                      href=re.compile("https://www.minecraft.net/bedrockdedicatedserver/bin-linux/")).get('href'))
 
                 if self.version not in link:
-                    proc = await asyncio.create_subprocess_shell(
-                        f"curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip && "
-                        f"unzip -o server/temp.zip -d server/new_server && "
-                        f"cp -r server/1.19.1/worlds server/new_server/ &&"
-                        f"cp server/1.19.1/allowlist.json server/new_server/ &&"
-                        f"cp server/1.19.1/server.properties server/new_server/ &&"
-                        f"cp server/1.19.1/permissions.json server/new_server/ &&"
-                        f"cp -r server/1.19.1/config server/new_server/ &&"
-                        f"cp -a server/1.19.1/. server/1.19.1-old/ &&"
-                        f"rm -r server/1.19.1/* &&"
-                        f"cp -a server/new_server/. server/1.19.1/",
-                        stdin=asyncio.subprocess.PIPE,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.STDOUT,
-                    )
-                    while True:
-                        line = await proc.stdout.readline()
-                        line = line.decode().rstrip()
-                        if line == '':
-                            log('debug', f'Aborting  due to EOL')
-                            break
-                        log('debug', f'{line}')
-
-                    log('server', f"Server updated according to the link: {link}")
-
-                    self.update = link.split('-')[3].split('.zip')[0]
+                    log('warning', 'I have found a new Minecraft Update. '
+                                   'Amethyst Auto-Updater is temporarily DISABLED. '
+                                   'You must manually update the server to the latest version! ')
+                    # proc = await asyncio.create_subprocess_shell(
+                    #     f"curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip && "
+                    #     f"unzip -o server/temp.zip -d server/new_server && "
+                    #     f"cp -r server/1.19.1/worlds server/new_server/ &&"
+                    #     f"cp server/1.19.1/allowlist.json server/new_server/ &&"
+                    #     f"cp server/1.19.1/server.properties server/new_server/ &&"
+                    #     f"cp server/1.19.1/permissions.json server/new_server/ &&"
+                    #     f"cp -r server/1.19.1/config server/new_server/ &&"
+                    #     f"cp -a server/1.19.1/. server/1.19.1-old/ &&"
+                    #     f"rm -r server/1.19.1/* &&"
+                    #     f"cp -a server/new_server/. server/1.19.1/",
+                    #     stdin=asyncio.subprocess.PIPE,
+                    #     stdout=asyncio.subprocess.PIPE,
+                    #     stderr=asyncio.subprocess.STDOUT,
+                    # )
+                    # while True:
+                    #     line = await proc.stdout.readline()
+                    #     line = line.decode().rstrip()
+                    #     if line == '':
+                    #         log('debug', f'Aborting  due to EOL')
+                    #         break
+                    #     log('debug', f'{line}')
+                    #
+                    # log('server', f"Server updated according to the link: {link}")
+                    #
+                    # self.update = link.split('-')[3].split('.zip')[0]
 
                 elif self.version in link:
                     self.update = None

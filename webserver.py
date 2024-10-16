@@ -27,7 +27,7 @@ async def status(request: Request = None):
                  'update': handler.server.update,
                  'server_start': f"{handler.server.start}",
                  'uptime': f"{datetime.now() - handler.server.start}",
-                 'usage': handler.system_logs[-1],
+                 'usage': handler.system_log,
                  'last_backup': f"{handler.previous_backup}"})
 
 
@@ -104,49 +104,6 @@ async def announce(request: Request):
         return text('Announcement has been sent!')
     else:
         return text('Please include msg as an argument. Example: thorny-bds:8000/commands/announce?msg=Hello!!!!')
-
-
-@app.route('/commands/quest/progress')
-async def quest_progress(request: Request):
-    if request.args.get('player', None):
-        player = request.args.get('player', None)
-        progress = request.args.get('progress', 'Quest Progress Unavailable')
-
-        await handler.server.send_command(f'title {player} actionbar {progress}')
-        await handler.server.send_command(f'execute at {player} run playsound note.pling @p ~ ~3 ~ 100 1.5')
-        await asyncio.sleep(0.2)
-        await handler.server.send_command(f'execute at {player} run playsound note.pling @p ~ ~3 ~ 100 2')
-
-        return text("OK!")
-    else:
-        return text('Please include player as an argument. Example: thorny-bds:8000/commands/announce?msg=Hello!!!!')
-
-
-@app.route('/commands/quest/complete')
-async def quest_complete(request: Request):
-    if request.args.get('player', None):
-        player = request.args.get('player', '')
-        playername = player.replace('"', '')
-        reward = request.args.get('reward', None)
-        reward_count = request.args.get('reward_count', 1)
-
-        await handler.server.send_command(f'title {player} title Quest Complete')
-        await handler.server.send_command(f'execute at {player} run playsound random.levelup @p ~ ~3 ~ 100 1.5')
-        if reward:
-            await handler.server.send_command(f'give {player} {reward} {reward_count}')
-        await handler.server.send_message(f'§e+=+=+=+=+=+=+ Server Message +=+=+=+=+=+=+§r\\n'
-                                          f'{playername} has just completed a Quest! '
-                                          f'Run §d/quests view§r on the discord to accept and start your own quest!')
-        await handler.server.send_announce(f'{playername} has just completed a Quest!')
-
-        # async with httpx.AsyncClient() as client:
-        #     r = await client.post('http://thorny-wbs:8000/chat/event', timeout=None,
-        #                           data={'content': f"{playername} has just completed a Quest!",
-        #                                 'colour': 'yellow'})
-
-        return text("OK!")
-    else:
-        return text('Please include player as an argument. Example: thorny-bds:8000/commands/announce?msg=Hello!!!!')
 
 
 async def server_response(request: Request = None):

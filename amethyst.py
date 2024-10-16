@@ -34,11 +34,11 @@ class LoopHandler:
 
         return decorator
 
-    async def start_looper(self, nexuscore):
+    async def start_looper(self, amethyst):
         log("core", "Starting Amethyst Looper...")
         self.tasks = []
         for i in self.loops:
-            self.tasks.append(asyncio.create_task(coro=i["function"](nexuscore), name=i["name"]))
+            self.tasks.append(asyncio.create_task(coro=i["function"](amethyst), name=i["name"]))
 
         self.running = True
         await asyncio.gather(*self.tasks)
@@ -48,13 +48,12 @@ class Amethyst:
     looper = LoopHandler()
 
     def __init__(self):
-        self.version = 'v7.2'
-        self.system_logs: list[dict] = []
-        self.previous_system_log = {'time': f"{datetime.now()}",
-                                    'ram_used': 0,
-                                    'ram_total': 0,
-                                    'ram_percentage': 0,
-                                    'cpu_percent': 0}
+        self.version = 'v7.4'
+        self.system_log = {'time': f"{datetime.now()}",
+                           'ram_used': 0,
+                           'ram_total': 0,
+                           'ram_percentage': 0,
+                           'cpu_percent': 0}
 
         with open('amethystdata.json', 'r') as f:
             self.data = json.load(f)
@@ -108,31 +107,17 @@ class Amethyst:
     @looper.loop_task("System Logger")
     async def system_log_loop(self):
         log("looper", "Starting Amethyst System Logger...")
-        with open("./system_usage.json", "r+") as usage_file:
-            self.system_logs = json.load(usage_file)
-            while True:
-                ram_usage = psutil.virtual_memory()
-                cpu_usage = psutil.cpu_percent(None)
-                self.system_logs.append({'time': f"{datetime.now()}",
-                                         'ram_used': ram_usage.used,
-                                         'ram_total': ram_usage.total,
-                                         'ram_percentage': ram_usage.percent,
-                                         'cpu_percent': cpu_usage,
-                                         'online_players': len(self.server.online)})
+        while True:
+            ram_usage = psutil.virtual_memory()
+            cpu_usage = psutil.cpu_percent(None)
+            self.system_log = {'time': f"{datetime.now()}",
+                               'ram_used': ram_usage.used,
+                               'ram_total': ram_usage.total,
+                               'ram_percentage': ram_usage.percent,
+                               'cpu_percent': cpu_usage,
+                               'online_players': len(self.server.online)}
 
-                if len(self.system_logs) > 140000:
-                    log('looper', 'Truncating system logs to 120000')
-                    copy_logs = deepcopy(self.system_logs)
-                    copy_logs.reverse()
-                    copy_logs = copy_logs[0:120000]
-                    copy_logs.reverse()
-                    self.system_logs = copy_logs
-
-                usage_file.seek(0)
-                json.dump(self.system_logs, usage_file, indent=4)
-                usage_file.truncate()
-
-                await asyncio.sleep(10)
+            await asyncio.sleep(10)
 
     @looper.loop_task("Restart Handler")
     async def restart_loop(self):
@@ -170,33 +155,27 @@ class Amethyst:
 
         while True:
             if self.server.status[0] == "server_crashed" and not self.server.running():
-                log('nexus responder', 'Responding to server crash...')
+                log('amethyst responder', 'Responding to server crash...')
                 self.server.set_status("responding_to_crash")
 
-                system_logs: list[dict] = deepcopy(self.system_logs)
-                system_logs.reverse()
+                log('amethyst responder', 'Sending last log:')
 
-                increase = system_logs[0]['ram_percentage'] - self.previous_system_log['ram_percentage']
-
-                try:
-                    log_index = system_logs.index(self.previous_system_log)
-                except ValueError:
-                    log_index = 12
-
-                log('nexus responder', 'Sending last minute of logs:')
-
-                for syslog in system_logs[0:log_index]:
-                    log('nexus responder', f'{syslog}')
-
-                log('nexus responder', f"Current Percent: {system_logs[0]['ram_percentage']}, "
-                                       f"Previous Percent: {self.previous_system_log['ram_percentage']}, "
-                                       f"Increase: {increase}")
+                log('amethyst responder', f'{self.system_log}')
 
                 await asyncio.sleep(20)
                 await self.start_server('started_by_system')
 
             elif self.server.status[0] == "system_clearance" and self.server.running():
-                log('nexus responder', 'Regular server restart in progress...')
+                log('amethyst responder', 'Regular server restart in progress...')
+
+                async with httpx.AsyncClient() as client:
+                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
+                                      json={'type': 'crash',
+                                            'content': '',
+                                            'embed_title': 'Regular Server Restart',
+                                            'embed_content': 'Server will restart in 60 seconds. Use `/online` to check status.',
+                                            'name': 'Amethyst'})
+
                 await self.server.send_announce('The server will restart in §l§e60 seconds§r')
                 await self.server.send_message('§e[Server Restart]§r All players will be §4kicked§r before server restart. '
                                                'You do not have to leave and §5will not lose any progress.§r')
@@ -204,6 +183,15 @@ class Amethyst:
                                                'Remember to use /online to check the status of the server.')
                 await asyncio.sleep(30)
                 await self.server.send_announce('The server will restart in §l§e30 seconds§r')
+
+                async with httpx.AsyncClient() as client:
+                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
+                                      json={'type': 'crash',
+                                            'content': '',
+                                            'embed_title': 'Regular Server Restart',
+                                            'embed_content': 'Server will restart in 30 seconds. Use `/online` to check status.',
+                                            'name': 'Amethyst'})
+
                 await asyncio.sleep(25)
                 await self.server.send_announce('All players will now be kicked')
                 for i in self.server.online:
@@ -217,11 +205,23 @@ class Amethyst:
                 await self.start_server('started_by_system')
 
             elif self.server.status[0] == "preemption":
-                log('nexus responder', 'Preemption response in progress...')
+                log('amethyst responder', 'Preemption response in progress...')
+
+                async with httpx.AsyncClient() as client:
+                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
+                                      json={'type': 'crash',
+                                            'content': '',
+                                            'embed_title': 'Server Preemption',
+                                            'embed_content': 'Amethyst is expecting a server preemption and is shutting down '
+                                                             'to avoid world corruption.\n'
+                                                             'Thorny will also be down during this time. '
+                                                             'Use `/ping` to check status.',
+                                            'name': 'Amethyst'})
+
                 await self.server.send_announce('The server will restart in §l§e5 seconds§r')
                 await self.server.send_message('§e[Server Restart]§r All players will be §4kicked§r before server restart. '
                                                'You do not have to leave and §5will not lose any progress.§r')
-                await self.server.send_message('§e[Server Restart]§r Amethyst is expecting a server crash and is shutting down '
+                await self.server.send_message('§e[Server Restart]§r Amethyst is expecting a preemption and is shutting down '
                                                'to avoid world corruption.')
                 await self.server.send_message('§e[Server Restart]§r Thorny will be down as well during this time. Use '
                                                '/ping to check status')
@@ -369,11 +369,11 @@ class BedrockServer:
 
     server: asyncio.subprocess.Process
 
-    def __init__(self, config: dict, nexus_data: dict):
+    def __init__(self, config: dict, amethyst_data: dict):
         self.start: datetime = datetime.now().replace(microsecond=0)
         self.status: list[str] = ['not_running']
         self.config = config
-        self.data = nexus_data
+        self.data = amethyst_data
         self.version: str = self.data['last_loaded_version']
         self.update = None
         self.discord_guild_id: int = self.config['discord_guild_id']
@@ -443,35 +443,38 @@ class BedrockServer:
 
                 soup = BeautifulSoup(server_download_site.text, 'html.parser')
                 link = str(soup.find("a",
-                                     href=re.compile("https://minecraft.azureedge.net/bin-linux/bedrock-server")).get('href'))
+                                     href=re.compile("https://www.minecraft.net/bedrockdedicatedserver/bin-linux/")).get('href'))
 
                 if self.version not in link:
-                    proc = await asyncio.create_subprocess_shell(
-                        f"curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip && "
-                        f"unzip -o server/temp.zip -d server/new_server && "
-                        f"cp -r server/1.19.1/worlds server/new_server/ &&"
-                        f"cp server/1.19.1/allowlist.json server/new_server/ &&"
-                        f"cp server/1.19.1/server.properties server/new_server/ &&"
-                        f"cp server/1.19.1/permissions.json server/new_server/ &&"
-                        f"cp -r server/1.19.1/config server/new_server/ &&"
-                        f"cp -a server/1.19.1/. server/1.19.1-old/ &&"
-                        f"rm -r server/1.19.1/* &&"
-                        f"cp -a server/new_server/. server/1.19.1/",
-                        stdin=asyncio.subprocess.PIPE,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.STDOUT,
-                    )
-                    while True:
-                        line = await proc.stdout.readline()
-                        line = line.decode().rstrip()
-                        if line == '':
-                            log('debug', f'Aborting  due to EOL')
-                            break
-                        log('debug', f'{line}')
-
-                    log('server', f"Server updated according to the link: {link}")
-
-                    self.update = link.split('-')[3].split('.zip')[0]
+                    log('warning', 'I have found a new Minecraft Update. '
+                                   'Amethyst Auto-Updater is temporarily DISABLED. '
+                                   'You must manually update the server to the latest version! ')
+                    # proc = await asyncio.create_subprocess_shell(
+                    #     f"curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip && "
+                    #     f"unzip -o server/temp.zip -d server/new_server && "
+                    #     f"cp -r server/1.19.1/worlds server/new_server/ &&"
+                    #     f"cp server/1.19.1/allowlist.json server/new_server/ &&"
+                    #     f"cp server/1.19.1/server.properties server/new_server/ &&"
+                    #     f"cp server/1.19.1/permissions.json server/new_server/ &&"
+                    #     f"cp -r server/1.19.1/config server/new_server/ &&"
+                    #     f"cp -a server/1.19.1/. server/1.19.1-old/ &&"
+                    #     f"rm -r server/1.19.1/* &&"
+                    #     f"cp -a server/new_server/. server/1.19.1/",
+                    #     stdin=asyncio.subprocess.PIPE,
+                    #     stdout=asyncio.subprocess.PIPE,
+                    #     stderr=asyncio.subprocess.STDOUT,
+                    # )
+                    # while True:
+                    #     line = await proc.stdout.readline()
+                    #     line = line.decode().rstrip()
+                    #     if line == '':
+                    #         log('debug', f'Aborting  due to EOL')
+                    #         break
+                    #     log('debug', f'{line}')
+                    #
+                    # log('server', f"Server updated according to the link: {link}")
+                    #
+                    # self.update = link.split('-')[3].split('.zip')[0]
 
                 elif self.version in link:
                     self.update = None
@@ -668,10 +671,40 @@ class BedrockServer:
 
             elif "Quit correctly" in line:
                 yield line
+
+                async with httpx.AsyncClient() as client:
+                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
+                                      json={'type': 'stop',
+                                            'content': '',
+                                            'embed_title': 'Server Stop',
+                                            'embed_content': "The server has stopped. Please be patient, it'll be back up soon!",
+                                            'name': 'Amethyst'})
+                
                 raise errors.UserRequestedStop()
+
+            elif "Server started" in line:
+                yield line
+
+                async with httpx.AsyncClient() as client:
+                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
+                                      json={'type': 'start',
+                                            'content': '',
+                                            'embed_title': 'Server Start',
+                                            'embed_content': 'The server is up and ready for playing!',
+                                            'name': 'Amethyst'})
 
             elif line in ["Killed", "Crash"]:
                 yield line
+
+                async with httpx.AsyncClient() as client:
+                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
+                                      json={'type': 'crash',
+                                            'content': '<@&668091613687316500>',
+                                            'embed_title': 'Server Crash Report',
+                                            'embed_content': 'An unexpected crash occurred. '
+                                                             'Please check that the world is fine and not corrupted before making progress!',
+                                            'name': 'Amethyst'})
+
                 raise errors.ServerCrash()
 
             elif line == "":

@@ -24,8 +24,8 @@ RUN pip install -r /requirements.txt
 
 SHELL ["/bin/bash", "-c"]
 
-RUN echo "Installing AWS CLI for backups to s3"
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip && sudo ./aws/install
+#RUN echo "Installing AWS CLI for backups to s3"
+#RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip && sudo ./aws/install
 RUN echo "Installing gcloud CLI for backups to gcloud"
 RUN curl -O "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-437.0.1-linux-x86_64.tar.gz"  \
     && tar -xf google-cloud-cli-437.0.1-linux-x86_64.tar.gz \

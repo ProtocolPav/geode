@@ -48,7 +48,7 @@ class Amethyst:
     looper = LoopHandler()
 
     def __init__(self):
-        self.version = 'v7.4'
+        self.version = 'v7.5'
         self.system_log = {'time': f"{datetime.now()}",
                            'ram_used': 0,
                            'ram_total': 0,
@@ -138,10 +138,10 @@ class Amethyst:
                                            f'(running:{self.server.running()}, status:{self.server.status[0]}, '
                                            f'status_check:{self.server.status_check()})')
 
-            elif restart_config['mode'] != 'default' and self.server.running():
-                log('restart handler', 'Restart handler is disabled. Checking again in 6 hours.')
-                log('end of support', 'From v7.0 onwards, Smart restart mode is no longer supported.')
-                await asyncio.sleep(21600)
+            elif restart_config['mode'] != 'default':
+                log('restart handler', 'Restart handler is disabled. To enable, edit the config file '
+                                       'and restart Amethyst.')
+                break
 
             elif not self.server.running():
                 log('restart handler', 'Waiting for server to go online...')
@@ -262,14 +262,6 @@ class Amethyst:
                         await asyncio.sleep(backup_interval)
             else:
                 await asyncio.sleep(1600)
-
-    @looper.loop_task("Config Reloader Loop")
-    async def config_reloader(self):
-        log('looper', 'Starting up Config Reloader')
-        while True:
-            log('core', 'Updating config file')
-            self.config = self.load_config_file()
-            await asyncio.sleep(1200)
 
     @looper.loop_task("Message Scheduler Loop")
     async def message_scheduler(self):
@@ -446,35 +438,41 @@ class BedrockServer:
                                      href=re.compile("https://www.minecraft.net/bedrockdedicatedserver/bin-linux/")).get('href'))
 
                 if self.version not in link:
-                    log('warning', 'I have found a new Minecraft Update. '
-                                   'Amethyst Auto-Updater is temporarily DISABLED. '
-                                   'You must manually update the server to the latest version! ')
-                    # proc = await asyncio.create_subprocess_shell(
-                    #     f"curl -H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip && "
-                    #     f"unzip -o server/temp.zip -d server/new_server && "
-                    #     f"cp -r server/1.19.1/worlds server/new_server/ &&"
-                    #     f"cp server/1.19.1/allowlist.json server/new_server/ &&"
-                    #     f"cp server/1.19.1/server.properties server/new_server/ &&"
-                    #     f"cp server/1.19.1/permissions.json server/new_server/ &&"
-                    #     f"cp -r server/1.19.1/config server/new_server/ &&"
-                    #     f"cp -a server/1.19.1/. server/1.19.1-old/ &&"
-                    #     f"rm -r server/1.19.1/* &&"
-                    #     f"cp -a server/new_server/. server/1.19.1/",
-                    #     stdin=asyncio.subprocess.PIPE,
-                    #     stdout=asyncio.subprocess.PIPE,
-                    #     stderr=asyncio.subprocess.STDOUT,
-                    # )
-                    # while True:
-                    #     line = await proc.stdout.readline()
-                    #     line = line.decode().rstrip()
-                    #     if line == '':
-                    #         log('debug', f'Aborting  due to EOL')
-                    #         break
-                    #     log('debug', f'{line}')
-                    #
-                    # log('server', f"Server updated according to the link: {link}")
-                    #
-                    # self.update = link.split('-')[3].split('.zip')[0]
+                    log('server', 'I have found a new Minecraft Update. Updating now!')
+                    proc = await asyncio.create_subprocess_shell(
+                        f"curl -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:54.0) Gecko/20100101 Firefox/54.0' "
+                        f"-H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip &&"
+                        f"unzip -o server/temp.zip -d server/new_server &&"
+                        f"cp -r server/1.19.1/worlds server/new_server/ &&"
+                        f"cp server/1.19.1/allowlist.json server/new_server/ &&"
+                        f"cp server/1.19.1/server.properties server/new_server/ &&"
+                        f"cp server/1.19.1/permissions.json server/new_server/ &&"
+                        f"cp -r server/1.19.1/config server/new_server/ &&"
+                        f"cp -a server/1.19.1/. server/1.19.1-old/ &&"
+                        f"rm -r server/1.19.1/* &&"
+                        f"cp -a server/new_server/. server/1.19.1/",
+                        stdin=asyncio.subprocess.PIPE,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.STDOUT,
+                    )
+                    while True:
+                        line = await proc.stdout.readline()
+                        line = line.decode().rstrip()
+                        if line == '':
+                            log('debug', f'Aborting  due to EOL')
+                            break
+                        # log('debug', f'{line}')
+
+                    log('server', f"Server updated according to the link: {link}")
+
+                    self.update = link.split('-')[3].split('.zip')[0]
+
+                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
+                                      json={'type': 'other',
+                                            'content': '',
+                                            'embed_title': 'Server Update!',
+                                            'embed_content': f"Great news! Server's been updated to {self.update}",
+                                            'name': 'Amethyst'})
 
                 elif self.version in link:
                     self.update = None

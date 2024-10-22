@@ -138,10 +138,10 @@ class Amethyst:
                                            f'(running:{self.server.running()}, status:{self.server.status[0]}, '
                                            f'status_check:{self.server.status_check()})')
 
-            elif restart_config['mode'] != 'default' and self.server.running():
-                log('restart handler', 'Restart handler is disabled. Checking again in 6 hours.')
-                log('end of support', 'From v7.0 onwards, Smart restart mode is no longer supported.')
-                await asyncio.sleep(21600)
+            elif restart_config['mode'] != 'default':
+                log('restart handler', 'Restart handler is disabled. To enable, edit the config file '
+                                       'and restart Amethyst.')
+                break
 
             elif not self.server.running():
                 log('restart handler', 'Waiting for server to go online...')
@@ -262,14 +262,6 @@ class Amethyst:
                         await asyncio.sleep(backup_interval)
             else:
                 await asyncio.sleep(1600)
-
-    @looper.loop_task("Config Reloader Loop")
-    async def config_reloader(self):
-        log('looper', 'Starting up Config Reloader')
-        while True:
-            log('core', 'Updating config file')
-            self.config = self.load_config_file()
-            await asyncio.sleep(1200)
 
     @looper.loop_task("Message Scheduler Loop")
     async def message_scheduler(self):

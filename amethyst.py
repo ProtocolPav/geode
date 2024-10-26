@@ -277,6 +277,14 @@ class Amethyst:
                     else:
                         header = "§e+=+=+=+=+=+=+ Server Message +=+=+=+=+=+=+§r\\n"
                         await self.server.send_message(f"{header}{message['content']}")
+
+                        async with httpx.AsyncClient() as client:
+                            await client.post('http://nexuscore:8000/api/v0.1/events/relay',
+                                              json={'type': 'other',
+                                                    'content': '',
+                                                    'embed_title': 'Server Message',
+                                                    'embed_content': f"{message['content']}'",
+                                                    'name': 'Amethyst'})
             except IndexError:
                 pass
 
@@ -688,7 +696,9 @@ class BedrockServer:
                                       json={'type': 'start',
                                             'content': '',
                                             'embed_title': 'Server Start',
-                                            'embed_content': 'The server is up and ready for playing!',
+                                            'embed_content': 'The server is up and ready for playing!\n'
+                                                             "**Help us!** *Didn't see a server **STOP** "
+                                                             "message before this? Report it by pinging a CM!*",
                                             'name': 'Amethyst'})
 
             elif line in ["Killed", "Crash"]:

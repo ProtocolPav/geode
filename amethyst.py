@@ -48,7 +48,7 @@ class Amethyst:
     looper = LoopHandler()
 
     def __init__(self):
-        self.version = 'v7.5'
+        self.version = 'v7.5-minimal'
         self.system_log = {'time': f"{datetime.now()}",
                            'ram_used': 0,
                            'ram_total': 0,
@@ -168,14 +168,6 @@ class Amethyst:
             elif self.server.status[0] == "system_clearance" and self.server.running():
                 log('amethyst responder', 'Regular server restart in progress...')
 
-                async with httpx.AsyncClient() as client:
-                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
-                                      json={'type': 'crash',
-                                            'content': '',
-                                            'embed_title': 'Regular Server Restart',
-                                            'embed_content': 'Server will restart in 60 seconds. Use `/online` to check status.',
-                                            'name': 'Amethyst'})
-
                 await self.server.send_announce('The server will restart in §l§e60 seconds§r')
                 await self.server.send_message('§e[Server Restart]§r All players will be §4kicked§r before server restart. '
                                                'You do not have to leave and §5will not lose any progress.§r')
@@ -183,14 +175,6 @@ class Amethyst:
                                                'Remember to use /online to check the status of the server.')
                 await asyncio.sleep(30)
                 await self.server.send_announce('The server will restart in §l§e30 seconds§r')
-
-                async with httpx.AsyncClient() as client:
-                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
-                                      json={'type': 'crash',
-                                            'content': '',
-                                            'embed_title': 'Regular Server Restart',
-                                            'embed_content': 'Server will restart in 30 seconds. Use `/online` to check status.',
-                                            'name': 'Amethyst'})
 
                 await asyncio.sleep(25)
                 await self.server.send_announce('All players will now be kicked')
@@ -206,17 +190,6 @@ class Amethyst:
 
             elif self.server.status[0] == "preemption":
                 log('amethyst responder', 'Preemption response in progress...')
-
-                async with httpx.AsyncClient() as client:
-                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
-                                      json={'type': 'crash',
-                                            'content': '',
-                                            'embed_title': 'Server Preemption',
-                                            'embed_content': 'Amethyst is expecting a server preemption and is shutting down '
-                                                             'to avoid world corruption.\n'
-                                                             'Thorny will also be down during this time. '
-                                                             'Use `/ping` to check status.',
-                                            'name': 'Amethyst'})
 
                 await self.server.send_announce('The server will restart in §l§e5 seconds§r')
                 await self.server.send_message('§e[Server Restart]§r All players will be §4kicked§r before server restart. '
@@ -467,13 +440,6 @@ class BedrockServer:
 
                     self.update = link.split('-')[3].split('.zip')[0]
 
-                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
-                                      json={'type': 'other',
-                                            'content': '',
-                                            'embed_title': 'Server Update!',
-                                            'embed_content': f"Great news! Server's been updated to {self.update}",
-                                            'name': 'Amethyst'})
-
                 elif self.version in link:
                     self.update = None
 
@@ -519,10 +485,6 @@ class BedrockServer:
             while not sent_successfully:
                 try:
                     log('server', 'Disconnecting all currently online players')
-                    online = await client.get(f"http://nexuscore:8000/api/v0.1/guilds/{self.discord_guild_id}/online")
-                    for user in online.json()['users']:
-                        await client.post(f"http://nexuscore:8000/api/v0.1/events/connection",
-                                          json={'type': 'disconnect', 'thorny_id': user['thorny_id']})
                     sent_successfully = True
 
                 except httpx.TimeoutException:
@@ -669,39 +631,15 @@ class BedrockServer:
 
             elif "Quit correctly" in line:
                 yield line
-
-                async with httpx.AsyncClient() as client:
-                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
-                                      json={'type': 'stop',
-                                            'content': '',
-                                            'embed_title': 'Server Stop',
-                                            'embed_content': "The server has stopped. Please be patient, it'll be back up soon!",
-                                            'name': 'Amethyst'})
                 
                 raise errors.UserRequestedStop()
 
             elif "Server started" in line:
                 yield line
 
-                async with httpx.AsyncClient() as client:
-                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
-                                      json={'type': 'start',
-                                            'content': '',
-                                            'embed_title': 'Server Start',
-                                            'embed_content': 'The server is up and ready for playing!',
-                                            'name': 'Amethyst'})
 
             elif line in ["Killed", "Crash"]:
                 yield line
-
-                async with httpx.AsyncClient() as client:
-                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
-                                      json={'type': 'crash',
-                                            'content': '<@&668091613687316500>',
-                                            'embed_title': 'Server Crash Report',
-                                            'embed_content': 'An unexpected crash occurred. '
-                                                             'Please check that the world is fine and not corrupted before making progress!',
-                                            'name': 'Amethyst'})
 
                 raise errors.ServerCrash()
 

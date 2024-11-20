@@ -1,4 +1,3 @@
-import httpx
 from sanic import Sanic, Request
 from sanic.response import json, text
 from datetime import datetime, timedelta

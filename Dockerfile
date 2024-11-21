@@ -19,8 +19,8 @@ RUN if test -f "server/1.19.1/bedrock_server"; then \
         && curl -H 'Cache-Control: no-cache, no-store' https://minecraft.azureedge.net/bin-linux/bedrock-server-1.19.1.01.zip --output server/bds.zip && ls -la && unzip server/bds.zip -d server/1.19.1 ;  \
     fi
 
-COPY requirements.txt /requirements.txt
-RUN pip install -r /requirements.txt
+COPY requirements.txt amethyst/requirements.txt
+RUN pip install -r amethyst/requirements.txt
 
 SHELL ["/bin/bash", "-c"]
 
@@ -48,4 +48,5 @@ EXPOSE 19132/udp
 EXPOSE 19133/tcp
 EXPOSE 19133/udp
 
-
+ENV PYTHONPATH "${PYTHONPATH}:/amethyst/"
+WORKDIR amethyst

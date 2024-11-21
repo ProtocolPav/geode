@@ -1,0 +1,72 @@
+# Backup Configuration
+backup:
+  enabled: true
+  location: "local"  # Options: local, s3, gcloud
+  gcloud_api_key: ""  # Required if using gcloud
+  aws_credentials:  # Required if using s3
+    access_key: ""
+    secret_key: ""
+
+  hourly_backups:
+    frequency: 1
+    cloud_subdirectory: "hourly"
+
+  daily_backups:
+    enabled: true
+    hour: 2  # UTC hour when backup occurs (e.g., 2 = between 02:00 and 03:00)
+    cloud_subdirectory: "daily"
+
+  monthly_backups:
+    enabled: true
+    day: "start"  # Options: 'start', 'middle', 'end', or specific day (e.g., 15)
+    cloud_subdirectory: "monthly"
+
+  startup_backup: true
+  include_addons: true # Backup the addons that are on your world
+  include_server_files: true # Backup server files like server.properties and allowlist.json
+
+# WARNING: Ensure cloud credentials are set correctly to avoid backup failures.
+
+# Discord Relay Configuration
+discord_relay:
+  nexuscore_api_key: ""
+  relay_events:
+    server_start_stop: true
+    server_crashes: true
+    player_joins_leaves: true
+    player_deaths: true
+    chat: true
+    quest_completion: true
+    backups: true
+    server_messages: true
+
+# Amethyst Addon Configuration
+amethyst_addon:
+  enable: true
+  world_border: # Players outside world border get inflicted with damage
+    enabled: true
+    overworld_radius: 2000
+    nether_radius: 2500
+    end_radius: 500
+  elytra_remove_mending: true # Replaces Mending with Curse of Vanishing on elytras
+  interactions_logging: true # Log interactions for statistics in Discord
+
+# Restart Configuration
+restarts:
+  enabled: true
+  interval_hours: 72 # Frequent restarts may disrupt gameplay. Adjust interval based on server activity.
+
+# Update Configuration
+updates:
+  auto_update_on_start: true
+  auto_update_if_empty: true # If server is empty for 20 minutes and updates are available, apply them
+
+# Maintenance Mode Configuration
+maintenance:
+  allowed_players: # Choose gamertags which are not OP to be allowed during maintenance mode
+    - "Player1"
+    - "Player2"
+
+# Rollback Configuration
+rollbacks:
+  auto_rollback_on_crash: true  # WARNING: May cause loss of progress since the last backup.

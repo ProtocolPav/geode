@@ -1,3 +1,4 @@
+websockets==10.0
 sanic==22.9.0
 httpx==0.23.0
 bs4==0.0.1
@@ -6,3 +7,6 @@ psutil==5.9.5
 pyyaml==6.0.1
 demoji==1.1.0
 click==8.1.7
+google-cloud-storage==2.18.2
+boto3==1.35.65
+rich==13.9.4

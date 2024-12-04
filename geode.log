@@ -1,0 +1,86 @@
+[38;5;240mMain [1000D[5C 2024-12-04 08:08:52 +0000 [0mINFO: [1000D[42C[KGeode is starting...
+[38;5;240mMain [1000D[5C 2024-12-04 08:08:52 +0000 [0mINFO: [1000D[42C[KRunning Geode [34mv1.0[0m
+[38;5;240mMain [1000D[5C 08:08:52 [0mINFO: [1000D[23C[K
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │                             Sanic v24.6.0                              │
+  │                    Goin' Fast @ http://0.0.0.0:8000                    │
+  ├───────────────────────┬────────────────────────────────────────────────┤
+  │ [48;2;255;13;104m                     [0m │      app: bedrock_server_app                   │
+  │ [38;2;255;255;255;48;2;255;13;104m    ▄███ █████ ██    [0m │     mode: debug, single worker                 │
+  │ [38;2;255;255;255;48;2;255;13;104m   ██                [0m │   server: sanic, HTTP/1.1                      │
+  │ [38;2;255;255;255;48;2;255;13;104m    ▀███████ ███▄    [0m │   python: 3.12.3                               │
+  │ [38;2;255;255;255;48;2;255;13;104m                ██   [0m │ platform: Linux-5.15.146.1-microsoft-standard- │
+  │ [38;2;255;255;255;48;2;255;13;104m   ████ ████████▀    [0m │           WSL2-x86_64-with-glibc2.39           │
+  │ [48;2;255;13;104m                     [0m │ packages: sanic-routing==23.12.0               │
+  │ Build Fast. Run Fast. │                                                │
+  └───────────────────────┴────────────────────────────────────────────────┘
+
+[38;5;240mMain [1000D[5C 2024-12-04 08:08:52 +0000 [0mINFO: [1000D[42C[KGeode is starting...
+[38;5;240mMain [1000D[5C 2024-12-04 08:08:52 +0000 [0mINFO: [1000D[42C[KRunning Geode [34mv1.0[0m
+[38;5;240mMain [1000D[5C 08:08:52 [0m[34mDEBUG[0m: [1000D[23C[KCreating multiprocessing context using 'spawn'
+[38;5;240mMain [1000D[5C 08:08:52 [0m[34mDEBUG[0m: [1000D[23C[K[34mStarting a process: [1m[38;2;255;13;104mSanic-Server-0-0[0m
+[38;5;240mSrv 0[1000D[5C 2024-12-04 08:08:52 +0000 [0mINFO: [1000D[42C[KGeode is starting...
+[38;5;240mSrv 0[1000D[5C 2024-12-04 08:08:52 +0000 [0mINFO: [1000D[42C[KRunning Geode [34mv1.0[0m
+[38;5;240mSrv 0[1000D[5C 08:08:52 [0m[34mDEBUG[0m: [1000D[23C[K[34mProcess ack: [1m[38;2;255;13;104mSanic-Server-0-0 [34m[16][0m
+[38;5;240mSrv 0[1000D[5C 08:09:02 [0m[34mDEBUG[0m: [1000D[23C[KCreated BedrockServer process PID19
+[38;5;240mSrv 0[1000D[5C 08:09:04 [0mINFO: [1000D[23C[KStarting Server
+[38;5;240mSrv 0[1000D[5C 08:09:04 [0mINFO: [1000D[23C[KVersion: 1.21.44.01
+[38;5;240mSrv 0[1000D[5C 08:09:04 [0mINFO: [1000D[23C[KSession ID: 8add4f20-d929-4562-acdd-9b9b2205df8a
+[38;5;240mSrv 0[1000D[5C 08:09:04 [0mINFO: [1000D[23C[KBuild ID: 28939337
+[38;5;240mSrv 0[1000D[5C 08:09:04 [0mINFO: [1000D[23C[KBranch: r/21_u4
+[38;5;240mSrv 0[1000D[5C 08:09:04 [0mINFO: [1000D[23C[KCommit ID: ba679b04477907df14dcaa5c85dca16b6fd0afaf
+[38;5;240mSrv 0[1000D[5C 08:09:04 [0mINFO: [1000D[23C[KConfiguration: Publish
+[38;5;240mSrv 0[1000D[5C 08:09:04 [0mINFO: [1000D[23C[KLevel Name: Bedrock level
+[38;5;240mSrv 0[1000D[5C 08:09:04 [0mINFO: [1000D[23C[KNo CDN config file found for dedicated server
+[38;5;240mSrv 0[1000D[5C 08:09:04 [0mINFO: [1000D[23C[KGame mode: 0 Survival
+[38;5;240mSrv 0[1000D[5C 08:09:04 [0mINFO: [1000D[23C[KDifficulty: 1 EASY
+[38;5;240mSrv 0[1000D[5C 08:09:04 [0mINFO: [1000D[23C[KContent logging to console is enabled.
+[38;5;240mSrv 0[1000D[5C 08:09:15 [0mINFO: [1000D[23C[KExperiment(s) active: gtst, ddi_
+[38;5;240mSrv 0[1000D[5C 08:09:15 [0mINFO: [1000D[23C[KOpening level 'worlds/Bedrock level/db'
+[38;5;240mSrv 0[1000D[5C 08:09:16 [0mINFO: [1000D[23C[K[SERVER] Pack Stack - [00][Amethyst Connect Behaviour Pack] [packid_ver][5f5ab0ea-79f8-4d1c-b283-0b7d05a538a9_2.0.0] [path][worlds/Bedrock level/behavior_packs/behaviour_pack]
+[38;5;240mSrv 0[1000D[5C 08:09:24 [0mINFO: [1000D[23C[KIPv4 supported, port: 19132: Used for gameplay and LAN discovery
+[38;5;240mSrv 0[1000D[5C 08:09:24 [0mINFO: [1000D[23C[KIPv6 supported, port: 19133: Used for gameplay
+[38;5;240mSrv 0[1000D[5C 08:09:25 [0mINFO: [1000D[23C[KServer started.
+[38;5;240mSrv 0[1000D[5C 08:09:25 [0mINFO: [1000D[23C[K================ TELEMETRY MESSAGE ===================
+[38;5;240mSrv 0[1000D[5C 08:09:25 [0mINFO: [1000D[23C[KServer Telemetry is currently not enabled.
+[38;5;240mSrv 0[1000D[5C 08:09:25 [0mINFO: [1000D[23C[KEnabling this telemetry helps us improve the game.
+[38;5;240mSrv 0[1000D[5C 08:09:25 [0mINFO: [1000D[23C[KTo enable this feature, add the line 'emit-server-telemetry=true'
+[38;5;240mSrv 0[1000D[5C 08:09:25 [0mINFO: [1000D[23C[Kto the server.properties file in the handheld/src-server directory
+[38;5;240mSrv 0[1000D[5C 08:09:25 [0mINFO: [1000D[23C[K======================================================
+[38;5;240mSrv 0[1000D[5C 08:09:25 [0mINFO: [1000D[23C[K[Scripting] [Loops] Loaded Elytra Checker Loop
+[38;5;240mSrv 0[1000D[5C 08:09:25 [0mINFO: [1000D[23C[K[Scripting] [Loops] Loaded World Border Loop
+[38;5;240mSrv 0[1000D[5C 08:09:25 [0mINFO: [1000D[23C[K[Scripting] [Loops] Loaded Quests Loop
+[38;5;240mSrv 0[1000D[5C 08:09:25 [0mINFO: [1000D[23C[K[Scripting] [Loops] Loaded Glitches Loop
+[38;5;240mSrv 0[1000D[5C 08:09:25 [0mINFO: [1000D[23C[K[Scripting] Component 'amethyst:glitch' was not registered in script but used on a block
+[38;5;240mMain [1000D[5C 08:10:32 [0mINFO: [1000D[23C[KReceived signal SIGTERM. Shutting down.
+[38;5;240mMain [1000D[5C 08:10:32 [0m[34mDEBUG[0m: [1000D[23C[K[34mTerminating a process: [1m[38;2;255;13;104mSanic-Server-0-0 [34m[16][0m
+[38;5;240mMain [1000D[5C 08:10:32 [0mINFO: [1000D[23C[KServer Stopped
+[38;5;240mMain [1000D[5C 08:10:32 [0m[34mDEBUG[0m: [1000D[23C[KA presto
+Main 2024-12-04 08:13:08 +0000 INFO: Geode is starting...
+[38;5;240mMain [1000D[5C 2024-12-04 08:13:08 +0000 [0mINFO: [1000D[42C[KRunning Geode [34mv1.0[0m
+[38;5;240mMain [1000D[5C 2024-12-04 08:13:08 +0000 [0mINFO: [1000D[42C[K
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │                             Sanic v24.6.0                              │
+  │                    Goin' Fast @ http://0.0.0.0:8000                    │
+  ├───────────────────────┬────────────────────────────────────────────────┤
+  │ [48;2;255;13;104m                     [0m │      app: bedrock_server_app                   │
+  │ [38;2;255;255;255;48;2;255;13;104m    ▄███ █████ ██    [0m │     mode: production, single worker            │
+  │ [38;2;255;255;255;48;2;255;13;104m   ██                [0m │   server: sanic, HTTP/1.1                      │
+  │ [38;2;255;255;255;48;2;255;13;104m    ▀███████ ███▄    [0m │   python: 3.12.3                               │
+  │ [38;2;255;255;255;48;2;255;13;104m                ██   [0m │ platform: Linux-5.15.146.1-microsoft-standard- │
+  │ [38;2;255;255;255;48;2;255;13;104m   ████ ████████▀    [0m │           WSL2-x86_64-with-glibc2.39           │
+  │ [48;2;255;13;104m                     [0m │ packages: sanic-routing==23.12.0               │
+  │ Build Fast. Run Fast. │                                                │
+  └───────────────────────┴────────────────────────────────────────────────┘
+
+[38;5;240mMain [1000D[5C 2024-12-04 08:13:09 +0000 [0mINFO: [1000D[42C[KGeode is starting...
+[38;5;240mMain [1000D[5C 2024-12-04 08:13:09 +0000 [0mINFO: [1000D[42C[KRunning Geode [34mv1.0[0m
+[38;5;240mMain [1000D[5C 2024-12-04 08:13:09 +0000 [0m[34m[34mDEBUG[0m[0m: [1000D[42C[KCreating multiprocessing context using 'spawn'
+[38;5;240mMain [1000D[5C 2024-12-04 08:13:09 +0000 [0m[34m[34mDEBUG[0m[0m: [1000D[42C[K[34mStarting a process: [1m[38;2;255;13;104mSanic-Server-0-0[0m
+[38;5;240mSrv 0[1000D[5C 2024-12-04 08:13:09 +0000 [0mINFO: [1000D[42C[KGeode is starting...
+[38;5;240mSrv 0[1000D[5C 2024-12-04 08:13:09 +0000 [0mINFO: [1000D[42C[KRunning Geode [34mv1.0[0m
+[38;5;240mSrv 0[1000D[5C 2024-12-04 08:13:09 +0000 [0m[34m[34mDEBUG[0m[0m: [1000D[42C[K[34mProcess ack: [1m[38;2;255;13;104mSanic-Server-0-0 [34m[16][0m
+[38;5;240mMain [1000D[5C 2024-12-04 08:13:15 +0000 [0mINFO: [1000D[42C[KReceived signal SIGTERM. Shutting down.
+[38;5;240mMain [1000D[5C 2024-12-04 08:13:15 +0000 [0m[34m[34mDEBUG[0m[0m: [1000D[42C[K[34mTerminating a process: [1m[38;2;255;13;104mSanic-Server-0-0 [34m[16][0m
+[38;5;240mMain [1000D[5C 2024-12-04 08:13:15 +0000 [0mINFO: [1000D[42C[KServer Stopped
+[38;5;240mMain [1000D[5C 2024-12-04 08:13:15 +0000 [0m[34m[34mDEBUG[0m[0m: [1000D[42C[KSee you later

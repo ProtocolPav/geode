@@ -166,7 +166,7 @@ class Amethyst:
                 log('amethyst responder', 'Regular server restart in progress...')
 
                 async with httpx.AsyncClient() as client:
-                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
+                    await client.post('http://localhost:8000/api/v0.1/events/relay',
                                       json={'type': 'crash',
                                             'content': '',
                                             'embed_title': 'Regular Server Restart',
@@ -182,7 +182,7 @@ class Amethyst:
                 await self.server.send_announce('The server will restart in §l§e30 seconds§r')
 
                 async with httpx.AsyncClient() as client:
-                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
+                    await client.post('http://localhost:8000/api/v0.1/events/relay',
                                       json={'type': 'crash',
                                             'content': '',
                                             'embed_title': 'Regular Server Restart',
@@ -205,7 +205,7 @@ class Amethyst:
                 log('amethyst responder', 'Preemption response in progress...')
 
                 async with httpx.AsyncClient() as client:
-                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
+                    await client.post('http://localhost:8000/api/v0.1/events/relay',
                                       json={'type': 'crash',
                                             'content': '',
                                             'embed_title': 'Server Preemption',
@@ -276,7 +276,7 @@ class Amethyst:
                         await self.server.send_message(f"{header}{message['content']}")
 
                         async with httpx.AsyncClient() as client:
-                            await client.post('http://nexuscore:8000/api/v0.1/events/relay',
+                            await client.post('http://localhost:8000/api/v0.1/events/relay',
                                               json={'type': 'other',
                                                     'content': '',
                                                     'embed_title': 'Server Message',
@@ -381,7 +381,7 @@ class BedrockServer:
         log('server', f'Last loaded version: {self.version}')
 
         prop_file = Properties()
-        prop_file.load(open("server/1.19.1/server.properties", 'rb'))
+        prop_file.load(open("../server/server.properties", 'rb'))
         self.server_properties = prop_file.properties
 
     def running(self) -> bool:
@@ -472,7 +472,7 @@ class BedrockServer:
 
                     self.update = link.split('-')[3].split('.zip')[0]
 
-                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
+                    await client.post('http://localhost:8000/api/v0.1/events/relay',
                                       json={'type': 'other',
                                             'content': '',
                                             'embed_title': 'Server Update!',
@@ -490,11 +490,12 @@ class BedrockServer:
         await self.check_for_updates()
 
         log('server', 'Starting server...')
-        self.server = await asyncio.create_subprocess_shell("cd server/1.19.1 && LD_LIBRARY_PATH=. ./bedrock_server",
+        self.server = await asyncio.create_subprocess_exec("./bedrock_server.exe",
                                                             stdin=asyncio.subprocess.PIPE,
                                                             stdout=asyncio.subprocess.PIPE,
                                                             stderr=asyncio.subprocess.STDOUT,
-                                                            limit= 1024 * 512
+                                                            limit= 1024 * 512,
+                                                            cwd='../server/'
                                                             )
         self.set_status(start_status)
         self.process_id = self.server.pid
@@ -524,9 +525,9 @@ class BedrockServer:
             while not sent_successfully:
                 try:
                     log('server', 'Disconnecting all currently online players')
-                    online = await client.get(f"http://nexuscore:8000/api/v0.1/guilds/{self.discord_guild_id}/online")
+                    online = await client.get(f"http://localhost:8000/api/v0.1/guilds/{self.discord_guild_id}/online")
                     for user in online.json()['users']:
-                        await client.post(f"http://nexuscore:8000/api/v0.1/events/connection",
+                        await client.post(f"http://localhost:8000/api/v0.1/events/connection",
                                           json={'type': 'disconnect', 'thorny_id': user['thorny_id']})
                     sent_successfully = True
 
@@ -676,20 +677,20 @@ class BedrockServer:
                 yield line
 
                 async with httpx.AsyncClient() as client:
-                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
+                    await client.post('http://localhost:8000/api/v0.1/events/relay',
                                       json={'type': 'stop',
                                             'content': '',
                                             'embed_title': 'Server Stop',
                                             'embed_content': "The server has stopped. Please be patient, it'll be back up soon!",
                                             'name': 'Amethyst'})
-                
+
                 raise errors.UserRequestedStop()
 
             elif "Server started" in line:
                 yield line
 
                 async with httpx.AsyncClient() as client:
-                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
+                    await client.post('http://localhost:8000/api/v0.1/events/relay',
                                       json={'type': 'start',
                                             'content': '',
                                             'embed_title': 'Server Start',
@@ -702,7 +703,7 @@ class BedrockServer:
                 yield line
 
                 async with httpx.AsyncClient() as client:
-                    await client.post('http://nexuscore:8000/api/v0.1/events/relay',
+                    await client.post('http://localhost:8000/api/v0.1/events/relay',
                                       json={'type': 'crash',
                                             'content': '<@&668091613687316500>',
                                             'embed_title': 'Server Crash Report',

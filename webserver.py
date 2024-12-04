@@ -1,12 +1,12 @@
 from sanic import Sanic, Request
 from sanic.response import json, text
+from sanic.log import LOGGING_CONFIG_DEFAULTS, Colors
 from datetime import datetime, timedelta
-from amethyst import Amethyst
 import asyncio
+from src import geode
 
 app = Sanic("bedrock_server_app")
-handler = Amethyst()
-
+handler = geode.Geode()
 
 @app.route('/<text_test:strorempty>')
 async def default(request: Request, text_test: str):
@@ -154,7 +154,8 @@ async def kick(request: Request, gamertag: str):
 @app.listener('after_server_start')
 async def init_core(application, loop: asyncio.AbstractEventLoop):
     await asyncio.sleep(10)
-    await handler.start_server('started_by_system')
+    await handler.start_server()
+    # await handler.start_server('started_by_system')
 
 
 @app.listener('before_server_stop')
@@ -163,4 +164,4 @@ async def stop_core(application, loop: asyncio.AbstractEventLoop):
     await asyncio.sleep(3)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", access_log=False)
+    app.run(host="0.0.0.0", access_log=False, debug=False)

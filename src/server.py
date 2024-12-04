@@ -2,8 +2,9 @@ import asyncio.subprocess
 import asyncio
 import platform
 from src import installation
+from pathlib import Path
 
-from sanic.log import logger
+from sanic.log import logger, Colors
 
 
 class BedrockServer:
@@ -35,9 +36,13 @@ class BedrockServer:
 
             if not line:
                 pass
-            elif "Quit correctly" in line:
+            elif "quit correctly" in line.lower():
                 logger.info(line)
                 break
+            elif "version" in line.lower():
+                logger.info(f'{Colors.BOLD}{Colors.SANIC}{line}{Colors.END}')
+                version_file = Path('../server/version.geode')
+                version_file.write_text(line.lower().split('version')[-1].partition(' ')[-1])
             else:
                 logger.info(line)
 

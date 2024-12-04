@@ -1,11 +1,9 @@
 import tempfile
 import httpx
-from rich.progress import BarColumn, DownloadColumn, Progress, TextColumn, TimeRemainingColumn, SpinnerColumn
-from rich.console import Console
 import zipfile
 from pathlib import Path
 import platform
-from sanic.log import logger
+from sanic.log import logger, Colors
 
 
 async def download():
@@ -31,35 +29,25 @@ async def download():
         logger.debug(f'Found link: {server_data["download_url"]}')
 
         async with client.stream('GET', server_data['download_url'], headers={'User-Agent': 'Geode/1.0 (Minecraft 1.12.1)'}) as response:
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                DownloadColumn(),
-                TimeRemainingColumn(),
-            ) as progress:
-                download_task = progress.add_task("[bold cyan]Downloading Bedrock Server...",
-                                                  total=server_data['size_in_bytes'])
+            size_in_MB = f'{Colors.GREY}{round(server_data["size_in_bytes"]/1000/1000, 1)}MB{Colors.END}'
+            logger.info(f'{Colors.BOLD}{Colors.BLUE}Downloading Bedrock Server...{Colors.END} | {size_in_MB}')
 
-                async for chunk in response.aiter_bytes(1024):
-                    progress.update(download_task, advance=len(chunk))
-                    file.write(chunk)
+            async for chunk in response.aiter_bytes(1024):
+                file.write(chunk)
 
-                progress.update(download_task, description="[bold blue]Downloaded!")
-                zip_file: zipfile.ZipFile
-                with zipfile.ZipFile(file) as zip_file:
-                    skip_items = ["allowlist.json", "permissions.json", "server.properties"]
-                    zip_size = sum([x.file_size for x in zip_file.infolist()])
+            zip_file: zipfile.ZipFile
+            with zipfile.ZipFile(file) as zip_file:
+                skip_items = ["allowlist.json", "permissions.json", "server.properties"]
+                zip_size = sum([x.file_size for x in zip_file.infolist()])
 
-                    install_task = progress.add_task("[bold cyan]Installing Bedrock Server...",
-                                                     total=zip_size)
+                size_in_MB = f'{Colors.GREY}{round(zip_size/1000/1000, 1)}MB{Colors.END}'
+                logger.info(f'{Colors.BOLD}{Colors.BLUE}Installing Bedrock Server...{Colors.END} | {size_in_MB}')
 
-                    for item in zip_file.infolist():
-                        logger.debug(f'Unzipping {item.filename}...')
-                        progress.update(install_task, advance=item.file_size)
-                        if item.filename in skip_items and (server_dir/item.filename).exists():
-                            logger.debug(f'Skipping {item.filename}')
+                for item in zip_file.infolist():
+                    logger.debug(f'{Colors.GREY}Unzipping {Colors.BOLD}{item.filename}...{Colors.END}')
+                    if item.filename in skip_items and (server_dir/item.filename).exists():
+                        logger.debug(f'Skipping {Colors.BOLD}{item.filename}{Colors.END}')
 
-                        zip_file.extract(item.filename, server_dir)
+                    zip_file.extract(item.filename, server_dir)
 
-                progress.update(install_task, description="[bold blue]Server Installed!")
+            logger.info(f'{Colors.BOLD}{Colors.CYAN}Server Version {version} Installed!{Colors.END} | {size_in_MB}')

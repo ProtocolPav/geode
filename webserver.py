@@ -164,4 +164,4 @@ async def stop_core(application, loop: asyncio.AbstractEventLoop):
     await asyncio.sleep(3)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", access_log=False, debug=False)
+    app.run(host="0.0.0.0", access_log=False, dev=True)

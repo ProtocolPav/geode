@@ -28,7 +28,7 @@ async def download():
         logger.debug(f'Found Minecraft Server version {version}')
         logger.debug(f'Found link: {server_data["download_url"]}')
 
-        async with client.stream('GET', server_data['download_url'], headers={'User-Agent': 'Geode/1.0 (Minecraft 1.12.1)'}) as response:
+        async with client.stream('GET', server_data['download_url'], headers={'User-Agent': 'Geode/1.0 (Minecraft)'}) as response:
             size_in_MB = f'{Colors.GREY}{round(server_data["size_in_bytes"]/1000/1000, 1)}MB{Colors.END}'
             logger.info(f'{Colors.BOLD}{Colors.BLUE}Downloading Bedrock Server...{Colors.END} | {size_in_MB}')
 
@@ -37,7 +37,7 @@ async def download():
 
             zip_file: zipfile.ZipFile
             with zipfile.ZipFile(file) as zip_file:
-                skip_items = ["allowlist.json", "permissions.json", "server.properties"]
+                skip_items = ["allowlist.json", "permissions.json", "server.properties", "config/default/permissions.json"]
                 zip_size = sum([x.file_size for x in zip_file.infolist()])
 
                 size_in_MB = f'{Colors.GREY}{round(zip_size/1000/1000, 1)}MB{Colors.END}'

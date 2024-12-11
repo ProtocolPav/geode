@@ -47,7 +47,7 @@ async def download():
                     logger.debug(f'{Colors.GREY}Unzipping {Colors.BOLD}{item.filename}...{Colors.END}')
                     if item.filename in skip_items and (server_dir/item.filename).exists():
                         logger.debug(f'Skipping {Colors.BOLD}{item.filename}{Colors.END}')
-
-                    zip_file.extract(item.filename, server_dir)
+                    else:
+                        zip_file.extract(item.filename, server_dir)
 
             logger.info(f'{Colors.BOLD}{Colors.CYAN}Server Version {version} Installed!{Colors.END} | {size_in_MB}')

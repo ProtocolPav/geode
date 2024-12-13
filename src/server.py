@@ -48,8 +48,7 @@ class BedrockServer:
 
     async def start(self):
         if not self.__process:
-            logger.debug(f'Checking for updates...')
-            await installation.download()
+            await installation.check_for_updates()
 
             self.__process = await asyncio.subprocess.create_subprocess_exec(
                 program=self.executable,

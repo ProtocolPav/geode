@@ -6,21 +6,30 @@ import platform
 from sanic.log import logger, Colors
 
 
-async def download():
+async def check_for_updates():
     server_dir = Path('../server/')
     server_dir.mkdir(parents=True, exist_ok=True)
     plat = platform.system().lower()
 
     if plat not in ['linux']:
         raise OSError('Geode only supports Debian-based Linux distributions, we advise you to run Geode via Docker.')
-    logger.debug(f'Platform: {plat} | Distribution: {platform.freedesktop_os_release()}')
+    logger.debug(f'Checking for updates...')
+    logger.debug(f'Platform: {plat}')
 
     client = httpx.AsyncClient()
     latest = await client.get("https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/versions.json")
     version = latest.json()[plat]['stable']
+    should_install = True
 
-    # Check if version should be installed. Separate the functions.
+    if (server_dir/'version.geode').exists() and (server_dir/'version.geode').read_text() == version:
+        should_install = False
 
+    if should_install:
+        await install(plat, version, client, server_dir)
+
+    logger.info('Server is up to date!')
+
+async def install(plat: str, version: str, client: httpx.AsyncClient, server_dir: Path):
     data_url = f"https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/{plat}/{version}.json"
     server_data = (await client.get(data_url)).json()
 

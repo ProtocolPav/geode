@@ -21,7 +21,7 @@ class BedrockServer:
         self.__process = None
 
     async def __send_command(self, command: str, sleep: int = 0):
-        logger.debug(f'Running Command [bold frame sandy_brown]{command}')
+        logger.debug(f'Running Command {Colors.BLUE}{command}{Colors.END}')
         self.__process.stdin.write(f'{command}\n'.encode())
         await self.__process.stdin.drain()
         await asyncio.sleep(sleep)
@@ -40,7 +40,7 @@ class BedrockServer:
                 logger.info(line)
                 break
             elif "version" in line.lower():
-                logger.info(f'{Colors.BOLD}{Colors.SANIC}{line}{Colors.END}')
+                logger.info(f'{Colors.BOLD}{Colors.PURPLE}{line}{Colors.END}')
                 version_file = Path('../server/version.geode')
                 version_file.write_text(line.lower().split('version')[-1].partition(' ')[-1])
             else:

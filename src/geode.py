@@ -14,7 +14,7 @@ class Geode:
         self.messages: list[dict] = []
 
         logger.info('Geode is starting...')
-        logger.info(f'Running Geode {Colors.BLUE}{self.version}{Colors.END}')
+        logger.info(f'Running Geode {Colors.PURPLE}{self.version}{Colors.END}')
         self.server: BedrockServer = BedrockServer()
 
     async def start_server(self):

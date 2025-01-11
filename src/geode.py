@@ -1,16 +1,18 @@
+import asyncio
+
+from src.handlers.loops import LoopHandler
 from src.server import BedrockServer
 from src.handlers.config import ConfigHandler
 
 from sanic.log import logger, Colors
 
 class Geode:
-    __looper: ...
-    __config: ConfigHandler
+    config: ConfigHandler = ConfigHandler()
+    __looper: LoopHandler = LoopHandler()
     __server: BedrockServer
 
     def __init__(self):
         self.version = 'v1.0'
-        self.__config = ConfigHandler()
         self.messages: list[dict] = []
 
         logger.info('Geode is starting...')
@@ -18,4 +20,11 @@ class Geode:
         self.server: BedrockServer = BedrockServer()
 
     async def start_server(self):
-        await self.server.start()
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(self.__looper.start_looper(self))
+            tg.create_task(self.server.start())
+
+    @__looper.loop('Backup Loop', 3600)
+    async def backup_loop(self):
+        if self.config['backup']['enabled']:
+            ...

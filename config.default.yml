@@ -8,7 +8,6 @@ backup:
     secret_key: ""
 
   hourly_backups:
-    frequency: 1
     cloud_subdirectory: "hourly"
 
   daily_backups:
@@ -18,7 +17,7 @@ backup:
 
   monthly_backups:
     enabled: true
-    day: "start"  # Options: 'start', 'middle', 'end', or specific day (e.g., 15)
+    day: "start"  # Options: 'start', 'middle', 'end', or specific day (e.g., 22)
     cloud_subdirectory: "monthly"
 
   startup_backup: true

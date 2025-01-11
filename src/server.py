@@ -66,5 +66,5 @@ class BedrockServer:
 
     async def stop(self):
         if self.__process:
-            # Disconnect all connected players
+            # TO ADD: Disconnect all connected players
             await self.__send_command('stop')

@@ -564,6 +564,8 @@ class BedrockServer:
             with open(destination_path, 'a') as f:
                 f.truncate(file_length)
 
+        await self.send_message('Map Update is in progress... Expect significantly decreased performance for up to 2 minutes.')
+
         # Update Map
         map_process = await asyncio.create_subprocess_shell(
             f"./unmined/unmined-cli web render "

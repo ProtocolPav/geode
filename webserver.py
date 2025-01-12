@@ -1,5 +1,5 @@
 import httpx
-from sanic import Sanic, Request
+from sanic import Sanic, Request, file
 from sanic.response import json, text
 from datetime import datetime, timedelta
 from amethyst import Amethyst
@@ -150,6 +150,10 @@ async def kick(request: Request, gamertag: str):
     gamertag = gamertag.replace("%20", " ")
     await handler.server.send_command(f'kick "{gamertag}"')
     return json(await server_response())
+
+@app.route('/map/<zoomlevel:int>/<regionx:int>/<regionz:int>/<x:int>/<z:int>')
+async def get_map(request: Request, zoomlevel: int, regionx: int, regionz: int, x: int, z: int):
+    return await file(f'unmined/map/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png')
 
 
 @app.listener('after_server_start')

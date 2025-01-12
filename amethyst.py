@@ -571,9 +571,9 @@ class BedrockServer:
             f"--output='./unmined/map' "
             f"--imageformat=png "
             f"--dimension=overworld "
-            f"--zoomin=5 "
-            f"--area='b((2100, 2100), (-2100, -2100))' "
-            f"--log-level=warning "
+            f"--zoomin=3 "
+            f"--area='b((2111, 2111), (-2112, -2112))' "
+            f"--log-level=error "
             f"--shadows=3d "
             f"--mapsettings='./unmined/config/Everthorn.json'",
             stdin=asyncio.subprocess.PIPE,
@@ -586,17 +586,12 @@ class BedrockServer:
             while True:
                 line = await process.stdout.readline()
                 line = line.decode().rstrip()
-                if line == '' and cloud_service == 's3':
-                    log('backup', f'Aborting {cloud_service} upload due to EOL')
+                log('generation', line)
+                if line == '':
+                    log('generation', f'Aborting Map Generation')
                     break
-                elif cloud_service == 's3' and f'upload: {path_to_backup}/{world_name} {file_date}.zip' in line:
-                    log('backup', 's3 upload successful!')
-                    os.remove(f"{path_to_backup}/{world_name} {file_date}.zip")
-                    break
-                elif cloud_service == 'gcloud' and f'Average throughput:' in line:
-                    log('backup', 'gcloud upload successful!')
-                    os.remove(f"{path_to_backup}/{world_name} {file_date}.zip")
-                    break
+        except Exception as e:
+            log('generation', f"{e.__traceback__}")
 
         shutil.make_archive(f"{path_to_backup}/{world_name} {file_date}", 'zip',
                             f"{path_to_backup}/{world_name} {file_date}")

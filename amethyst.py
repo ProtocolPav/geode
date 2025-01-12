@@ -565,7 +565,7 @@ class BedrockServer:
                 f.truncate(file_length)
 
         # Update Map
-        process = await asyncio.create_subprocess_shell(
+        map_process = await asyncio.create_subprocess_shell(
             f"./unmined/unmined-cli web render "
             f"--world='{path_to_backup}/{world_name} {file_date}' "
             f"--output='./unmined/map' "
@@ -584,7 +584,7 @@ class BedrockServer:
 
         try:
             while True:
-                line = await process.stdout.readline()
+                line = await map_process.stdout.readline()
                 line = line.decode().rstrip()
                 log('generation', line)
                 if not line:

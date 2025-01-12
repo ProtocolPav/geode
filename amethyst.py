@@ -589,9 +589,11 @@ class BedrockServer:
                 log('generation', line)
                 if line == '':
                     log('generation', f'Aborting Map Generation')
+                    process.terminate()
                     break
         except Exception as e:
             log('generation', f"{e.__traceback__}")
+            process.terminate()
 
         shutil.make_archive(f"{path_to_backup}/{world_name} {file_date}", 'zip',
                             f"{path_to_backup}/{world_name} {file_date}")

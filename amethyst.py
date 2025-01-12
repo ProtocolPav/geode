@@ -586,7 +586,6 @@ class BedrockServer:
             while True:
                 line = await map_process.stdout.readline()
                 line = line.decode().rstrip()
-                log('generation', line)
                 if not line:
                     log('generation', f'Aborting Map Generation')
                     break
@@ -634,7 +633,6 @@ class BedrockServer:
             while True:
                 line = await process.stdout.readline()
                 line = line.decode().rstrip()
-                log('gcloud', line)
                 if line == '' and cloud_service == 's3':
                     log('backup', f'Aborting {cloud_service} upload due to EOL')
                     break

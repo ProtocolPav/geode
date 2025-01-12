@@ -571,7 +571,7 @@ class BedrockServer:
             f"--output='./unmined/map' "
             f"--imageformat=png "
             f"--dimension=overworld "
-            f"--zoomin=3 "
+            f"--zoomin=2 "
             f"--area='b((2111, 2111), (-2112, -2112))' "
             f"--log-level=error "
             f"--shadows=3d "

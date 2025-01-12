@@ -622,8 +622,8 @@ class BedrockServer:
 
         else:
             process = await asyncio.create_subprocess_shell(
-                f"./google-cloud-sdk/bin/gcloud config set storage/parallel_composite_upload_enabled False "
-                f"&& ./google-cloud-sdk/bin/gcloud storage cp ../server/1.19.1/backup/*.zip gs://{bucket}/{backup_type}",
+                f"../google-cloud-sdk/bin/gcloud config set storage/parallel_composite_upload_enabled False "
+                f"&& ../google-cloud-sdk/bin/gcloud storage cp ../server/1.19.1/backup/*.zip gs://{bucket}/{backup_type}",
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
@@ -634,6 +634,7 @@ class BedrockServer:
             while True:
                 line = await process.stdout.readline()
                 line = line.decode().rstrip()
+                log('gcloud', line)
                 if line == '' and cloud_service == 's3':
                     log('backup', f'Aborting {cloud_service} upload due to EOL')
                     break
@@ -658,8 +659,8 @@ class BedrockServer:
             restoration_path = f'../server/1.19.1/worlds/{file_name}'
 
             process = await asyncio.create_subprocess_shell(
-                f"./google-cloud-sdk/bin/gcloud config set storage/parallel_composite_upload_enabled False "
-                f"&& ./google-cloud-sdk/bin/gcloud storage cp gs://{bucket}/{backup_type}/{file_name} ../server/1.19.1/worlds",
+                f"../google-cloud-sdk/bin/gcloud config set storage/parallel_composite_upload_enabled False "
+                f"&& ../google-cloud-sdk/bin/gcloud storage cp gs://{bucket}/{backup_type}/{file_name} ../server/1.19.1/worlds",
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,

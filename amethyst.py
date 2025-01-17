@@ -549,10 +549,14 @@ class BedrockServer:
         file_date = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
         os.makedirs(f'{path_to_backup}/{world_name} {file_date}/db')
 
+        check_file_list = []
+
         for file in file_list:
             file_path = file.split('/')
             file_to_copy = file_path[-1].split(':')[0]
             file_length = int(file_path[-1].split(':')[1])
+
+            check_file_list.append(file_to_copy)
 
             db = "db" if "db" in file_path else ""
 
@@ -563,6 +567,10 @@ class BedrockServer:
 
             with open(destination_path, 'a') as f:
                 f.truncate(file_length)
+
+        for og_file in os.listdir(f"{path_to_worlds}/{world_name}/db/"):
+            if og_file not in check_file_list:
+                log('check', f'NOT FOUND - {og_file}')
 
         await self.send_message('Map Update is in progress... Expect significantly decreased performance for up to 2 minutes.')
 
@@ -577,7 +585,8 @@ class BedrockServer:
             f"--area='b((2111, 2111), (-2112, -2112))' "
             f"--log-level=error "
             f"--shadows=3d "
-            f"--mapsettings='./unmined/config/Everthorn.json'",
+            f"--mapsettings='./unmined/config/Everthorn.json' "
+            f"--chunk-processors=1",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,

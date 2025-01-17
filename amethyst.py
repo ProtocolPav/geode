@@ -566,7 +566,9 @@ class BedrockServer:
             shutil.copyfile(original_path, destination_path)
 
             with open(destination_path, 'a') as f:
-                f.truncate(file_length)
+                if os.path.getsize(destination_path) != file_length:
+                    log('check', f'Truncating {destination_path} by {os.path.getsize(destination_path) - file_length}B')
+                    f.truncate(file_length)
 
         for og_file in os.listdir(f"{path_to_worlds}/{world_name}/db/"):
             if og_file not in check_file_list:

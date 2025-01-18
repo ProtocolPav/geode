@@ -588,7 +588,7 @@ class BedrockServer:
             f"--log-level=error "
             f"--shadows=3d "
             f"--mapsettings='./unmined/config/Everthorn.json' "
-            f"--chunk-processors=1",
+            f"--chunkprocessors=1",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,

@@ -599,7 +599,6 @@ class BedrockServer:
             while True:
                 line = await map_process.stdout.readline()
                 line = line.decode().rstrip()
-                log('generation', line)
                 if not line:
                     log('generation', f'Aborting Map Generation')
                     break

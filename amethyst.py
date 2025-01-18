@@ -574,7 +574,7 @@ class BedrockServer:
             if og_file not in check_file_list:
                 log('check', f'NOT FOUND - {og_file}')
 
-        await self.send_message('Map Update is in progress... Expect significantly decreased performance for up to 2 minutes.')
+        await self.send_message('Map Update is in progress... Expect slightly decreased performance for up to 7 minutes.')
 
         # Update Map
         map_process = await asyncio.create_subprocess_shell(
@@ -599,6 +599,7 @@ class BedrockServer:
             while True:
                 line = await map_process.stdout.readline()
                 line = line.decode().rstrip()
+                log('generation', line)
                 if not line:
                     log('generation', f'Aborting Map Generation')
                     break

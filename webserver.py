@@ -1,3 +1,5 @@
+import os.path
+
 import httpx
 from sanic import Sanic, Request, file
 from sanic.response import json, text
@@ -153,7 +155,8 @@ async def kick(request: Request, gamertag: str):
 
 @app.route('/map/<zoomlevel:int>/<regionx:int>/<regionz:int>/<x:int>/<z:int>')
 async def get_map(request: Request, zoomlevel: int, regionx: int, regionz: int, x: int, z: int):
-    return await file(f'unmined/map/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png')
+    if os.path.exists(f'unmined/map/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png'):
+        return await file(f'unmined/map/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png')
 
 
 @app.listener('after_server_start')

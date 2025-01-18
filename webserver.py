@@ -158,6 +158,8 @@ async def get_map(request: Request, zoomlevel: int, regionx: int, regionz: int, 
     if os.path.exists(f'unmined/map/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png'):
         return await file(f'unmined/map/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png')
 
+    return json({}, 404)
+
 
 @app.listener('after_server_start')
 async def init_core(application, loop: asyncio.AbstractEventLoop):

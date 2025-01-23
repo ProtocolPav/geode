@@ -598,14 +598,14 @@ class BedrockServer:
         await asyncio.create_subprocess_shell(
             f"./unmined/unmined-cli web render "
             f"--world='{path_to_backup}/{world_name} {file_date}' "
-            f"--output='./unmined/underground' "
+            f"--output='./unmined/nether' "
             f"--imageformat=png "
-            f"--dimension=overworld "
+            f"--dimension=nether "
             f"--zoomin=2 "
             f"--area='b((2111, 2111), (-2112, -2112))' "
             f"--log-level=error "
             f"--shadows=3d "
-            f"--mapsettings='./unmined/config/Underground.json' "
+            f"--mapsettings='./unmined/config/Nether.json' "
             f"--chunkprocessors=1",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
@@ -613,7 +613,7 @@ class BedrockServer:
             limit=1024 * 512
         )
 
-        await asyncio.create_subprocess_shell(
+        map_process = await asyncio.create_subprocess_shell(
             f"./unmined/unmined-cli web render "
             f"--world='{path_to_backup}/{world_name} {file_date}' "
             f"--output='./unmined/subway' "
@@ -630,6 +630,16 @@ class BedrockServer:
             stderr=asyncio.subprocess.STDOUT,
             limit=1024 * 512
         )
+
+        try:
+            while True:
+                line = await map_process.stdout.readline()
+                line = line.decode().rstrip()
+                if not line:
+                    log('generation', f'Aborting Map Generation')
+                    break
+        except Exception as e:
+            log('generation', f"{e.__traceback__}")
 
         shutil.make_archive(f"{path_to_backup}/{world_name} {file_date}", 'zip',
                             f"{path_to_backup}/{world_name} {file_date}")

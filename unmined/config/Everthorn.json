@@ -26,7 +26,8 @@
     "WaterVisibilityRange": 12
   },
   "SlicerSettings": {
-    "TopY": -48
+    "TopY": 300,
+    "UseTopY": true
   },
   "StylesheetSettings": {
     "Settings": {

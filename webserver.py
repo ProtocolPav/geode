@@ -153,10 +153,10 @@ async def kick(request: Request, gamertag: str):
     await handler.server.send_command(f'kick "{gamertag}"')
     return json(await server_response())
 
-@app.route('/map/<zoomlevel:int>/<regionx:int>/<regionz:int>/<x:int>/<z:int>')
-async def get_map(request: Request, zoomlevel: int, regionx: int, regionz: int, x: int, z: int):
-    if os.path.exists(f'unmined/map/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png'):
-        return await file(f'unmined/map/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png')
+@app.route('/map/<layer:str>/<zoomlevel:int>/<regionx:int>/<regionz:int>/<x:int>/<z:int>')
+async def get_map(request: Request, layer: str, zoomlevel: int, regionx: int, regionz: int, x: int, z: int):
+    if os.path.exists(f'unmined/{layer}/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png'):
+        return await file(f'unmined/{layer}/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png')
 
     return json({}, 404)
 

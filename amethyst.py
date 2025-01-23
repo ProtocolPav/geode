@@ -613,6 +613,24 @@ class BedrockServer:
             limit=1024 * 512
         )
 
+        await asyncio.create_subprocess_shell(
+            f"./unmined/unmined-cli web render "
+            f"--world='{path_to_backup}/{world_name} {file_date}' "
+            f"--output='./unmined/subway' "
+            f"--imageformat=png "
+            f"--dimension=overworld "
+            f"--zoomin=2 "
+            f"--area='b((2111, 2111), (-2112, -2112))' "
+            f"--log-level=error "
+            f"--shadows=3d "
+            f"--mapsettings='./unmined/config/Subway.json' "
+            f"--chunkprocessors=1",
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            limit=1024 * 512
+        )
+
         shutil.make_archive(f"{path_to_backup}/{world_name} {file_date}", 'zip',
                             f"{path_to_backup}/{world_name} {file_date}")
         shutil.rmtree(f"{path_to_backup}/{world_name} {file_date}")

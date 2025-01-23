@@ -2,8 +2,11 @@
   "BlockFilterSettings": {
     "IsEnabled": true,
     "PredefinedFilters": {
+      "Torch": true,
+      "Flora": false,
+      "Ores": true
     },
-    "QuickFilterText": ""
+    "QuickFilterText": "minecraft:glow_lichen,\r\nminecraft:calcite,\r\nminecraft:smooth_basalt,\r\nminecraft:*amethyst*"
   },
   "DataPackSettings": {
     "IsEnabled": true,

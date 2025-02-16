@@ -1,0 +1,49 @@
+import asyncio
+import re
+from dataclasses import dataclass
+from collections.abc import Callable
+
+from sanic.log import logger, Colors
+
+@dataclass
+class EventParser:
+    name: str
+    regex: re.compile
+
+@dataclass
+class ParsedEvent:
+    name: str
+    callback: Callable
+    args: tuple | None
+
+class EventHandler:
+    def __init__(self):
+        self.events = [
+            EventParser('player.connect', re.compile(r'Player connected: (.*), xuid: ([1-9]+)')),
+            EventParser('server.start', re.compile(r'^Server started', re.IGNORECASE)),
+            EventParser('server.stop', re.compile(r'^Quit correctly', re.IGNORECASE)),
+            EventParser('server.version', re.compile(r'^Version:?\s*(\d+\.\d+\.\d+\.\d+)$', re.IGNORECASE))
+        ]
+        self.listeners: dict[str, Callable] = {}
+
+    def parse(self, line) -> ParsedEvent | None:
+        for event in self.events:
+            if match := event.regex.search(line):
+                return ParsedEvent(event.name, self.listeners[event.name], match.groups())
+        return None
+
+    def listen(self, event: str):
+        def decorator(func: Callable):
+            if event in [x.name for x in self.events]:
+                self.listeners[event] = func
+                logger.info(f'Registered Event {event} with callback as {func.__name__}')
+            else:
+                logger.info(f'Cannot register Event {event}! Does not exist')
+
+        return decorator
+
+    async def emit(self, event: str, *args):
+        if self.listeners.get(event, None):
+            await self.listeners[event](args)
+        else:
+            logger.info(f'The Event {event} is not registered.')

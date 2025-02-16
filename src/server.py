@@ -6,11 +6,13 @@ from pathlib import Path
 
 from sanic.log import logger, Colors
 
+from src.handlers.events import EventHandler
+
 
 class BedrockServer:
     __process: asyncio.subprocess.Process | None
     __tasks: asyncio.TaskGroup
-    __events: ...
+    __events: EventHandler = EventHandler()
 
     def __init__(self):
         if platform.system().lower() == 'linux':
@@ -34,17 +36,27 @@ class BedrockServer:
             line = (await self.__process.stdout.readline()).decode().rstrip()
             line = '] '.join(line.split('] ')[1:])
 
-            if not line:
-                pass
-            elif "quit correctly" in line.lower():
+            parsed_line = self.__events.parse(line)
+
+            if parsed_line is not None:
+                await parsed_line.callback(self, line, *parsed_line.args)
+            elif line:  # Won't print empty lines
                 logger.info(line)
-                break
-            elif "version" in line.lower():
-                logger.info(f'{Colors.BOLD}{Colors.PURPLE}{line}{Colors.END}')
-                version_file = Path('../server/version.geode')
-                version_file.write_text(line.lower().split('version')[-1].partition(' ')[-1])
-            else:
-                logger.info(line)
+
+    @__events.listen('server.start')
+    async def on_server_start(self, line: str):
+        logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
+
+    @__events.listen('server.stop')
+    async def on_server_stop(self, line: str):
+        logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
+        # Clean up pending tasks, like the server output, etc.
+
+    @__events.listen('server.version')
+    async def on_server_version(self, line: str, version: str):
+        logger.info(f'{Colors.BOLD}{Colors.PURPLE}{line}{Colors.END}')
+        version_file = Path('../server/version.geode')
+        version_file.write_text(version)
 
     async def start(self):
         if not self.__process:

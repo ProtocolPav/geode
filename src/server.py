@@ -58,6 +58,10 @@ class BedrockServer:
         version_file = Path('../server/version.geode')
         version_file.write_text(version)
 
+    @__events.listen('player.connect')
+    async def on_player_connect(self, line: str, gamertag: str, xuid: str):
+        logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
+
     async def start(self):
         if not self.__process:
             await installation.check_for_updates()

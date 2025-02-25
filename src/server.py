@@ -1,6 +1,9 @@
 import asyncio.subprocess
 import asyncio
 import platform
+
+from typing_extensions import Literal, Optional
+
 from src import installation
 from pathlib import Path
 
@@ -12,7 +15,7 @@ from src.handlers.events import EventHandler
 class BedrockServer:
     __process: asyncio.subprocess.Process | None
     __tasks: asyncio.TaskGroup
-    __events: EventHandler = EventHandler()
+    events: EventHandler = EventHandler()
 
     def __init__(self):
         if platform.system().lower() == 'linux':
@@ -23,6 +26,12 @@ class BedrockServer:
         self.__process = None
 
     async def __send_command(self, command: str, sleep: int = 0):
+        """
+        Send a Minecraft command to the server.
+
+        :param command: The command to send
+        :param sleep: (Optional) The amount of seconds to sleep after the command is sent
+        """
         logger.debug(f'Running Command {Colors.BLUE}{command}{Colors.END}')
         self.__process.stdin.write(f'{command}\n'.encode())
         await self.__process.stdin.drain()
@@ -30,36 +39,97 @@ class BedrockServer:
 
     async def __server_output(self):
         """
-        Process server output and fire any necessary events
+        Processes the Minecraft BDS output and fires any events
         """
         while True:
             line = (await self.__process.stdout.readline()).decode().rstrip()
             line = '] '.join(line.split('] ')[1:])
 
-            parsed_line = self.__events.parse(line)
+            parsed_line = self.events.parse(line)
 
             if parsed_line is not None:
                 await parsed_line.callback(self, line, *parsed_line.args)
             elif line:  # Won't print empty lines
                 logger.info(line)
 
-    @__events.listen('server.start')
-    async def on_server_start(self, line: str):
-        logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
+    async def status(self) -> Literal['starting', 'running', 'stopping', 'stopped']:
+        """
+        Get the status of the server
+        """
 
-    @__events.listen('server.stop')
+    async def backup_action(self) -> Literal['saving', 'map_update'] | None:
+        """
+        Returns which backup action is happening
+        """
+
+    @events.listen('server.start')
+    async def on_server_start(self, line: str):
+        """
+        When the server has started and is ready for playing.
+
+        :param line: The console log line where the event occurs
+        """
+        logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
+        # TO ADD: Disconnect all connected players, in case there was a glitch
+        # Log to all the correct locations
+
+    @events.listen('server.stop')
     async def on_server_stop(self, line: str):
+        """
+        When the server has stopped.
+
+        :param line: The console log line where the event occurs
+        """
         logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
         # Clean up pending tasks, like the server output, etc.
+        # TO ADD: Disconnect all connected players
+        # Log to all the correct locations
 
-    @__events.listen('server.version')
+    @events.listen('server.version')
     async def on_server_version(self, line: str, version: str):
+        """
+        When the server version is detected by the console.
+
+        :param line: The console log line where the event occurs
+        :param version: The version found
+        """
         logger.info(f'{Colors.BOLD}{Colors.PURPLE}{line}{Colors.END}')
         version_file = Path('../server/version.geode')
         version_file.write_text(version)
 
-    @__events.listen('player.connect')
-    async def on_player_connect(self, line: str, gamertag: str, xuid: str):
+    @events.listen('player.connect')
+    async def on_player_connect(self, line: str, gamertag: str, xuid: Optional[str]):
+        """
+        When a player connects to the server. This doesn't mean the player has spawned in the world.
+
+        :param line: The console log line where the event occurs
+        :param gamertag: The gamertag of the connected player
+        :param xuid: The xuid of the connected player. Can be None.
+        """
+        logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
+
+    @events.listen('player.spawn')
+    async def on_player_spawn(self, line: str, gamertag: str, xuid: Optional[str], pfid: Optional[str]):
+        """
+        When a player spawns in the world, after they have connected.
+
+        :param line: The console log line where the event occurs
+        :param gamertag: The gamertag of the player
+        :param xuid: The xuid of the player. Can be None.
+        :param pfid: The pfid of the player. Can be None.
+        """
+        logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
+
+    @events.listen('player.disconnect')
+    async def on_player_disconnect(self, line: str, gamertag: str, xuid: Optional[str], pfid: Optional[str]):
+        """
+        When a player disconnects from the server.
+
+        :param line: The console log line where the event occurs
+        :param gamertag: The gamertag of the player
+        :param xuid: The xuid of the player. Can be None.
+        :param pfid: The pfid of the player. Can be None.
+        """
         logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
 
     async def start(self):
@@ -82,5 +152,4 @@ class BedrockServer:
 
     async def stop(self):
         if self.__process:
-            # TO ADD: Disconnect all connected players
             await self.__send_command('stop')

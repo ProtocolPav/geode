@@ -20,3 +20,10 @@ class UserRequestedStop(ServerStopped):
     """
     def __init__(self):
         super().__init__()
+
+class NotRunning(Exception):
+    """
+    Raised when the Bedrock Server is not running
+    """
+    def __init__(self):
+        super().__init__()

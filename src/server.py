@@ -16,6 +16,7 @@ class BedrockServer:
     __process: asyncio.subprocess.Process | None
     __tasks: asyncio.TaskGroup
     events: EventHandler = EventHandler()
+    status: str = 'starting'
 
     def __init__(self):
         if platform.system().lower() == 'linux':
@@ -25,7 +26,7 @@ class BedrockServer:
 
         self.__process = None
 
-    async def __send_command(self, command: str, sleep: int = 0):
+    async def send_command(self, command: str, sleep: int = 0):
         """
         Send a Minecraft command to the server.
 
@@ -52,15 +53,38 @@ class BedrockServer:
             elif line:  # Won't print empty lines
                 logger.info(line)
 
-    async def status(self) -> Literal['starting', 'running', 'stopping', 'stopped']:
+    async def get_status(self) -> Literal['starting', 'running', 'stopping', 'stopped']:
         """
         Get the status of the server
         """
+        return self.status
 
-    async def backup_action(self) -> Literal['saving', 'map_update'] | None:
+    async def get_backup_action(self) -> Literal['saving', 'map_update'] | None:
         """
         Returns which backup action is happening
         """
+
+    async def start(self):
+        if not self.__process:
+            await installation.check_for_updates()
+
+            self.__process = await asyncio.subprocess.create_subprocess_exec(
+                program=self.executable,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                limit= 1024 * 512,
+                cwd='../server/')
+            logger.debug(f'Created BedrockServer process PID{self.__process.pid}')
+
+            async with asyncio.TaskGroup() as self.__tasks:
+                self.__tasks.create_task(self.__server_output(), name=f"[{self.__process.pid}] BDS Output")
+
+            logger.debug(f'Current tasks: {self.__tasks}')
+
+    async def stop(self):
+        if self.__process:
+            await self.send_command('stop')
 
     @events.listen('server.start')
     async def on_server_start(self, line: str):
@@ -70,6 +94,7 @@ class BedrockServer:
         :param line: The console log line where the event occurs
         """
         logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
+        self.status = 'running'
         # TO ADD: Disconnect all connected players, in case there was a glitch
         # Log to all the correct locations
 
@@ -131,25 +156,3 @@ class BedrockServer:
         :param pfid: The pfid of the player. Can be None.
         """
         logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
-
-    async def start(self):
-        if not self.__process:
-            await installation.check_for_updates()
-
-            self.__process = await asyncio.subprocess.create_subprocess_exec(
-                program=self.executable,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                limit= 1024 * 512,
-                cwd='../server/')
-            logger.debug(f'Created BedrockServer process PID{self.__process.pid}')
-
-            async with asyncio.TaskGroup() as self.__tasks:
-                self.__tasks.create_task(self.__server_output(), name=f"[{self.__process.pid}] BDS Output")
-
-            logger.debug(f'Current tasks: {self.__tasks}')
-
-    async def stop(self):
-        if self.__process:
-            await self.__send_command('stop')

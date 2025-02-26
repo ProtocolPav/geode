@@ -25,8 +25,8 @@ class LoopHandler:
                     await function(geode)
                     await asyncio.sleep(interval)
 
-                except asyncio.CancelledError:
-                    logger.info(f"[Loops] {name} has been canceled")
+                except asyncio.CancelledError as e:
+                    logger.exception(f"[Loops] {name} has been canceled", exc_info=e)
 
                 except Exception as e:
                     logger.exception(f"[Loops] There was an error executing {name}. Trying again in 30 seconds.", exc_info=e)
@@ -40,7 +40,5 @@ class LoopHandler:
 
             for loop in self.__loops:
                 self.__tasks.append(asyncio.create_task(coro=loop(geode)))
-
-            await asyncio.gather(*self.__tasks)
 
             self.running = True

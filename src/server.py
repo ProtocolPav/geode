@@ -44,7 +44,7 @@ class BedrockServer:
         """
         while True:
             line = (await self.__process.stdout.readline()).decode().rstrip()
-            line = '] '.join(line.split('] ')[1:])
+            line = '] '.join(line.split('] ')[1:]) if line.split('] ')[1:] else line
 
             parsed_line = self.events.parse(line)
 

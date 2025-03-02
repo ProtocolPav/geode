@@ -25,8 +25,12 @@ class Geode:
             tg.create_task(self.looper.start_looper(self))
             tg.create_task(self.server.start())
 
-    @looper.loop('Backup Loop', 3600)
+    @looper.loop('Backup Loop', 30)
     async def backup_loop(self):
-        await asyncio.sleep(30)
+        if self.server.status != 'running':
+            raise errors.NotRunning()
 
-        await self.server.send_command('save hold')
+        await self.server.send_command('save hold', 3)
+        await self.server.send_command('save query', 3)
+        await self.server.send_command('save query', 3)
+        await self.server.send_command('save resume', 3)

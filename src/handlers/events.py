@@ -26,10 +26,11 @@ class EventHandler:
                         re.compile(r'Player disconnected: (.*), xuid: ([1-9]+)(?:, pfid: ([a-z0-9]+))?', re.IGNORECASE)),
             EventParser('server.start', re.compile(r'^Server started', re.IGNORECASE)),
             EventParser('server.stop', re.compile(r'^Quit correctly', re.IGNORECASE)),
+            EventParser('server.stop', re.compile(r'^Exiting program', re.IGNORECASE)),
             EventParser('server.version', re.compile(r'^Version:?\s*(\d+\.\d+\.\d+\.\d+)$', re.IGNORECASE)),
             EventParser('backup.hold', re.compile(r'Saving', re.IGNORECASE)),
             EventParser('backup.hold.error', re.compile(r'The command is already running', re.IGNORECASE)),
-            EventParser('backup.query', re.compile(r'(.*/[^/]+:\d+)', re.IGNORECASE)),
+            EventParser('backup.query', re.compile(r'(?:^|,\s*)([^:]+):(\d+)(?=\s*(?:,|$))', re.IGNORECASE)),
             EventParser('backup.error', re.compile(r'A previous save has not been completed', re.IGNORECASE)),
             EventParser('backup.resume', re.compile(r'Changes to the world are resumed', re.IGNORECASE)),
         ]

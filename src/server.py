@@ -16,7 +16,7 @@ class BedrockServer:
     __process: asyncio.subprocess.Process | None
     __tasks: asyncio.TaskGroup
     events: EventHandler = EventHandler()
-    status: str = 'starting'
+    status: Literal['starting', 'running', 'stopping', 'stopped'] = 'starting'
 
     def __init__(self):
         if platform.system().lower() == 'linux':
@@ -33,7 +33,7 @@ class BedrockServer:
         :param command: The command to send
         :param sleep: (Optional) The amount of seconds to sleep after the command is sent
         """
-        logger.debug(f'Running Command {Colors.BLUE}{command}{Colors.END}')
+        logger.debug(f'{Colors.GREY}Running Command {Colors.BLUE}{command}{Colors.END}')
         self.__process.stdin.write(f'{command}\n'.encode())
         await self.__process.stdin.drain()
         await asyncio.sleep(sleep)
@@ -52,17 +52,6 @@ class BedrockServer:
                 await parsed_line.callback(self, line, *parsed_line.args)
             elif line:  # Won't print empty lines
                 logger.info(line)
-
-    async def get_status(self) -> Literal['starting', 'running', 'stopping', 'stopped']:
-        """
-        Get the status of the server
-        """
-        return self.status
-
-    async def get_backup_action(self) -> Literal['saving', 'map_update'] | None:
-        """
-        Returns which backup action is happening
-        """
 
     async def start(self):
         if not self.__process:
@@ -155,4 +144,24 @@ class BedrockServer:
         :param xuid: The xuid of the player. Can be None.
         :param pfid: The pfid of the player. Can be None.
         """
+        logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
+
+    @events.listen('backup.hold')
+    async def on_backup_hold(self, line: str):
+        logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
+        await self.send_command('save query')
+
+    @events.listen('backup.query')
+    async def on_backup_query(self, line: str, *file_list: tuple):
+        logger.info(f'{Colors.YELLOW}{file_list}{Colors.END}')
+        logger.debug('Backup process starting')
+        await self.send_command('save resume')
+
+    @events.listen('backup.error')
+    async def on_backup_error(self, line: str):
+        logger.warn(f'{Colors.YELLOW}{line}{Colors.END}')
+        await self.send_command('save query')
+
+    @events.listen('backup.resume')
+    async def on_backup_resume(self, line: str):
         logger.info(f'{Colors.YELLOW}{line}{Colors.END}')

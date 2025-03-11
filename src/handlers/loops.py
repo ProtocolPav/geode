@@ -3,6 +3,8 @@ from collections.abc import Callable
 
 from sanic.log import logger, Colors
 
+import errors
+
 
 class LoopHandler:
     def __init__(self):
@@ -18,18 +20,24 @@ class LoopHandler:
 
     def add_loop(self, function: Callable, name: str, interval: int):
         async def task_function(geode):
-            logger.info(f"[Loops] Loading {name} ({function.__name__}) to loop every {interval} seconds")
+            bold_name = f'{Colors.BOLD}{name}{Colors.END}'
+            logger.info(f"[Loops] Loading {bold_name} ({function.__name__}) to loop every {interval} seconds")
 
             while True:
                 try:
+                    logger.info(f"[Loops] Running {bold_name}...")
                     await function(geode)
                     await asyncio.sleep(interval)
 
                 except asyncio.CancelledError as e:
-                    logger.exception(f"[Loops] {name} has been canceled", exc_info=e)
+                    logger.exception(f"[Loops] {bold_name} has been canceled", exc_info=e)
+
+                except errors.NotRunning as e:
+                    logger.error(f"[Loops] {bold_name} cannot execute because the server is stopped. Trying again in 30 seconds.")
+                    await asyncio.sleep(30)
 
                 except Exception as e:
-                    logger.exception(f"[Loops] There was an error executing {name}. Trying again in 30 seconds.", exc_info=e)
+                    logger.exception(f"[Loops] There was an error executing {bold_name}. Trying again in 30 seconds.", exc_info=e)
                     await asyncio.sleep(30)
 
         self.__loops.append(task_function)

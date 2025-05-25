@@ -9,15 +9,7 @@ COPY --from=build /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1 /usr/lib/x86_64-lin
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install apt-utils -yqq && rm -rf /var/cache/apt/*
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install apt-utils -yqq && DEBIAN_FRONTEND=noninteractive apt-get install python3 pip sudo curl unzip screen net-tools gawk openssl findutils pigz libcurl4 libc6 libcrypt1 libcurl4-openssl-dev ca-certificates binfmt-support -yqq && rm -rf /var/cache/apt/*
-
-RUN if test -f "server/1.19.1/bedrock_server"; then \
-          echo "Bedrock Server is already installed." ;\
-    else  \
-        echo "Bedrock Server is not installed. Installing an older version. Amethyst will automatically update to the latest version." \
-        && mkdir server  \
-        && curl -H 'Cache-Control: no-cache, no-store' https://minecraft.azureedge.net/bin-linux/bedrock-server-1.19.1.01.zip --output server/bds.zip && ls -la && unzip server/bds.zip -d server/1.19.1 ;  \
-    fi
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install apt-utils -yqq && DEBIAN_FRONTEND=noninteractive apt-get install python3 pip sudo curl unzip screen net-tools gawk openssl findutils pigz libcurl4 libc6 libicu-dev libcrypt1 libcurl4-openssl-dev ca-certificates binfmt-support -yqq && rm -rf /var/cache/apt/*
 
 COPY requirements.txt /requirements.txt
 RUN pip install -r /requirements.txt
@@ -48,4 +40,6 @@ EXPOSE 19132/udp
 EXPOSE 19133/tcp
 EXPOSE 19133/udp
 
+ENV PYTHONPATH "${PYTHONPATH}:/amethyst/"
+WORKDIR amethyst
 

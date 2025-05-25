@@ -384,7 +384,7 @@ class BedrockServer:
         log('server', f'Last loaded version: {self.version}')
 
         prop_file = Properties()
-        prop_file.load(open("server/1.19.1/server.properties", 'rb'))
+        prop_file.load(open("../server/1.19.1/server.properties", 'rb'))
         self.server_properties = prop_file.properties
 
     def running(self) -> bool:
@@ -449,16 +449,16 @@ class BedrockServer:
                     log('server', 'I have found a new Minecraft Update. Updating now!')
                     proc = await asyncio.create_subprocess_shell(
                         f"curl -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:54.0) Gecko/20100101 Firefox/54.0' "
-                        f"-H 'Cache-Control: no-cache, no-store' {link} --output server/temp.zip &&"
-                        f"unzip -o server/temp.zip -d server/new_server &&"
-                        f"cp -r server/1.19.1/worlds server/new_server/ &&"
-                        f"cp server/1.19.1/allowlist.json server/new_server/ &&"
-                        f"cp server/1.19.1/server.properties server/new_server/ &&"
-                        f"cp server/1.19.1/permissions.json server/new_server/ &&"
-                        f"cp -r server/1.19.1/config server/new_server/ &&"
-                        f"cp -a server/1.19.1/. server/1.19.1-old/ &&"
-                        f"rm -r server/1.19.1/* &&"
-                        f"cp -a server/new_server/. server/1.19.1/",
+                        f"-H 'Cache-Control: no-cache, no-store' {link} --output ../server/temp.zip &&"
+                        f"unzip -o ../server/temp.zip -d ../server/new_server &&"
+                        f"cp -r ../server/1.19.1/worlds ../server/new_server/ &&"
+                        f"cp ../server/1.19.1/allowlist.json ../server/new_server/ &&"
+                        f"cp ../server/1.19.1/server.properties ../server/new_server/ &&"
+                        f"cp ../server/1.19.1/permissions.json ../server/new_server/ &&"
+                        f"cp -r ../server/1.19.1/config ../server/new_server/ &&"
+                        f"cp -a ../server/1.19.1/. ../server/1.19.1-old/ &&"
+                        f"rm -r ../server/1.19.1/* &&"
+                        f"cp -a ../server/new_server/. ../server/1.19.1/",
                         stdin=asyncio.subprocess.PIPE,
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.STDOUT,
@@ -493,7 +493,7 @@ class BedrockServer:
         await self.check_for_updates()
 
         log('server', 'Starting server...')
-        self.server = await asyncio.create_subprocess_shell("cd server/1.19.1 && LD_LIBRARY_PATH=. ./bedrock_server",
+        self.server = await asyncio.create_subprocess_shell("cd ../server/1.19.1 && LD_LIBRARY_PATH=. ./bedrock_server",
                                                             stdin=asyncio.subprocess.PIPE,
                                                             stdout=asyncio.subprocess.PIPE,
                                                             stderr=asyncio.subprocess.STDOUT,
@@ -538,8 +538,8 @@ class BedrockServer:
                     await asyncio.sleep(30)
 
     async def initiate_backup(self, file_list: list[str]):
-        path_to_worlds = 'server/1.19.1/worlds'
-        path_to_backup = 'server/1.19.1/backup'
+        path_to_worlds = '../server/1.19.1/worlds'
+        path_to_backup = '../server/1.19.1/backup'
         daily_backup_hour = self.config['backup']['daily_backup_hour']
         monthly_backup_day = self.config['backup']['monthly_backup_day']
         world_name = self.server_properties['level-name']
@@ -549,10 +549,14 @@ class BedrockServer:
         file_date = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
         os.makedirs(f'{path_to_backup}/{world_name} {file_date}/db')
 
+        check_file_list = []
+
         for file in file_list:
             file_path = file.split('/')
             file_to_copy = file_path[-1].split(':')[0]
             file_length = int(file_path[-1].split(':')[1])
+
+            check_file_list.append(file_to_copy)
 
             db = "db" if "db" in file_path else ""
 
@@ -562,7 +566,80 @@ class BedrockServer:
             shutil.copyfile(original_path, destination_path)
 
             with open(destination_path, 'a') as f:
-                f.truncate(file_length)
+                if os.path.getsize(destination_path) != file_length:
+                    log('check', f'Truncating {destination_path} by {os.path.getsize(destination_path) - file_length}B')
+                    f.truncate(file_length)
+
+        for og_file in os.listdir(f"{path_to_worlds}/{world_name}/db/"):
+            if og_file not in check_file_list:
+                log('check', f'NOT FOUND - {og_file}')
+
+        await self.send_message('Map Update is in progress... Expect slightly decreased performance for up to 7 minutes.')
+
+        # Update Map
+        await asyncio.create_subprocess_shell(
+            f"./unmined/unmined-cli web render "
+            f"--world='{path_to_backup}/{world_name} {file_date}' "
+            f"--output='./unmined/overworld' "
+            f"--imageformat=png "
+            f"--dimension=overworld "
+            f"--zoomin=2 "
+            f"--area='b((2111, 2111), (-2112, -2112))' "
+            f"--log-level=error "
+            f"--shadows=3d "
+            f"--mapsettings='./unmined/config/Everthorn.json' "
+            f"--chunkprocessors=1",
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            limit=1024 * 512
+        )
+
+        await asyncio.create_subprocess_shell(
+            f"./unmined/unmined-cli web render "
+            f"--world='{path_to_backup}/{world_name} {file_date}' "
+            f"--output='./unmined/nether' "
+            f"--imageformat=png "
+            f"--dimension=nether "
+            f"--zoomin=2 "
+            f"--area='b((2111, 2111), (-2112, -2112))' "
+            f"--log-level=error "
+            f"--shadows=3d "
+            f"--mapsettings='./unmined/config/Nether.json' "
+            f"--chunkprocessors=1",
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            limit=1024 * 512
+        )
+
+        map_process = await asyncio.create_subprocess_shell(
+            f"./unmined/unmined-cli web render "
+            f"--world='{path_to_backup}/{world_name} {file_date}' "
+            f"--output='./unmined/subway' "
+            f"--imageformat=png "
+            f"--dimension=overworld "
+            f"--zoomin=2 "
+            f"--area='b((2111, 2111), (-2112, -2112))' "
+            f"--log-level=error "
+            f"--shadows=3d "
+            f"--mapsettings='./unmined/config/Subway.json' "
+            f"--chunkprocessors=1",
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            limit=1024 * 512
+        )
+
+        try:
+            while True:
+                line = await map_process.stdout.readline()
+                line = line.decode().rstrip()
+                if not line:
+                    log('generation', f'Aborting Map Generation')
+                    break
+        except Exception as e:
+            log('generation', f"{e.__traceback__}")
 
         shutil.make_archive(f"{path_to_backup}/{world_name} {file_date}", 'zip',
                             f"{path_to_backup}/{world_name} {file_date}")
@@ -584,7 +661,7 @@ class BedrockServer:
 
         if cloud_service == 's3':
             process = await asyncio.create_subprocess_shell(
-                f"aws s3 sync server/1.19.1/backup/ s3://{bucket}/{backup_type}/",
+                f"aws s3 sync ../server/1.19.1/backup/ s3://{bucket}/{backup_type}/",
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
@@ -593,8 +670,8 @@ class BedrockServer:
 
         else:
             process = await asyncio.create_subprocess_shell(
-                f"./google-cloud-sdk/bin/gcloud config set storage/parallel_composite_upload_enabled False "
-                f"&& ./google-cloud-sdk/bin/gcloud storage cp server/1.19.1/backup/*.zip gs://{bucket}/{backup_type}",
+                f"../google-cloud-sdk/bin/gcloud config set storage/parallel_composite_upload_enabled False "
+                f"&& ../google-cloud-sdk/bin/gcloud storage cp ../server/1.19.1/backup/*.zip gs://{bucket}/{backup_type}",
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
@@ -625,12 +702,12 @@ class BedrockServer:
         bucket = self.config['backup']['cloud_bucket']
 
         if cloud_service == 'gcloud':
-            default_path = f'server/1.19.1/worlds/{self.server_properties["level-name"]}'
-            restoration_path = f'server/1.19.1/worlds/{file_name}'
+            default_path = f'../server/1.19.1/worlds/{self.server_properties["level-name"]}'
+            restoration_path = f'../server/1.19.1/worlds/{file_name}'
 
             process = await asyncio.create_subprocess_shell(
-                f"./google-cloud-sdk/bin/gcloud config set storage/parallel_composite_upload_enabled False "
-                f"&& ./google-cloud-sdk/bin/gcloud storage cp gs://{bucket}/{backup_type}/{file_name} server/1.19.1/worlds",
+                f"../google-cloud-sdk/bin/gcloud config set storage/parallel_composite_upload_enabled False "
+                f"&& ../google-cloud-sdk/bin/gcloud storage cp gs://{bucket}/{backup_type}/{file_name} ../server/1.19.1/worlds",
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,

@@ -265,6 +265,7 @@ minecraft:oak_trapdoor = #9F844D
 minecraft:oak_stairs = #9F844D
 minecraft:fence_gate = #9F844D
 //minecraft:oak_leaves = #45B017
+minecraft:wall_sign = #9F844D
 minecraft:oak_wall_sign = #9F844D
 minecraft:oak_standing_sign = #9F844D
 minecraft:oak_hanging_sign = #9F844D
@@ -455,6 +456,7 @@ minecraft:infested_stone = #696969
 minecraft:stone_slab = #808080
 minecraft:stone_slab[type=double] = #808080
 minecraft:stone_stairs = #808080
+minecraft:normal_stone_stairs = #808080
 minecraft:stone = #808080
 
 //======Smooth=Stone==========
@@ -529,6 +531,7 @@ minecraft:brick_wall = #7D4333
 minecraft:brick_slab = #7D4333
 
 //======Mudbricks==========
+minecraft:mud = #1f1f24
 minecraft:packed_mud = #99765A
 minecraft:mud_bricks = #8A664E
 minecraft:mud_brick_slab = #8A664E
@@ -745,47 +748,30 @@ minecraft:sculk_shrieker = #999F80
 //====Copper====
 minecraft:lightning_rod = #C97555
 minecraft:copper_block = #C97555
-minecraft:cut_copper = #A85A3E
-minecraft:cut_copper_slab = #A85A3E
-minecraft:cut_copper_slab[type=double] = #A85A3E
-minecraft:cut_copper_stairs = #A85A3E
-minecraft:exposed_copper = #A97862
-minecraft:exposed_cut_copper = #807356
-minecraft:exposed_cut_copper_slab = #807356
-minecraft:exposed_cut_copper_slab[type=double] = #807356
-minecraft:exposed_cut_copper_stairs = #807356
-minecraft:weathered_copper = #6C985C
-minecraft:weathered_cut_copper = #6A7245
-minecraft:weathered_cut_copper_slab = #6A7245
-minecraft:weathered_cut_copper_slab[type=double] = #6A7245
-minecraft:weathered_cut_copper_stairs = #6A7245
-minecraft:oxidized_copper = #52A279
-minecraft:oxidized_cut_copper = #336450
-minecraft:oxidized_cut_copper_slab = #336450
-minecraft:oxidized_cut_copper_slab[type=double] = #336450
-minecraft:oxidized_cut_copper_stairs = #336450
-
-//====Waxed=Copper====
 minecraft:waxed_copper = #C97555
-minecraft:waxed_cut_copper = #A85A3E
-minecraft:waxed_cut_copper_slab = #A85A3E
-minecraft:waxed_cut_copper_slab[type=double] = #A85A3E
-minecraft:waxed_cut_copper_stairs = #A85A3E
-minecraft:waxed_exposed_copper = #A97862
-minecraft:waxed_exposed_cut_copper = #807356
-minecraft:waxed_exposed_cut_copper_slab = #807356
-minecraft:waxed_exposed_cut_copper_slab[type=double] = #807356
-minecraft:waxed_exposed_cut_copper_stairs = #807356
-minecraft:waxed_weathered_copper = #6C985C
-minecraft:waxed_weathered_cut_copper = #6A7245
-minecraft:waxed_weathered_cut_copper_slab = #6A7245
-minecraft:waxed_weathered_cut_copper_slab[type=double] = #6A7245
-minecraft:waxed_weathered_cut_copper_stairs = #6A7245
-minecraft:waxed_oxidized_copper = #52A279
-minecraft:waxed_oxidized_cut_copper = #336450
-minecraft:waxed_oxidized_cut_copper_slab = #336450
-minecraft:waxed_oxidized_cut_copper_slab[type=double] = #336450
-minecraft:waxed_oxidized_cut_copper_stairs = #336450
+minecraft:*chiseled_copper = #A85A3E
+minecraft:*cut_copper = #A85A3E
+minecraft:*cut_copper_slab = #A85A3E
+minecraft:*cut_copper_slab[type=double] = #A85A3E
+minecraft:*cut_copper_stairs = #A85A3E
+minecraft:*exposed_copper = #A97862
+minecraft:*exposed_chiseled_copper = #A97862
+minecraft:*exposed_cut_copper = #807356
+minecraft:*exposed_cut_copper_slab = #807356
+minecraft:*exposed_cut_copper_slab[type=double] = #807356
+minecraft:*exposed_cut_copper_stairs = #807356
+minecraft:*weathered_copper = #6C985C
+minecraft:*weathered_chiseled_copper = #6C985C
+minecraft:*weathered_cut_copper = #6A7245
+minecraft:*weathered_cut_copper_slab = #6A7245
+minecraft:*weathered_cut_copper_slab[type=double] = #6A7245
+minecraft:*weathered_cut_copper_stairs = #6A7245
+minecraft:*oxidized_copper = #52A279
+minecraft:*oxidized_chiseled_copper = #52A279
+minecraft:*oxidized_cut_copper = #336450
+minecraft:*oxidized_cut_copper_slab = #336450
+minecraft:*oxidized_cut_copper_slab[type=double] = #336450
+minecraft:*oxidized_cut_copper_stairs = #336450
 
 //====Iron====
 minecraft:chain = #3E4453
@@ -996,9 +982,9 @@ minecraft:torch = #FFD800
 minecraft:soul_torch = #60F5FA
 minecraft:lantern = #C16938
 minecraft:soul_lantern = #22A4AB
-minecraft:campfire[lit=1] = #DFA21B
-minecraft:campfire[lit=0] = #716857
-minecraft:soul_campfire[lit=1] = #23C0C6
+minecraft:campfire[extinguished=0] = #DFA21B
+minecraft:campfire[extinguished=1] = #716857
+minecraft:soul_campfire = #23C0C6
 minecraft:soul_campfire[lit=0] = #716857
 minecraft:fire = #DEA01A
 minecraft:soul_fire = #16D8DE
@@ -1162,3 +1148,5 @@ minecraft:warped_pressure_plate = #007877
 minecraft:twisting_vines = #129C84
 minecraft:weeping_vines = #D0420E
 minecraft:nether_wart = #A41D20
+minecraft:pink_petals = #f7b9dc
+minecraft:brick_block = #ad604b

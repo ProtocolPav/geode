@@ -638,6 +638,7 @@ class BedrockServer:
                 if not line:
                     log('generation', f'Aborting Map Generation')
                     break
+                print(line)
         except Exception as e:
             log('generation', f"{e.__traceback__}")
 

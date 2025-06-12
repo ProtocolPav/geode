@@ -444,7 +444,7 @@ class BedrockServer:
                 soup = BeautifulSoup(server_download_site.text, 'html.parser')
                 link_tag = soup.find("a",
                                      href=re.compile("https://www.minecraft.net/bedrockdedicatedserver/bin-linux/"))
-                link = ''
+                link = f'{self.version}'
 
                 if link_tag:
                     link = str(link_tag.get('href'))

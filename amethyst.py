@@ -442,8 +442,16 @@ class BedrockServer:
                                                                  "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
 
                 soup = BeautifulSoup(server_download_site.text, 'html.parser')
-                link = str(soup.find("a",
-                                     href=re.compile("https://www.minecraft.net/bedrockdedicatedserver/bin-linux/")).get('href'))
+                link_tag = soup.find("a",
+                                     href=re.compile("https://www.minecraft.net/bedrockdedicatedserver/bin-linux/"))
+                link = ''
+
+                if link_tag:
+                    link = str(link_tag.get('href'))
+                    # Proceed with download
+                else:
+                    print("⚠️ Could not find the Bedrock server download link.")
+                    print(f'{server_download_site.text}')
 
                 if self.version not in link:
                     log('server', 'I have found a new Minecraft Update. Updating now!')

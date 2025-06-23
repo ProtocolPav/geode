@@ -644,86 +644,101 @@ class BedrockServer:
                   f"{cloud_service} upload aborted")
 
     async def initiate_map_update(self, world_path: str):
+        log('generation', f'Starting map update for world: {world_path}')
+
         await self.send_message(
-            f"A Map Update is in progress. The server may experience higher lag than usual for up to 7 minutes", relay=True,
-            include_header=True)
+            f"A Map Update is in progress. The server may experience higher lag than usual for up to 7 minutes",
+            relay=True, include_header=True)
 
         map_start_time = datetime.now()
 
-        # Update Map
-        await asyncio.create_subprocess_shell(
-            f"./unmined/unmined-cli web render "
-            f"--world='{world_path}' "
-            f"--output='./unmined/overworld' "
-            f"--imageformat=png "
-            f"--dimension=overworld "
-            f"--zoomin=2 "
-            f"--area='b((2111, 2111), (-2112, -2112))' "
-            f"--log-level=error "
-            f"--shadows=3d "
-            f"--mapsettings='./unmined/config/Everthorn.json' "
-            f"--chunkprocessors=1",
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            limit=1024 * 512
+        # Common parameters to reduce repetition
+        base_cmd = f"sudo ./unmined/unmined-cli web render --world='{world_path}'"
+        common_params = (
+            "--imageformat=png --zoomin=2 "
+            "--area='b((2111, 2111), (-2112, -2112))' "
+            "--log-level=error --shadows=3d --chunkprocessors=1"
         )
 
-        await asyncio.create_subprocess_shell(
-            f"./unmined/unmined-cli web render "
-            f"--world='{world_path}' "
-            f"--output='./unmined/nether' "
-            f"--imageformat=png "
-            f"--dimension=nether "
-            f"--zoomin=2 "
-            f"--area='b((2111, 2111), (-2112, -2112))' "
-            f"--log-level=error "
-            f"--shadows=3d "
-            f"--mapsettings='./unmined/config/Nether.json' "
-            f"--chunkprocessors=1",
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            limit=1024 * 512
-        )
+        # Define all render tasks
+        render_tasks = [
+            f"{base_cmd} --output='./unmined/overworld' --dimension=overworld "
+            f"--mapsettings='./unmined/config/Everthorn.json' {common_params}",
 
-        map_process = await asyncio.create_subprocess_shell(
-            f"./unmined/unmined-cli web render "
-            f"--world='{world_path}' "
-            f"--output='./unmined/subway' "
-            f"--imageformat=png "
-            f"--dimension=overworld "
-            f"--zoomin=2 "
-            f"--area='b((2111, 2111), (-2112, -2112))' "
-            f"--log-level=error "
-            f"--shadows=3d "
-            f"--mapsettings='./unmined/config/Subway.json' "
-            f"--chunkprocessors=1",
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            limit=1024 * 512
-        )
+            f"{base_cmd} --output='./unmined/nether' --dimension=nether "
+            f"--mapsettings='./unmined/config/Nether.json' {common_params}",
+
+            f"{base_cmd} --output='./unmined/subway' --dimension=overworld "
+            f"--mapsettings='./unmined/config/Subway.json' {common_params}"
+        ]
+
+        render_names = ['overworld', 'nether', 'subway']
+        log('generation', f'Configured {len(render_tasks)} render tasks: {", ".join(render_names)}')
 
         try:
-            while True:
-                line = await map_process.stdout.readline()
-                line = line.decode().rstrip()
-                if not line:
-                    log('generation', f'Aborting Map Generation')
+            # Run all processes concurrently
+            log('generation', 'Starting concurrent map rendering processes')
+            processes = []
+            for i, cmd in enumerate(render_tasks):
+                log('generation', f'Launching {render_names[i]} render process')
+                process = await asyncio.create_subprocess_shell(
+                    cmd,
+                    stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.STDOUT,
+                    limit=1024 * 1024  # Increased buffer size
+                )
+                processes.append(process)
+                log('generation', f'{render_names[i]} render process started with PID: {process.pid}')
 
-                    duration = datetime.now() - map_start_time
+            log('generation', f'All {len(processes)} render processes launched, waiting for completion')
 
-                    minutes = duration.seconds // 60
+            # Wait for all processes to complete
+            results = await asyncio.gather(*[p.wait() for p in processes], return_exceptions=True)
 
-                    await self.send_message(f"Map Update Complete! This one took ~{round(minutes)}m", relay=True,
-                                            include_header=True)
+            log('generation', 'All render processes completed, analyzing results')
 
-                    break
+            # Check for any failures
+            failed_processes = []
+            successful_processes = []
+
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    log('generation', f'{render_names[i]} render failed with exception: {str(result)}')
+                    failed_processes.append(i)
+                elif isinstance(result, int) and result != 0:
+                    log('generation', f'{render_names[i]} render failed with exit code: {result}')
+                    failed_processes.append(i)
+                else:
+                    log('generation', f'{render_names[i]} render completed successfully')
+                    successful_processes.append(i)
+
+            duration = datetime.now() - map_start_time
+            minutes = duration.seconds // 60
+            seconds = duration.seconds % 60
+
+            log('generation',
+                f'Map update completed in {minutes}m {seconds}s - Success: {len(successful_processes)}, Failed: {len(failed_processes)}')
+
+            if failed_processes:
+                failed_names = [render_names[i] for i in failed_processes]
+                log('generation', f'Failed renders: {", ".join(failed_names)}')
+                await self.send_message(
+                    f"Map Update completed with some errors after ~{round(minutes)}m. "
+                    f"Failed renders: {len(failed_processes)}/{len(render_tasks)}",
+                    relay=True, include_header=True)
+            else:
+                log('generation', 'All map renders completed successfully')
+                await self.send_message(
+                    f"Map Update Complete! This one took ~{round(minutes)}m",
+                    relay=True, include_header=True)
+
         except Exception as e:
-            log('generation', f"{e.__traceback__}")
-
-            await self.send_message(f"There was an issue completing the map update.", relay=True, include_header=True)
+            log('generation', f"Map generation critical error: {str(e)}")
+            log('generation', f"Exception details: {e.__class__.__name__} - {str(e)}")
+            await self.send_message(
+                f"There was an issue completing the map update.",
+                relay=True, include_header=True)
 
     async def restore_backup(self, backup_type: str, file_name: str):
         cloud_service = self.config['backup']['cloud_platform']

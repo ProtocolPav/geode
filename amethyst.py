@@ -168,7 +168,8 @@ class Amethyst:
                                       json={'type': 'crash',
                                             'content': '',
                                             'embed_title': 'Regular Server Restart',
-                                            'embed_content': 'Server will restart in 60 seconds. Use `/online` to check status.',
+                                            'embed_content': 'Server will restart in 60 seconds. Use `/online` to check status.\n\n'
+                                                             f"-# <:_purple_circle:1115918037464399924> Powered by **Amethyst {self.version}**",
                                             'name': 'Amethyst'})
 
                 await self.server.send_announce('The server will restart in §l§e60 seconds§r')
@@ -184,7 +185,8 @@ class Amethyst:
                                       json={'type': 'crash',
                                             'content': '',
                                             'embed_title': 'Regular Server Restart',
-                                            'embed_content': 'Server will restart in 30 seconds. Use `/online` to check status.',
+                                            'embed_content': 'Server will restart in 30 seconds. Use `/online` to check status.\n\n'
+                                                             f"-# <:_purple_circle:1115918037464399924> Powered by **Amethyst {self.version}**",
                                             'name': 'Amethyst'})
 
                 await asyncio.sleep(25)
@@ -210,7 +212,8 @@ class Amethyst:
                                             'embed_content': 'Amethyst is expecting a server preemption and is shutting down '
                                                              'to avoid world corruption.\n'
                                                              'Thorny will also be down during this time. '
-                                                             'Use `/ping` to check status.',
+                                                             'Use `/ping` to check status.\n\n'
+                                                             f"-# <:_purple_circle:1115918037464399924> Powered by **Amethyst {self.version}**",
                                             'name': 'Amethyst'})
 
                 await self.server.send_announce('The server will restart in §l§e5 seconds§r')
@@ -778,9 +781,9 @@ class BedrockServer:
                     await client.post('http://nexuscore:8000/api/v0.2/events/relay',
                                       json={'type': 'stop',
                                             'content': '',
-                                            'embed_title': '<:_pink_circle:1115918044779261952> Server Stop',
-                                            'embed_content': "The server has stopped. Please be patient, it'll be back up soon!"
-                                                             f"-# Minecraft Version: {self.version} | Powered by **Amethyst {self.amethyst_version}**",
+                                            'embed_title': 'Server Stop',
+                                            'embed_content': "The server has stopped. Please be patient, it'll be back up soon!\n\n"
+                                                             f"-# <:_purple_circle:1115918037464399924> Powered by **Amethyst {self.amethyst_version}**",
                                             'name': 'Amethyst'})
                 
                 raise errors.UserRequestedStop()
@@ -792,9 +795,8 @@ class BedrockServer:
                     await client.post('http://nexuscore:8000/api/v0.2/events/relay',
                                       json={'type': 'start',
                                             'content': '',
-                                            'embed_title': '<:_green_circle:1115918042078134364> Server Start',
-                                            'embed_content': 'The server is up and ready for playing!\n\n'
-                                                             f"-# Minecraft Version: {self.version}\n"
+                                            'embed_title': 'Server Start',
+                                            'embed_content': f'The server is up and ready for playing! Running Minecraft **v{self.version}**.\n\n'
                                                              f"-# <:_purple_circle:1115918037464399924> Powered by **Amethyst {self.amethyst_version}**",
                                             'name': 'Amethyst'})
 
@@ -805,10 +807,11 @@ class BedrockServer:
                     await client.post('http://nexuscore:8000/api/v0.2/events/relay',
                                       json={'type': 'crash',
                                             'content': '',
-                                            'embed_title': '<:_pink_circle:1115918044779261952> Server Crash Report',
+                                            'embed_title': 'Server Crash Report',
                                             'embed_content': 'An unexpected crash occurred. '
                                                              '**DO NOT** get on the server until a Community Manager says it is safe to get on!\n'
-                                                             'You **WILL** lose your progress if not!!!',
+                                                             'You **WILL** lose your progress if not!!!\n\n'
+                                                             f"-# <:_purple_circle:1115918037464399924> Powered by **Amethyst {self.amethyst_version}**",
                                             'name': 'Amethyst'})
 
                 raise errors.ServerCrash()

@@ -276,15 +276,8 @@ class Amethyst:
                         await self.server.send_announce(message['content'])
                     else:
                         header = "§e+=+=+=+=+=+=+ Server Message +=+=+=+=+=+=+§r\\n"
-                        await self.server.send_message(f"{header}{message['content']}")
+                        await self.server.send_message(f"{header}{message['content']}", include_header=True, play_sound=True, relay=True)
 
-                        async with httpx.AsyncClient() as client:
-                            await client.post('http://nexuscore:8000/api/v0.2/events/relay',
-                                              json={'type': 'other',
-                                                    'content': '',
-                                                    'embed_title': 'Server Message',
-                                                    'embed_content': f"{message['content']}'",
-                                                    'name': 'Amethyst'})
             except IndexError:
                 pass
 
@@ -415,14 +408,31 @@ class BedrockServer:
         await self.server.stdin.drain()
         await asyncio.sleep(sleep)
 
-    async def send_message(self, message: str):
+    async def send_message(self, message: str, include_header: bool = False, play_sound: bool = False, relay: bool = False):
         processed_message = demoji.replace_with_desc(message)
         processed_message = processed_message.translate(str.maketrans({'’': "'",
                                                                        '“': '"',
                                                                        '”': '"',
                                                                        '‘': "'"}))
 
-        await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{processed_message}"}}]}}')
+        header = "§e+=+=+=+=+=+=+ Server Message +=+=+=+=+=+=+§r\\n"
+
+        if play_sound:
+            await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')
+
+        if include_header:
+            await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{header}{processed_message}"}}]}}')
+        else:
+            await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{processed_message}"}}]}}')
+
+        if relay:
+            async with httpx.AsyncClient() as client:
+                await client.post('http://nexuscore:8000/api/v0.2/events/relay',
+                                  json={'type': 'other',
+                                        'content': '',
+                                        'embed_title': 'Server Message',
+                                        'embed_content': f"{message}'",
+                                        'name': 'Amethyst'})
 
     async def send_announce(self, message: str):
         await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')
@@ -576,7 +586,9 @@ class BedrockServer:
             if og_file not in check_file_list:
                 log('check', f'NOT FOUND - {og_file}')
 
-        await self.send_message('Map Update is in progress... Expect slightly decreased performance for up to 7 minutes.')
+        await self.send_message(f"A Map Update is in progress. The server may experience higher lag than usual for up to 7 minutes", relay=True, include_header=True)
+
+        map_start_time = datetime.now()
 
         # Update Map
         await asyncio.create_subprocess_shell(
@@ -639,9 +651,18 @@ class BedrockServer:
                 line = line.decode().rstrip()
                 if not line:
                     log('generation', f'Aborting Map Generation')
+
+                    duration = datetime.now() - map_start_time
+
+                    minutes = duration.seconds // 60
+
+                    await self.send_message(f"Map Update Complete! This one took ~{round(minutes)}m", relay=True, include_header=True)
+
                     break
         except Exception as e:
             log('generation', f"{e.__traceback__}")
+
+            await self.send_message(f"There was an issue completing the map update.", relay=True, include_header=True)
 
         shutil.make_archive(f"{path_to_backup}/{world_name} {file_date}", 'zip',
                             f"{path_to_backup}/{world_name} {file_date}")

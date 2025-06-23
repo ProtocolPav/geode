@@ -273,8 +273,7 @@ class Amethyst:
                     if message['type'] == 'announce':
                         await self.server.send_announce(message['content'])
                     else:
-                        header = "§e+=+=+=+=+=+=+ Server Message +=+=+=+=+=+=+§r\\n"
-                        await self.server.send_message(f"{header}{message['content']}", include_header=True, play_sound=True, relay=True)
+                        await self.server.send_message(f"{message['content']}", include_header=True, play_sound=True, relay=True)
 
             except IndexError:
                 pass

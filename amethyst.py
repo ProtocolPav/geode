@@ -426,7 +426,7 @@ class BedrockServer:
                                   json={'type': 'other',
                                         'content': '',
                                         'embed_title': 'Server Message',
-                                        'embed_content': f"{message}'",
+                                        'embed_content': f"{message}",
                                         'name': 'Amethyst'})
 
     async def send_announce(self, message: str):

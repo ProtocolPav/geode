@@ -585,6 +585,8 @@ class BedrockServer:
             if og_file not in check_file_list:
                 log('check', f'NOT FOUND - {og_file}')
 
+        await self.initiate_map_update(f'{path_to_backup}/{world_name} {file_date}')
+
         shutil.make_archive(f"{path_to_backup}/{world_name} {file_date}", 'zip',
                             f"{path_to_backup}/{world_name} {file_date}")
         shutil.rmtree(f"{path_to_backup}/{world_name} {file_date}")
@@ -593,9 +595,6 @@ class BedrockServer:
 
         log('backup', 'Finished backup')
         log('backup', f'This backup is {round(size / 1000 / 1000, 2)}MB')
-
-        await self.initiate_map_update(f'{path_to_backup}/{world_name} {file_date}')
-
         log('backup', f'Beginning upload to {cloud_service} bucket: {bucket}')
 
         if datetime.now().hour == daily_backup_hour:

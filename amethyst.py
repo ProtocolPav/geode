@@ -61,7 +61,7 @@ class Amethyst:
         print('\033[1;35m' + self.data['title'] + '\033[0m')
         log("core", f"Amethyst Version: {self.version}")
         log("core", "Starting up Amethyst...")
-        self.server: BedrockServer = BedrockServer(self.config, self.data)
+        self.server: BedrockServer = BedrockServer(self.config, self.data, self.version)
 
     @staticmethod
     def load_config_file() -> dict:
@@ -314,7 +314,7 @@ class Amethyst:
         if not self.server.running():
             await self.server.disconnect_all()
 
-            self.server = BedrockServer(self.config, self.data)
+            self.server = BedrockServer(self.config, self.data, self.version)
 
             try:
                 asyncio.get_event_loop().create_task(coro=self.server.create_server(start_status),
@@ -357,7 +357,7 @@ class BedrockServer:
 
     server: asyncio.subprocess.Process
 
-    def __init__(self, config: dict, amethyst_data: dict):
+    def __init__(self, config: dict, amethyst_data: dict, amethyst_version: str):
         self.start: datetime = datetime.now().replace(microsecond=0)
         self.status: list[str] = ['not_running']
         self.config = config
@@ -368,6 +368,7 @@ class BedrockServer:
         self.process_id: int = 0
         self.online: list = []
         self.console_logs = []
+        self.amethyst_version = amethyst_version
 
         log('server', f'Last loaded version: {self.version}')
 
@@ -792,8 +793,7 @@ class BedrockServer:
                                             'content': '',
                                             'embed_title': 'Server Start',
                                             'embed_content': 'The server is up and ready for playing!\n'
-                                                             "**Help us!** *Didn't see a server **STOP** "
-                                                             "message before this? Report it by pinging a CM!*",
+                                                             f"-# Minecraft Version: {self.version} | Powered By Amethyst {self.amethyst_version}",
                                             'name': 'Amethyst'})
 
             elif line in ["Killed", "Crash"]:
@@ -802,10 +802,11 @@ class BedrockServer:
                 async with httpx.AsyncClient() as client:
                     await client.post('http://nexuscore:8000/api/v0.2/events/relay',
                                       json={'type': 'crash',
-                                            'content': '<@&668091613687316500>',
+                                            'content': '',
                                             'embed_title': 'Server Crash Report',
                                             'embed_content': 'An unexpected crash occurred. '
-                                                             'Please check that the world is fine and not corrupted before making progress!',
+                                                             '**DO NOT** get on the server until a Community Manager says it is safe to get on!\n'
+                                                             'You **WILL** lose your progress if not!!!',
                                             'name': 'Amethyst'})
 
                 raise errors.ServerCrash()

@@ -593,9 +593,10 @@ class BedrockServer:
 
         log('backup', 'Finished backup')
         log('backup', f'This backup is {round(size / 1000 / 1000, 2)}MB')
-        log('backup', f'Beginning upload to {cloud_service} bucket: {bucket}')
 
         await self.initiate_map_update(f'{path_to_backup}/{world_name} {file_date}')
+
+        log('backup', f'Beginning upload to {cloud_service} bucket: {bucket}')
 
         if datetime.now().hour == daily_backup_hour:
             if datetime.now().day == monthly_backup_day:

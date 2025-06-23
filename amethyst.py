@@ -724,8 +724,7 @@ class BedrockServer:
                 failed_names = [render_names[i] for i in failed_processes]
                 log('generation', f'Failed renders: {", ".join(failed_names)}')
                 await self.send_message(
-                    f"Map Update completed with some errors after ~{round(minutes)}m. "
-                    f"Failed renders: {len(failed_processes)}/{len(render_tasks)}",
+                    f"Map update finished. Some or all map updates failed.",
                     relay=True, include_header=True)
             else:
                 log('generation', 'All map renders completed successfully')

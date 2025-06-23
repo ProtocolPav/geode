@@ -432,65 +432,64 @@ class BedrockServer:
         await self.send_command(f'testfor @a[{selectors}]')
 
     async def check_for_updates(self):
-        async with httpx.AsyncClient() as client:
-            log('server', 'Checking for updates...')
+        client = httpx.AsyncClient()
+        latest = await client.get("https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/versions.json")
+        version = latest.json()['linux']['stable']
 
-            try:
-                server_download_site = await client.get("https://www.minecraft.net/en-us/download/server/bedrock",
-                                                        follow_redirects=True,
-                                                        headers={"Accept-Encoding": "identity", "Accept-Language": "en",
-                                                                 "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+        if self.version != version:
+            data_url = f"https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/linux/{version}.json"
+            server_data = (await client.get(data_url)).json()
 
-                soup = BeautifulSoup(server_download_site.text, 'html.parser')
-                link_tag = soup.find("a",
-                                     href=re.compile("https://www.minecraft.net/bedrockdedicatedserver/bin-linux/"))
+            link = server_data['download_url']
 
-                # link = str(link_tag.get('href'))
-                link = 'https://www.minecraft.net/bedrockdedicatedserver/bin-linux/bedrock-server-1.21.90.4.zip'
+            log('server', 'I have found a new Minecraft Update. Updating now!')
 
-                if self.version not in link:
-                    log('server', 'I have found a new Minecraft Update. Updating now!')
-                    proc = await asyncio.create_subprocess_shell(
-                        f"curl -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:54.0) Gecko/20100101 Firefox/54.0' "
-                        f"-H 'Cache-Control: no-cache, no-store' {link} --output ../server/temp.zip &&"
-                        f"unzip -o ../server/temp.zip -d ../server/new_server &&"
-                        f"cp -r ../server/1.19.1/worlds ../server/new_server/ &&"
-                        f"cp ../server/1.19.1/allowlist.json ../server/new_server/ &&"
-                        f"cp ../server/1.19.1/server.properties ../server/new_server/ &&"
-                        f"cp ../server/1.19.1/permissions.json ../server/new_server/ &&"
-                        f"cp -r ../server/1.19.1/config ../server/new_server/ &&"
-                        f"cp -a ../server/1.19.1/. ../server/1.19.1-old/ &&"
-                        f"rm -r ../server/1.19.1/* &&"
-                        f"cp -a ../server/new_server/. ../server/1.19.1/",
-                        stdin=asyncio.subprocess.PIPE,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.STDOUT,
-                    )
-                    while True:
-                        line = await proc.stdout.readline()
-                        line = line.decode().rstrip()
-                        if line == '':
-                            log('debug', f'Aborting  due to EOL')
-                            break
-                        # log('debug', f'{line}')
+            await client.post('http://nexuscore:8000/api/v0.2/events/relay',
+                              json={'type': 'other',
+                                    'content': '',
+                                    'embed_title': 'Server Update in progress...',
+                                    'embed_content': f"I have found a new Minecraft Update. Updating now!",
+                                    'name': 'Amethyst'})
 
-                    log('server', f"Server updated according to the link: {link}")
+            proc = await asyncio.create_subprocess_shell(
+                f"curl -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:54.0) Gecko/20100101 Firefox/54.0' "
+                f"-H 'Cache-Control: no-cache, no-store' {link} --output ../server/temp.zip &&"
+                f"unzip -o ../server/temp.zip -d ../server/new_server &&"
+                f"cp -r ../server/1.19.1/worlds ../server/new_server/ &&"
+                f"cp ../server/1.19.1/allowlist.json ../server/new_server/ &&"
+                f"cp ../server/1.19.1/server.properties ../server/new_server/ &&"
+                f"cp ../server/1.19.1/permissions.json ../server/new_server/ &&"
+                f"cp -r ../server/1.19.1/config ../server/new_server/ &&"
+                f"cp -a ../server/1.19.1/. ../server/1.19.1-old/ &&"
+                f"rm -r ../server/1.19.1/* &&"
+                f"cp -a ../server/new_server/. ../server/1.19.1/",
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            while True:
+                line = await proc.stdout.readline()
+                line = line.decode().rstrip()
+                if line == '':
+                    log('debug', f'Aborting  due to EOL')
+                    break
+                # log('debug', f'{line}')
 
-                    self.update = link.split('-')[3].split('.zip')[0]
+            log('server', f"Server updated according to the link: {link}")
 
-                    await client.post('http://nexuscore:8000/api/v0.2/events/relay',
-                                      json={'type': 'other',
-                                            'content': '',
-                                            'embed_title': 'Server Update!',
-                                            'embed_content': f"Great news! Server's been updated to {self.update}",
-                                            'name': 'Amethyst'})
+            self.update = link.split('-')[3].split('.zip')[0]
 
-                elif self.version in link:
-                    self.update = None
+            await client.post('http://nexuscore:8000/api/v0.2/events/relay',
+                              json={'type': 'other',
+                                    'content': '',
+                                    'embed_title': 'Server Update Complete!',
+                                    'embed_content': f"Great news! Server's been updated to {self.update}",
+                                    'name': 'Amethyst'})
 
-                log('server', 'Server is up to date!')
-            except httpx.TimeoutException:
-                log('server', 'There was an issue with checking updates')
+        elif self.version == version:
+            self.update = None
+
+        log('server', 'Server is up to date!')
 
     async def create_server(self, start_status: str = 'started_by_user'):
         await self.check_for_updates()

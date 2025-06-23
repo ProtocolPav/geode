@@ -8,13 +8,8 @@ from datetime import datetime, timedelta
 import os
 
 import httpx
-from httpx import AsyncClient
-from bs4 import BeautifulSoup
 from jproperties import Properties
-import re
 import demoji
-
-from copy import deepcopy
 
 import errors
 

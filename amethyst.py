@@ -778,8 +778,9 @@ class BedrockServer:
                     await client.post('http://nexuscore:8000/api/v0.2/events/relay',
                                       json={'type': 'stop',
                                             'content': '',
-                                            'embed_title': 'Server Stop',
-                                            'embed_content': "The server has stopped. Please be patient, it'll be back up soon!",
+                                            'embed_title': '<:_pink_circle:1115918044779261952> Server Stop',
+                                            'embed_content': "The server has stopped. Please be patient, it'll be back up soon!"
+                                                             f"-# Minecraft Version: {self.version} | Powered by **Amethyst {self.amethyst_version}**",
                                             'name': 'Amethyst'})
                 
                 raise errors.UserRequestedStop()
@@ -791,9 +792,10 @@ class BedrockServer:
                     await client.post('http://nexuscore:8000/api/v0.2/events/relay',
                                       json={'type': 'start',
                                             'content': '',
-                                            'embed_title': 'Server Start',
-                                            'embed_content': 'The server is up and ready for playing!\n'
-                                                             f"-# Minecraft Version: {self.version} | Powered By Amethyst {self.amethyst_version}",
+                                            'embed_title': '<:_green_circle:1115918042078134364> Server Start',
+                                            'embed_content': 'The server is up and ready for playing!\n\n'
+                                                             f"-# Minecraft Version: {self.version}\n"
+                                                             f"-# <:_purple_circle:1115918037464399924> Powered by **Amethyst {self.amethyst_version}**",
                                             'name': 'Amethyst'})
 
             elif line in ["Killed", "Crash"]:
@@ -803,7 +805,7 @@ class BedrockServer:
                     await client.post('http://nexuscore:8000/api/v0.2/events/relay',
                                       json={'type': 'crash',
                                             'content': '',
-                                            'embed_title': 'Server Crash Report',
+                                            'embed_title': '<:_pink_circle:1115918044779261952> Server Crash Report',
                                             'embed_content': 'An unexpected crash occurred. '
                                                              '**DO NOT** get on the server until a Community Manager says it is safe to get on!\n'
                                                              'You **WILL** lose your progress if not!!!',

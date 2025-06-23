@@ -8,13 +8,8 @@ from datetime import datetime, timedelta
 import os
 
 import httpx
-from httpx import AsyncClient
-from bs4 import BeautifulSoup
 from jproperties import Properties
-import re
 import demoji
-
-from copy import deepcopy
 
 import errors
 
@@ -48,7 +43,7 @@ class Amethyst:
     looper = LoopHandler()
 
     def __init__(self):
-        self.version = 'v7.6'
+        self.version = 'v7.7'
         self.system_log = {'time': f"{datetime.now()}",
                            'ram_used': 0,
                            'ram_total': 0,
@@ -66,7 +61,7 @@ class Amethyst:
         print('\033[1;35m' + self.data['title'] + '\033[0m')
         log("core", f"Amethyst Version: {self.version}")
         log("core", "Starting up Amethyst...")
-        self.server: BedrockServer = BedrockServer(self.config, self.data)
+        self.server: BedrockServer = BedrockServer(self.config, self.data, self.version)
 
     @staticmethod
     def load_config_file() -> dict:
@@ -173,7 +168,8 @@ class Amethyst:
                                       json={'type': 'crash',
                                             'content': '',
                                             'embed_title': 'Regular Server Restart',
-                                            'embed_content': 'Server will restart in 60 seconds. Use `/online` to check status.',
+                                            'embed_content': 'Server will restart in 60 seconds. Use `/online` to check status.\n\n'
+                                                             f"-# <:_purple_circle:1115918037464399924> Powered by **Amethyst {self.version}**",
                                             'name': 'Amethyst'})
 
                 await self.server.send_announce('The server will restart in §l§e60 seconds§r')
@@ -189,7 +185,8 @@ class Amethyst:
                                       json={'type': 'crash',
                                             'content': '',
                                             'embed_title': 'Regular Server Restart',
-                                            'embed_content': 'Server will restart in 30 seconds. Use `/online` to check status.',
+                                            'embed_content': 'Server will restart in 30 seconds. Use `/online` to check status.\n\n'
+                                                             f"-# <:_purple_circle:1115918037464399924> Powered by **Amethyst {self.version}**",
                                             'name': 'Amethyst'})
 
                 await asyncio.sleep(25)
@@ -215,7 +212,8 @@ class Amethyst:
                                             'embed_content': 'Amethyst is expecting a server preemption and is shutting down '
                                                              'to avoid world corruption.\n'
                                                              'Thorny will also be down during this time. '
-                                                             'Use `/ping` to check status.',
+                                                             'Use `/ping` to check status.\n\n'
+                                                             f"-# <:_purple_circle:1115918037464399924> Powered by **Amethyst {self.version}**",
                                             'name': 'Amethyst'})
 
                 await self.server.send_announce('The server will restart in §l§e5 seconds§r')
@@ -276,15 +274,8 @@ class Amethyst:
                         await self.server.send_announce(message['content'])
                     else:
                         header = "§e+=+=+=+=+=+=+ Server Message +=+=+=+=+=+=+§r\\n"
-                        await self.server.send_message(f"{header}{message['content']}")
+                        await self.server.send_message(f"{header}{message['content']}", include_header=True, play_sound=True, relay=True)
 
-                        async with httpx.AsyncClient() as client:
-                            await client.post('http://nexuscore:8000/api/v0.2/events/relay',
-                                              json={'type': 'other',
-                                                    'content': '',
-                                                    'embed_title': 'Server Message',
-                                                    'embed_content': f"{message['content']}'",
-                                                    'name': 'Amethyst'})
             except IndexError:
                 pass
 
@@ -326,7 +317,7 @@ class Amethyst:
         if not self.server.running():
             await self.server.disconnect_all()
 
-            self.server = BedrockServer(self.config, self.data)
+            self.server = BedrockServer(self.config, self.data, self.version)
 
             try:
                 asyncio.get_event_loop().create_task(coro=self.server.create_server(start_status),
@@ -369,7 +360,7 @@ class BedrockServer:
 
     server: asyncio.subprocess.Process
 
-    def __init__(self, config: dict, amethyst_data: dict):
+    def __init__(self, config: dict, amethyst_data: dict, amethyst_version: str):
         self.start: datetime = datetime.now().replace(microsecond=0)
         self.status: list[str] = ['not_running']
         self.config = config
@@ -380,6 +371,7 @@ class BedrockServer:
         self.process_id: int = 0
         self.online: list = []
         self.console_logs = []
+        self.amethyst_version = amethyst_version
 
         log('server', f'Last loaded version: {self.version}')
 
@@ -415,14 +407,31 @@ class BedrockServer:
         await self.server.stdin.drain()
         await asyncio.sleep(sleep)
 
-    async def send_message(self, message: str):
+    async def send_message(self, message: str, include_header: bool = False, play_sound: bool = False, relay: bool = False):
         processed_message = demoji.replace_with_desc(message)
         processed_message = processed_message.translate(str.maketrans({'’': "'",
                                                                        '“': '"',
                                                                        '”': '"',
                                                                        '‘': "'"}))
 
-        await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{processed_message}"}}]}}')
+        header = "§e+=+=+=+=+=+=+ Server Message +=+=+=+=+=+=+§r\\n"
+
+        if play_sound:
+            await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')
+
+        if include_header:
+            await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{header}{processed_message}"}}]}}')
+        else:
+            await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{processed_message}"}}]}}')
+
+        if relay:
+            async with httpx.AsyncClient() as client:
+                await client.post('http://nexuscore:8000/api/v0.2/events/relay',
+                                  json={'type': 'other',
+                                        'content': '',
+                                        'embed_title': 'Server Message',
+                                        'embed_content': f"{message}",
+                                        'name': 'Amethyst'})
 
     async def send_announce(self, message: str):
         await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')
@@ -432,65 +441,64 @@ class BedrockServer:
         await self.send_command(f'testfor @a[{selectors}]')
 
     async def check_for_updates(self):
-        async with httpx.AsyncClient() as client:
-            log('server', 'Checking for updates...')
+        client = httpx.AsyncClient()
+        latest = await client.get("https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/versions.json")
+        version = latest.json()['linux']['stable']
 
-            try:
-                server_download_site = await client.get("https://www.minecraft.net/en-us/download/server/bedrock",
-                                                        follow_redirects=True,
-                                                        headers={"Accept-Encoding": "identity", "Accept-Language": "en",
-                                                                 "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+        if self.version != version:
+            data_url = f"https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/linux/{version}.json"
+            server_data = (await client.get(data_url)).json()
 
-                soup = BeautifulSoup(server_download_site.text, 'html.parser')
-                link_tag = soup.find("a",
-                                     href=re.compile("https://www.minecraft.net/bedrockdedicatedserver/bin-linux/"))
+            link = server_data['download_url']
 
-                # link = str(link_tag.get('href'))
-                link = 'https://www.minecraft.net/bedrockdedicatedserver/bin-linux/bedrock-server-1.21.90.4.zip'
+            log('server', 'I have found a new Minecraft Update. Updating now!')
 
-                if self.version not in link:
-                    log('server', 'I have found a new Minecraft Update. Updating now!')
-                    proc = await asyncio.create_subprocess_shell(
-                        f"curl -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:54.0) Gecko/20100101 Firefox/54.0' "
-                        f"-H 'Cache-Control: no-cache, no-store' {link} --output ../server/temp.zip &&"
-                        f"unzip -o ../server/temp.zip -d ../server/new_server &&"
-                        f"cp -r ../server/1.19.1/worlds ../server/new_server/ &&"
-                        f"cp ../server/1.19.1/allowlist.json ../server/new_server/ &&"
-                        f"cp ../server/1.19.1/server.properties ../server/new_server/ &&"
-                        f"cp ../server/1.19.1/permissions.json ../server/new_server/ &&"
-                        f"cp -r ../server/1.19.1/config ../server/new_server/ &&"
-                        f"cp -a ../server/1.19.1/. ../server/1.19.1-old/ &&"
-                        f"rm -r ../server/1.19.1/* &&"
-                        f"cp -a ../server/new_server/. ../server/1.19.1/",
-                        stdin=asyncio.subprocess.PIPE,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.STDOUT,
-                    )
-                    while True:
-                        line = await proc.stdout.readline()
-                        line = line.decode().rstrip()
-                        if line == '':
-                            log('debug', f'Aborting  due to EOL')
-                            break
-                        # log('debug', f'{line}')
+            await client.post('http://nexuscore:8000/api/v0.2/events/relay',
+                              json={'type': 'other',
+                                    'content': '',
+                                    'embed_title': 'Server Update in progress...',
+                                    'embed_content': f"I have found a new Minecraft Update. Updating now!",
+                                    'name': 'Amethyst'})
 
-                    log('server', f"Server updated according to the link: {link}")
+            proc = await asyncio.create_subprocess_shell(
+                f"curl -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:54.0) Gecko/20100101 Firefox/54.0' "
+                f"-H 'Cache-Control: no-cache, no-store' {link} --output ../server/temp.zip &&"
+                f"unzip -o ../server/temp.zip -d ../server/new_server &&"
+                f"cp -r ../server/1.19.1/worlds ../server/new_server/ &&"
+                f"cp ../server/1.19.1/allowlist.json ../server/new_server/ &&"
+                f"cp ../server/1.19.1/server.properties ../server/new_server/ &&"
+                f"cp ../server/1.19.1/permissions.json ../server/new_server/ &&"
+                f"cp -r ../server/1.19.1/config ../server/new_server/ &&"
+                f"cp -a ../server/1.19.1/. ../server/1.19.1-old/ &&"
+                f"rm -r ../server/1.19.1/* &&"
+                f"cp -a ../server/new_server/. ../server/1.19.1/",
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            while True:
+                line = await proc.stdout.readline()
+                line = line.decode().rstrip()
+                if line == '':
+                    log('debug', f'Aborting  due to EOL')
+                    break
+                # log('debug', f'{line}')
 
-                    self.update = link.split('-')[3].split('.zip')[0]
+            log('server', f"Server updated according to the link: {link}")
 
-                    await client.post('http://nexuscore:8000/api/v0.2/events/relay',
-                                      json={'type': 'other',
-                                            'content': '',
-                                            'embed_title': 'Server Update!',
-                                            'embed_content': f"Great news! Server's been updated to {self.update}",
-                                            'name': 'Amethyst'})
+            self.update = link.split('-')[3].split('.zip')[0]
 
-                elif self.version in link:
-                    self.update = None
+            await client.post('http://nexuscore:8000/api/v0.2/events/relay',
+                              json={'type': 'other',
+                                    'content': '',
+                                    'embed_title': 'Server Update Complete!',
+                                    'embed_content': f"Great news! Server's been updated to {self.update}",
+                                    'name': 'Amethyst'})
 
-                log('server', 'Server is up to date!')
-            except httpx.TimeoutException:
-                log('server', 'There was an issue with checking updates')
+        elif self.version == version:
+            self.update = None
+
+        log('server', 'Server is up to date!')
 
     async def create_server(self, start_status: str = 'started_by_user'):
         await self.check_for_updates()
@@ -577,72 +585,7 @@ class BedrockServer:
             if og_file not in check_file_list:
                 log('check', f'NOT FOUND - {og_file}')
 
-        await self.send_message('Map Update is in progress... Expect slightly decreased performance for up to 7 minutes.')
-
-        # Update Map
-        await asyncio.create_subprocess_shell(
-            f"./unmined/unmined-cli web render "
-            f"--world='{path_to_backup}/{world_name} {file_date}' "
-            f"--output='./unmined/overworld' "
-            f"--imageformat=png "
-            f"--dimension=overworld "
-            f"--zoomin=2 "
-            f"--area='b((2111, 2111), (-2112, -2112))' "
-            f"--log-level=error "
-            f"--shadows=3d "
-            f"--mapsettings='./unmined/config/Everthorn.json' "
-            f"--chunkprocessors=1",
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            limit=1024 * 512
-        )
-
-        await asyncio.create_subprocess_shell(
-            f"./unmined/unmined-cli web render "
-            f"--world='{path_to_backup}/{world_name} {file_date}' "
-            f"--output='./unmined/nether' "
-            f"--imageformat=png "
-            f"--dimension=nether "
-            f"--zoomin=2 "
-            f"--area='b((2111, 2111), (-2112, -2112))' "
-            f"--log-level=error "
-            f"--shadows=3d "
-            f"--mapsettings='./unmined/config/Nether.json' "
-            f"--chunkprocessors=1",
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            limit=1024 * 512
-        )
-
-        map_process = await asyncio.create_subprocess_shell(
-            f"./unmined/unmined-cli web render "
-            f"--world='{path_to_backup}/{world_name} {file_date}' "
-            f"--output='./unmined/subway' "
-            f"--imageformat=png "
-            f"--dimension=overworld "
-            f"--zoomin=2 "
-            f"--area='b((2111, 2111), (-2112, -2112))' "
-            f"--log-level=error "
-            f"--shadows=3d "
-            f"--mapsettings='./unmined/config/Subway.json' "
-            f"--chunkprocessors=1",
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            limit=1024 * 512
-        )
-
-        try:
-            while True:
-                line = await map_process.stdout.readline()
-                line = line.decode().rstrip()
-                if not line:
-                    log('generation', f'Aborting Map Generation')
-                    break
-        except Exception as e:
-            log('generation', f"{e.__traceback__}")
+        await self.initiate_map_update(f'{path_to_backup}/{world_name} {file_date}')
 
         shutil.make_archive(f"{path_to_backup}/{world_name} {file_date}", 'zip',
                             f"{path_to_backup}/{world_name} {file_date}")
@@ -671,7 +614,7 @@ class BedrockServer:
                 limit=1024 * 512
             )
 
-        else:
+        elif cloud_service == 'gcloud':
             process = await asyncio.create_subprocess_shell(
                 f"../google-cloud-sdk/bin/gcloud config set storage/parallel_composite_upload_enabled False "
                 f"&& ../google-cloud-sdk/bin/gcloud storage cp ../server/1.19.1/backup/*.zip gs://{bucket}/{backup_type}",
@@ -699,6 +642,102 @@ class BedrockServer:
         except asyncio.LimitOverrunError:
             print("AsyncioLimitOverrunError - Separator not found, and Chunk limit is exceeded!\n"
                   f"{cloud_service} upload aborted")
+
+    async def initiate_map_update(self, world_path: str):
+        log('generation', f'Starting map update for world: {world_path}')
+
+        await self.send_message(
+            f"A Map Update is in progress. The server may experience higher lag than usual for up to 7 minutes",
+            relay=True, include_header=True)
+
+        map_start_time = datetime.now()
+
+        # Common parameters to reduce repetition
+        base_cmd = f"sudo ./unmined/unmined-cli web render --world='{world_path}'"
+        common_params = (
+            "--imageformat=png --zoomin=2 "
+            "--area='b((2111, 2111), (-2112, -2112))' "
+            "--log-level=error --shadows=3d --chunkprocessors=1"
+        )
+
+        # Define all render tasks
+        render_tasks = [
+            f"{base_cmd} --output='./unmined/overworld' --dimension=overworld "
+            f"--mapsettings='./unmined/config/Everthorn.json' {common_params}",
+
+            f"{base_cmd} --output='./unmined/nether' --dimension=nether "
+            f"--mapsettings='./unmined/config/Nether.json' {common_params}",
+
+            f"{base_cmd} --output='./unmined/subway' --dimension=overworld "
+            f"--mapsettings='./unmined/config/Subway.json' {common_params}"
+        ]
+
+        render_names = ['overworld', 'nether', 'subway']
+        log('generation', f'Configured {len(render_tasks)} render tasks: {", ".join(render_names)}')
+
+        try:
+            # Run all processes concurrently
+            log('generation', 'Starting concurrent map rendering processes')
+            processes = []
+            for i, cmd in enumerate(render_tasks):
+                log('generation', f'Launching {render_names[i]} render process')
+                process = await asyncio.create_subprocess_shell(
+                    cmd,
+                    stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.STDOUT,
+                    limit=1024 * 1024  # Increased buffer size
+                )
+                processes.append(process)
+                log('generation', f'{render_names[i]} render process started with PID: {process.pid}')
+
+            log('generation', f'All {len(processes)} render processes launched, waiting for completion')
+
+            # Wait for all processes to complete
+            results = await asyncio.gather(*[p.wait() for p in processes], return_exceptions=True)
+
+            log('generation', 'All render processes completed, analyzing results')
+
+            # Check for any failures
+            failed_processes = []
+            successful_processes = []
+
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    log('generation', f'{render_names[i]} render failed with exception: {str(result)}')
+                    failed_processes.append(i)
+                elif isinstance(result, int) and result != 0:
+                    log('generation', f'{render_names[i]} render failed with exit code: {result}')
+                    failed_processes.append(i)
+                else:
+                    log('generation', f'{render_names[i]} render completed successfully')
+                    successful_processes.append(i)
+
+            duration = datetime.now() - map_start_time
+            minutes = duration.seconds // 60
+            seconds = duration.seconds % 60
+
+            log('generation',
+                f'Map update completed in {minutes}m {seconds}s - Success: {len(successful_processes)}, Failed: {len(failed_processes)}')
+
+            if failed_processes:
+                failed_names = [render_names[i] for i in failed_processes]
+                log('generation', f'Failed renders: {", ".join(failed_names)}')
+                await self.send_message(
+                    f"Map update finished. Some or all map updates failed.",
+                    relay=True, include_header=True)
+            else:
+                log('generation', 'All map renders completed successfully')
+                await self.send_message(
+                    f"Map Update Complete! This one took ~{round(minutes)}m",
+                    relay=True, include_header=True)
+
+        except Exception as e:
+            log('generation', f"Map generation critical error: {str(e)}")
+            log('generation', f"Exception details: {e.__class__.__name__} - {str(e)}")
+            await self.send_message(
+                f"There was an issue completing the map update.",
+                relay=True, include_header=True)
 
     async def restore_backup(self, backup_type: str, file_name: str):
         cloud_service = self.config['backup']['cloud_platform']
@@ -763,7 +802,8 @@ class BedrockServer:
                                       json={'type': 'stop',
                                             'content': '',
                                             'embed_title': 'Server Stop',
-                                            'embed_content': "The server has stopped. Please be patient, it'll be back up soon!",
+                                            'embed_content': "The server has stopped. Please be patient, it'll be back up soon!\n\n"
+                                                             f"-# <:_purple_circle:1115918037464399924> Powered by **Amethyst {self.amethyst_version}**",
                                             'name': 'Amethyst'})
                 
                 raise errors.UserRequestedStop()
@@ -776,9 +816,8 @@ class BedrockServer:
                                       json={'type': 'start',
                                             'content': '',
                                             'embed_title': 'Server Start',
-                                            'embed_content': 'The server is up and ready for playing!\n'
-                                                             "**Help us!** *Didn't see a server **STOP** "
-                                                             "message before this? Report it by pinging a CM!*",
+                                            'embed_content': f'The server is up and ready for playing! Running Minecraft **v{self.version}**.\n\n'
+                                                             f"-# <:_purple_circle:1115918037464399924> Powered by **Amethyst {self.amethyst_version}**",
                                             'name': 'Amethyst'})
 
             elif line in ["Killed", "Crash"]:
@@ -787,10 +826,12 @@ class BedrockServer:
                 async with httpx.AsyncClient() as client:
                     await client.post('http://nexuscore:8000/api/v0.2/events/relay',
                                       json={'type': 'crash',
-                                            'content': '<@&668091613687316500>',
+                                            'content': '',
                                             'embed_title': 'Server Crash Report',
                                             'embed_content': 'An unexpected crash occurred. '
-                                                             'Please check that the world is fine and not corrupted before making progress!',
+                                                             '**DO NOT** get on the server until a Community Manager says it is safe to get on!\n'
+                                                             'You **WILL** lose your progress if not!!!\n\n'
+                                                             f"-# <:_purple_circle:1115918037464399924> Powered by **Amethyst {self.amethyst_version}**",
                                             'name': 'Amethyst'})
 
                 raise errors.ServerCrash()

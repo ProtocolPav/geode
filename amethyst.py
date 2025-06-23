@@ -585,84 +585,6 @@ class BedrockServer:
             if og_file not in check_file_list:
                 log('check', f'NOT FOUND - {og_file}')
 
-        await self.send_message(f"A Map Update is in progress. The server may experience higher lag than usual for up to 7 minutes", relay=True, include_header=True)
-
-        map_start_time = datetime.now()
-
-        # Update Map
-        await asyncio.create_subprocess_shell(
-            f"./unmined/unmined-cli web render "
-            f"--world='{path_to_backup}/{world_name} {file_date}' "
-            f"--output='./unmined/overworld' "
-            f"--imageformat=png "
-            f"--dimension=overworld "
-            f"--zoomin=2 "
-            f"--area='b((2111, 2111), (-2112, -2112))' "
-            f"--log-level=error "
-            f"--shadows=3d "
-            f"--mapsettings='./unmined/config/Everthorn.json' "
-            f"--chunkprocessors=1",
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            limit=1024 * 512
-        )
-
-        await asyncio.create_subprocess_shell(
-            f"./unmined/unmined-cli web render "
-            f"--world='{path_to_backup}/{world_name} {file_date}' "
-            f"--output='./unmined/nether' "
-            f"--imageformat=png "
-            f"--dimension=nether "
-            f"--zoomin=2 "
-            f"--area='b((2111, 2111), (-2112, -2112))' "
-            f"--log-level=error "
-            f"--shadows=3d "
-            f"--mapsettings='./unmined/config/Nether.json' "
-            f"--chunkprocessors=1",
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            limit=1024 * 512
-        )
-
-        map_process = await asyncio.create_subprocess_shell(
-            f"./unmined/unmined-cli web render "
-            f"--world='{path_to_backup}/{world_name} {file_date}' "
-            f"--output='./unmined/subway' "
-            f"--imageformat=png "
-            f"--dimension=overworld "
-            f"--zoomin=2 "
-            f"--area='b((2111, 2111), (-2112, -2112))' "
-            f"--log-level=error "
-            f"--shadows=3d "
-            f"--mapsettings='./unmined/config/Subway.json' "
-            f"--chunkprocessors=1",
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            limit=1024 * 512
-        )
-
-        try:
-            while True:
-                line = await map_process.stdout.readline()
-                line = line.decode().rstrip()
-                if not line:
-                    log('generation', f'Aborting Map Generation')
-
-                    duration = datetime.now() - map_start_time
-
-                    minutes = duration.seconds // 60
-
-                    await self.send_message(f"Map Update Complete! This one took ~{round(minutes)}m", relay=True, include_header=True)
-
-                    break
-        except Exception as e:
-            log('generation', f"{e.__traceback__}")
-
-            await self.send_message(f"There was an issue completing the map update.", relay=True, include_header=True)
-
         shutil.make_archive(f"{path_to_backup}/{world_name} {file_date}", 'zip',
                             f"{path_to_backup}/{world_name} {file_date}")
         shutil.rmtree(f"{path_to_backup}/{world_name} {file_date}")
@@ -672,6 +594,8 @@ class BedrockServer:
         log('backup', 'Finished backup')
         log('backup', f'This backup is {round(size / 1000 / 1000, 2)}MB')
         log('backup', f'Beginning upload to {cloud_service} bucket: {bucket}')
+
+        await self.initiate_map_update(f'{path_to_backup}/{world_name} {file_date}')
 
         if datetime.now().hour == daily_backup_hour:
             if datetime.now().day == monthly_backup_day:
@@ -718,6 +642,88 @@ class BedrockServer:
         except asyncio.LimitOverrunError:
             print("AsyncioLimitOverrunError - Separator not found, and Chunk limit is exceeded!\n"
                   f"{cloud_service} upload aborted")
+
+    async def initiate_map_update(self, world_path: str):
+        await self.send_message(
+            f"A Map Update is in progress. The server may experience higher lag than usual for up to 7 minutes", relay=True,
+            include_header=True)
+
+        map_start_time = datetime.now()
+
+        # Update Map
+        await asyncio.create_subprocess_shell(
+            f"./unmined/unmined-cli web render "
+            f"--world='{world_path}' "
+            f"--output='./unmined/overworld' "
+            f"--imageformat=png "
+            f"--dimension=overworld "
+            f"--zoomin=2 "
+            f"--area='b((2111, 2111), (-2112, -2112))' "
+            f"--log-level=error "
+            f"--shadows=3d "
+            f"--mapsettings='./unmined/config/Everthorn.json' "
+            f"--chunkprocessors=1",
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            limit=1024 * 512
+        )
+
+        await asyncio.create_subprocess_shell(
+            f"./unmined/unmined-cli web render "
+            f"--world='{world_path}' "
+            f"--output='./unmined/nether' "
+            f"--imageformat=png "
+            f"--dimension=nether "
+            f"--zoomin=2 "
+            f"--area='b((2111, 2111), (-2112, -2112))' "
+            f"--log-level=error "
+            f"--shadows=3d "
+            f"--mapsettings='./unmined/config/Nether.json' "
+            f"--chunkprocessors=1",
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            limit=1024 * 512
+        )
+
+        map_process = await asyncio.create_subprocess_shell(
+            f"./unmined/unmined-cli web render "
+            f"--world='{world_path}' "
+            f"--output='./unmined/subway' "
+            f"--imageformat=png "
+            f"--dimension=overworld "
+            f"--zoomin=2 "
+            f"--area='b((2111, 2111), (-2112, -2112))' "
+            f"--log-level=error "
+            f"--shadows=3d "
+            f"--mapsettings='./unmined/config/Subway.json' "
+            f"--chunkprocessors=1",
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            limit=1024 * 512
+        )
+
+        try:
+            while True:
+                line = await map_process.stdout.readline()
+                line = line.decode().rstrip()
+                if not line:
+                    log('generation', f'Aborting Map Generation')
+
+                    duration = datetime.now() - map_start_time
+
+                    minutes = duration.seconds // 60
+
+                    await self.send_message(f"Map Update Complete! This one took ~{round(minutes)}m", relay=True,
+                                            include_header=True)
+
+                    break
+        except Exception as e:
+            log('generation', f"{e.__traceback__}")
+
+            await self.send_message(f"There was an issue completing the map update.", relay=True, include_header=True)
 
     async def restore_backup(self, backup_type: str, file_name: str):
         cloud_service = self.config['backup']['cloud_platform']

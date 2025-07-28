@@ -584,7 +584,11 @@ class BedrockServer:
             if og_file not in check_file_list:
                 log('check', f'NOT FOUND - {og_file}')
 
-        await self.initiate_map_update(f'{path_to_backup}/{world_name} {file_date}')
+        async with httpx.AsyncClient() as client:
+            online = await client.get(f"http://nexuscore:8000/api/v0.2/guilds/{self.discord_guild_id}/online")
+
+        if len(online.json()['users']) > 0:
+            await self.initiate_map_update(f'{path_to_backup}/{world_name} {file_date}')
 
         shutil.make_archive(f"{path_to_backup}/{world_name} {file_date}", 'zip',
                             f"{path_to_backup}/{world_name} {file_date}")

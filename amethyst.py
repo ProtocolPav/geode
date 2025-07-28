@@ -273,8 +273,7 @@ class Amethyst:
                     if message['type'] == 'announce':
                         await self.server.send_announce(message['content'])
                     else:
-                        header = "§e+=+=+=+=+=+=+ Server Message +=+=+=+=+=+=+§r\\n"
-                        await self.server.send_message(f"{header}{message['content']}", include_header=True, play_sound=True, relay=True)
+                        await self.server.send_message(f"{message['content']}", include_header=True, play_sound=True, relay=True)
 
             except IndexError:
                 pass
@@ -585,7 +584,11 @@ class BedrockServer:
             if og_file not in check_file_list:
                 log('check', f'NOT FOUND - {og_file}')
 
-        await self.initiate_map_update(f'{path_to_backup}/{world_name} {file_date}')
+        async with httpx.AsyncClient() as client:
+            online = await client.get(f"http://nexuscore:8000/api/v0.2/guilds/{self.discord_guild_id}/online")
+
+        if len(online.json()['users']) > 0:
+            await self.initiate_map_update(f'{path_to_backup}/{world_name} {file_date}')
 
         shutil.make_archive(f"{path_to_backup}/{world_name} {file_date}", 'zip',
                             f"{path_to_backup}/{world_name} {file_date}")

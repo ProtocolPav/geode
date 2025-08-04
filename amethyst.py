@@ -408,12 +408,12 @@ class BedrockServer:
 
     async def send_message(self, message: str, include_header: bool = False, play_sound: bool = False, relay: bool = False):
         processed_message = demoji.replace_with_desc(message)
-        processed_message = processed_message.translate(str.maketrans({'’': "'",
-                                                                       '“': '"',
-                                                                       '”': '"',
-                                                                       '‘': "'"}))
+        processed_message = processed_message.translate(str.maketrans({'’': "\'",
+                                                                       '“': '\"',
+                                                                       '”': '\"',
+                                                                       '‘': "\'"}))
 
-        header = "§e+=+=+=+=+=+=+ Server Message +=+=+=+=+=+=+§r\\n"
+        header = " "
 
         if play_sound:
             await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')

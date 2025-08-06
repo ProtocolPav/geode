@@ -43,7 +43,7 @@ class Amethyst:
     looper = LoopHandler()
 
     def __init__(self):
-        self.version = 'v7.7'
+        self.version = 'v7.8'
         self.system_log = {'time': f"{datetime.now()}",
                            'ram_used': 0,
                            'ram_total': 0,
@@ -538,7 +538,7 @@ class BedrockServer:
                 try:
                     log('server', 'Disconnecting all currently online players')
                     online = await client.get(f"http://nexuscore:8000/api/v0.2/guilds/{self.discord_guild_id}/online")
-                    for user in online.json()['users']:
+                    for user in online.json():
                         await client.post(f"http://nexuscore:8000/api/v0.2/events/connection",
                                           json={'type': 'disconnect', 'thorny_id': user['thorny_id']})
                     sent_successfully = True
@@ -587,7 +587,7 @@ class BedrockServer:
         async with httpx.AsyncClient() as client:
             online = await client.get(f"http://nexuscore:8000/api/v0.2/guilds/{self.discord_guild_id}/online")
 
-        if len(online.json()['users']) > 0:
+        if len(online.json()) > 0:
             await self.initiate_map_update(f'{path_to_backup}/{world_name} {file_date}')
 
         shutil.make_archive(f"{path_to_backup}/{world_name} {file_date}", 'zip',

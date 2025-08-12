@@ -20,10 +20,8 @@ class EventHandler:
     def __init__(self):
         self.events = [
             EventParser('player.connect', re.compile(r'Player connected: (.*), xuid: ([1-9]+)', re.IGNORECASE)),
-            EventParser('player.spawn',
-                        re.compile(r'Player Spawned: (.*), xuid: ([1-9]+)(?:, pfid: ([a-z0-9]+))?', re.IGNORECASE)),
-            EventParser('player.disconnect',
-                        re.compile(r'Player disconnected: (.*), xuid: ([1-9]+)(?:, pfid: ([a-z0-9]+))?', re.IGNORECASE)),
+            EventParser('player.spawn', re.compile(r'Player Spawned: (.*), xuid: ([1-9]+)(?:, pfid: ([a-z0-9]+))?', re.IGNORECASE)),
+            EventParser('player.disconnect', re.compile(r'Player disconnected: (.*), xuid: ([1-9]+)(?:, pfid: ([a-z0-9]+))?', re.IGNORECASE)),
             EventParser('server.start', re.compile(r'^Server started', re.IGNORECASE)),
             EventParser('server.stop', re.compile(r'^Quit correctly', re.IGNORECASE)),
             EventParser('server.stop', re.compile(r'^Exiting program', re.IGNORECASE)),

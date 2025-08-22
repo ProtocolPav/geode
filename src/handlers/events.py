@@ -38,6 +38,22 @@ class EventHandler:
             self.listeners[x.name] = self.__default
 
     def parse(self, line) -> ParsedEvent | None:
+        """
+        Parses a log line to match events and extract relevant data.
+
+        This method processes a given log line by iterating through the list of Events.
+        If a match is found using regular expressions associated with an event,
+        it returns a `ParsedEvent`.
+
+        Parameters:
+            line: str
+                The line from the log that needs to be parsed.
+
+        Returns:
+            ParsedEvent | None
+                A `ParsedEvent` object with the event details if a match is found, or
+                None if no match is found.
+        """
         for event in self.events:
             if event.name == 'backup.query':
                 matches = event.regex.findall(line)
@@ -48,6 +64,18 @@ class EventHandler:
         return None
 
     def listen(self, event: str):
+        """
+        Registers a callback function for a specific event.
+
+        Parameters:
+        event: str
+            The name of the event to associate with the given callback function.
+
+        Returns:
+        Callable
+            A decorator function that registers the callback function for
+            the given event.
+        """
         def decorator(func: Callable):
             if event in [x.name for x in self.events]:
                 self.listeners[event] = func
@@ -57,8 +85,13 @@ class EventHandler:
 
         return decorator
 
-    # REDUNDANT METHOD?
     async def emit(self, event: str, *args):
+        """
+        Emit an event to the corresponding registered listener.
+
+        This function triggers the execution of the registered listener for the
+        given event.
+        """
         if self.listeners.get(event, None):
             await self.listeners[event](args)
         else:

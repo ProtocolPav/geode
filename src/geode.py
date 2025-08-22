@@ -18,6 +18,7 @@ class Geode:
 
         logger.info('Geode is starting...')
         logger.info(f'Running Geode {Colors.PURPLE}{self.version}{Colors.END}')
+        logger.info(self.config)
         self.server = server
 
     async def start_server(self):
@@ -30,4 +31,4 @@ class Geode:
         if self.server.status != 'started':
             raise errors.NotRunning()
 
-        await self.server.send_command('save hold')
+        await self.server.initiate_backup()

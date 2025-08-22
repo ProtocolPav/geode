@@ -2,6 +2,7 @@ import asyncio.subprocess
 import asyncio
 import platform
 
+from jproperties import Properties
 from typing_extensions import Literal, Optional
 
 from src import installation
@@ -9,6 +10,7 @@ from pathlib import Path
 
 from sanic.log import logger, Colors
 
+from src.handlers.backups import BackupHandler
 from src.handlers.events import EventHandler
 
 
@@ -17,6 +19,8 @@ class BedrockServer:
     __tasks: asyncio.TaskGroup
     events: EventHandler = EventHandler()
     status: Literal['stopped', 'started', 'backup', 'map_update'] = 'stopped'
+    executable: str
+    properties: dict[str, str]
 
     def __init__(self):
         if platform.system().lower() == 'linux':
@@ -56,6 +60,11 @@ class BedrockServer:
     async def start(self):
         if not self.__process:
             await installation.check_for_updates()
+
+            prop_file = Properties()
+            prop_file.load(open('../server/server.properties', 'rb'))
+            self.properties = prop_file.properties
+            logger.debug(f'Loaded properties: {self.properties}')
 
             self.__process = await asyncio.subprocess.create_subprocess_exec(
                 program=self.executable,
@@ -170,6 +179,8 @@ class BedrockServer:
     async def on_backup_query(self, line: str, *file_list: tuple):
         logger.info(f'{Colors.YELLOW}{file_list}{Colors.END}')
         logger.debug('Backup process starting')
+        backup_handler = BackupHandler(file_list, self.properties['level-name'])
+        await backup_handler.backup()
         await self.send_command('save resume')
 
     @events.listen('backup.error')

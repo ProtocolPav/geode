@@ -16,7 +16,7 @@ class BedrockServer:
     __process: asyncio.subprocess.Process | None
     __tasks: asyncio.TaskGroup
     events: EventHandler = EventHandler()
-    status: Literal['starting', 'running', 'stopping', 'stopped'] = 'starting'
+    status: Literal['stopped', 'started', 'backup', 'map_update'] = 'stopped'
 
     def __init__(self):
         if platform.system().lower() == 'linux':
@@ -75,6 +75,20 @@ class BedrockServer:
         if self.__process:
             await self.send_command('stop')
 
+    async def initiate_backup(self):
+        if self.status == 'started':
+            await self.send_command('save hold')
+            self.status = 'backup'
+        else:
+            logger.warn('Cannot initiate backup because the server is not running.')
+
+    async def initiate_map_update(self):
+        if self.status == 'started':
+            await self.send_command('save hold')
+            self.status = 'map_update'
+        else:
+            logger.warn('Cannot initiate map update because the server is not running.')
+
     @events.listen('server.start')
     async def on_server_start(self, line: str):
         """
@@ -83,7 +97,7 @@ class BedrockServer:
         :param line: The console log line where the event occurs
         """
         logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
-        self.status = 'running'
+        self.status = 'started'
         # TO ADD: Disconnect all connected players, in case there was a glitch
         # Log to all the correct locations
 
@@ -95,6 +109,7 @@ class BedrockServer:
         :param line: The console log line where the event occurs
         """
         logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
+        self.status = 'stopped'
         # Clean up pending tasks, like the server output, etc.
         # TO ADD: Disconnect all connected players
         # Log to all the correct locations

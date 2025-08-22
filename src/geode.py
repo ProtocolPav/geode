@@ -1,6 +1,6 @@
 import asyncio
 
-import errors
+from src import errors
 from src.handlers.loops import LoopHandler
 from src.server import BedrockServer
 from src.handlers.config import ConfigHandler
@@ -27,7 +27,7 @@ class Geode:
 
     @looper.loop('Backup Loop', 3600)
     async def backup_loop(self):
-        if self.server.status != 'running':
+        if self.server.status != 'started':
             raise errors.NotRunning()
 
         await self.server.send_command('save hold')

@@ -3,7 +3,7 @@ from collections.abc import Callable
 
 from sanic.log import logger, Colors
 
-import errors
+from src import errors
 
 
 class LoopHandler:

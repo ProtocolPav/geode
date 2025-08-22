@@ -2,6 +2,7 @@
 backup:
   enabled: true
   location: "local"  # Options: local, s3, gcloud
+  bucket_name: "" # Required if using gcloud or s3
   gcloud_api_key: ""  # Required if using gcloud
   aws_credentials:  # Required if using s3
     access_key: ""
@@ -20,7 +21,6 @@ backup:
     day: "start"  # Options: 'start', 'middle', 'end', or specific day (e.g., 22)
     cloud_subdirectory: "monthly"
 
-  startup_backup: true
   include_addons: true # Backup the addons that are on your world
   include_server_files: true # Backup server files like server.properties and allowlist.json
 

@@ -1,3 +1,4 @@
+import tarfile
 import tempfile
 import httpx
 import zipfile
@@ -9,11 +10,13 @@ from sanic.log import logger, Colors
 async def check_for_updates():
     server_dir = Path('../server/')
     server_dir.mkdir(parents=True, exist_ok=True)
+    unmined_dir = Path('../unmined/')
+
     plat = platform.system().lower()
 
     if plat not in ['linux']:
         raise OSError('Geode only supports Debian-based Linux distributions, we advise you to run Geode via Docker.')
-    logger.debug(f'Checking for updates...')
+    logger.info(f'Checking for updates...')
     logger.debug(f'Platform: {plat}')
 
     client = httpx.AsyncClient()
@@ -26,6 +29,11 @@ async def check_for_updates():
 
     if should_install:
         await install(plat, version, client, server_dir)
+
+    if unmined_dir.exists():
+        logger.debug('Unmined CLI already installed')
+    else:
+        await install_unmined(client, unmined_dir)
 
     logger.info('Server is up to date!')
 
@@ -60,3 +68,28 @@ async def install(plat: str, version: str, client: httpx.AsyncClient, server_dir
                         zip_file.extract(item.filename, server_dir)
 
             logger.info(f'{Colors.BOLD}{Colors.CYAN}Server Version {version} Installed!{Colors.END} | {size_in_MB}')
+
+async def install_unmined(client: httpx.AsyncClient, unmined_dir: Path):
+    data_url = "https://unmined.net/download/unmined-cli-linux-x64-dev/"
+    extraction_dir = Path('../')
+
+    with tempfile.NamedTemporaryFile(dir=extraction_dir) as file:
+        logger.debug(f'Installing Unmined CLI...')
+
+        async with client.stream('GET', data_url, headers={'User-Agent': 'Geode/1.0 (Minecraft)'}) as response:
+            logger.info(response.headers)
+            size_in_MB = f'{Colors.GREY}{round(int(response.headers.get("x-dlm-filesize", 0))/1000/1000, 1)}MB{Colors.END}'
+            logger.info(f'{Colors.BOLD}{Colors.BLUE}Downloading Unmined CLI...{Colors.END} | {size_in_MB}')
+
+            async for chunk in response.aiter_bytes(1024):
+                file.write(chunk)
+
+        file.flush()
+
+        with tarfile.open(file.name, 'r:gz') as tar_file:
+            root_dir = extraction_dir / Path(tar_file.getnames()[0])
+            tar_file.extractall(extraction_dir)
+
+        root_dir.rename(unmined_dir)
+
+        logger.info(f'{Colors.BOLD}{Colors.CYAN}Unmined CLI Installed!{Colors.END} | {size_in_MB}')

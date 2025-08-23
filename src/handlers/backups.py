@@ -78,7 +78,8 @@ class BackupHandler:
             for file_path in src.glob('**/*'):
                 zip_file.write(file_path, file_path.relative_to(src))
 
-    async def __run_unmined(self, world_path: Path):
+    @staticmethod
+    async def __run_unmined(world_path: Path):
         base_cmd = f"../unmined/unmined-cli web render --world='{world_path}'"
 
         common_params = ' '.join([
@@ -90,6 +91,8 @@ class BackupHandler:
             "--chunkprocessors=1"
         ])
 
+        # Make dynamic parameterization, based on user configurations
+        # allow people to pass in their own blockstyles.txt via docker, for custom block palletes
         render_tasks = {
             'overworld': f"{base_cmd} --output='../unmined/overworld' --dimension=overworld --mapsettings='./Everthorn.json' {common_params}",
             'nether': f"{base_cmd} --output='../unmined/nether' --dimension=nether --mapsettings='./Nether.json' {common_params}",

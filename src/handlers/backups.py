@@ -74,6 +74,9 @@ class BackupHandler:
             for file_path in src.glob('**/*'):
                 zip_file.write(file_path, file_path.relative_to(src))
 
+    def __run_unmined(self):
+        ...
+
     async def backup(self):
         with tempfile.TemporaryDirectory(dir=self.backup_path) as temp_dir:
             temp_dir_path = Path(temp_dir)
@@ -85,3 +88,4 @@ class BackupHandler:
     async def map_update(self):
         with tempfile.TemporaryDirectory(dir=self.backup_path) as temp_dir:
             temp_dir_path = Path(temp_dir)
+            self.__copy_files_to_dir(temp_dir_path)

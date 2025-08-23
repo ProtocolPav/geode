@@ -2,13 +2,15 @@ import asyncio
 import re
 from dataclasses import dataclass
 from collections.abc import Callable
+from typing import Literal
 
 from sanic.log import logger, Colors
 
 @dataclass
 class EventParser:
     name: str
-    regex: re.Pattern
+    regex: re.Pattern | None = None
+    check_type: Literal['match', 'findall', 'manual'] = 'match'
 
 @dataclass
 class ParsedEvent:
@@ -19,18 +21,28 @@ class ParsedEvent:
 class EventHandler:
     def __init__(self):
         self.events = [
+            # Player Events
             EventParser('player.connect', re.compile(r'Player connected: (.*), xuid: ([1-9]+)', re.IGNORECASE)),
             EventParser('player.spawn', re.compile(r'Player Spawned: (.*), xuid: ([1-9]+)(?:, pfid: ([a-z0-9]+))?', re.IGNORECASE)),
             EventParser('player.disconnect', re.compile(r'Player disconnected: (.*), xuid: ([1-9]+)(?:, pfid: ([a-z0-9]+))?', re.IGNORECASE)),
+
+            # Server Events
             EventParser('server.start', re.compile(r'^Server started', re.IGNORECASE)),
             EventParser('server.stop', re.compile(r'^Quit correctly', re.IGNORECASE)),
             EventParser('server.stop', re.compile(r'^Exiting program', re.IGNORECASE)),
+            EventParser('server.crash', re.compile(r'^Killed', re.IGNORECASE)),
+            EventParser('server.crash', re.compile(r'^Crash', re.IGNORECASE)),
             EventParser('server.version', re.compile(r'^Version:?\s*(\d+\.\d+\.\d+\.\d+)$', re.IGNORECASE)),
+
+            # Backup Events
             EventParser('backup.hold', re.compile(r'Saving', re.IGNORECASE)),
             EventParser('backup.hold.error', re.compile(r'The command is already running', re.IGNORECASE)),
-            EventParser('backup.query', re.compile(r'(?:^|,\s*)([^:]+):(\d+)(?=\s*(?:,|$))', re.IGNORECASE)),
+            EventParser('backup.query', re.compile(r'(?:^|,\s*)([^:]+):(\d+)(?=\s*(?:,|$))', re.IGNORECASE), 'findall'),
             EventParser('backup.error', re.compile(r'A previous save has not been completed', re.IGNORECASE)),
             EventParser('backup.resume', re.compile(r'Changes to the world are resumed', re.IGNORECASE)),
+
+            # Manual Events (Invoked via .emit())
+            EventParser('backup.initiate', check_type='manual'),
         ]
         self.listeners: dict[str, Callable] = {}
 
@@ -55,10 +67,14 @@ class EventHandler:
                 None if no match is found.
         """
         for event in self.events:
-            if event.name == 'backup.query':
+            if event.check_type == 'manual':
+                return None
+
+            elif event.check_type == 'findall':
                 matches = event.regex.findall(line)
                 if matches:
                     return ParsedEvent(event.name, self.listeners[event.name], matches)
+
             elif match := event.regex.search(line):
                 return ParsedEvent(event.name, self.listeners[event.name], match.groups())
         return None

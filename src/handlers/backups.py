@@ -1,3 +1,4 @@
+import asyncio
 import shutil
 import tempfile
 import zipfile
@@ -40,6 +41,9 @@ class BackupHandler:
                 with open(target, 'a') as f:
                     f.truncate(int(file_length))
 
+        level_path = [x for x in (dst / 'worlds').iterdir()]
+        return dst / 'worlds' / level_path[0]
+
     def __copy_extra_files(self, dst: Path):
         extra_files = []
 
@@ -74,8 +78,44 @@ class BackupHandler:
             for file_path in src.glob('**/*'):
                 zip_file.write(file_path, file_path.relative_to(src))
 
-    def __run_unmined(self):
-        ...
+    async def __run_unmined(self, world_path: Path):
+        base_cmd = f"../unmined/unmined-cli web render --world='{world_path}'"
+
+        common_params = ' '.join([
+            "--imageformat=png",
+            "--zoomin=2",
+            "--area='b((2111, 2111), (-2112, -2112))'",
+            "--log-level=error",
+            "--shadows=3d",
+            "--chunkprocessors=1"
+        ])
+
+        render_tasks = {
+            'overworld': f"{base_cmd} --output='../unmined/overworld' --dimension=overworld --mapsettings='./Everthorn.json' {common_params}",
+            'nether': f"{base_cmd} --output='../unmined/nether' --dimension=nether --mapsettings='./Nether.json' {common_params}",
+            'subway': f"{base_cmd} --output='../unmined/subway' --dimension=overworld --mapsettings='./Subway.json' {common_params}"
+        }
+
+        try:
+            processes = [await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT) for cmd in render_tasks.values()]
+
+            logger.info(f'Starting {len(render_tasks)} Map Renders...')
+            start_time = datetime.now()
+
+            results = await asyncio.gather(*[p.wait() for p in processes], return_exceptions=True)
+
+            successful = [list(render_tasks.keys())[i] for i, result in enumerate(results) if result == 0]
+
+            duration = datetime.now() - start_time
+            minutes = duration.seconds // 60
+            seconds = duration.seconds % 60
+
+            logger.info(f'Map Render completed in {minutes}m {seconds}s. Completed: {len(successful)}/{len(results)}')
+            logger.info(f'All Renders: {", ".join(render_tasks.keys())}')
+            logger.info(f'Completed Renders: {", ".join(successful)}')
+
+        except Exception as e:
+            logger.error(f'Map update failed: {e.__class__.__name__} - {str(e)}')
 
     async def backup(self):
         with tempfile.TemporaryDirectory(dir=self.backup_path) as temp_dir:
@@ -88,4 +128,5 @@ class BackupHandler:
     async def map_update(self):
         with tempfile.TemporaryDirectory(dir=self.backup_path) as temp_dir:
             temp_dir_path = Path(temp_dir)
-            self.__copy_files_to_dir(temp_dir_path)
+            level_path = self.__copy_files_to_dir(temp_dir_path)
+            await self.__run_unmined('..' / level_path)

@@ -180,7 +180,7 @@ class BedrockServer:
         logger.info(f'{Colors.YELLOW}{file_list}{Colors.END}')
         logger.debug('Backup process starting')
         backup_handler = BackupHandler(file_list, self.properties['level-name'])
-        await backup_handler.backup()
+        await backup_handler.map_update()
         await self.send_command('save resume')
 
     @events.listen('backup.error')

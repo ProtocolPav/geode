@@ -13,15 +13,14 @@ from pathlib import Path
 from sanic.log import logger, Colors
 
 from src.handlers.backups import BackupHandler
-from src.handlers.events import EventHandler
 
 from pyventus.events import EventLinker, AsyncIOEventEmitter
 
 @dataclass
 class EventParser:
     name: str
-    regex: re.Pattern | None = None
-    check_type: Literal['match', 'findall', 'manual'] = 'match'
+    regex: re.Pattern
+    check_type: Literal['match', 'findall'] = 'match'
 
 
 class BedrockServer:
@@ -61,13 +60,6 @@ class BedrockServer:
             EventParser('backup.query', re.compile(r'(?:^|,\s*)([^:]+):(\d+)(?=\s*(?:,|$))', re.IGNORECASE), 'findall'),
             EventParser('backup.error', re.compile(r'A previous save has not been completed', re.IGNORECASE)),
             EventParser('backup.resume', re.compile(r'Changes to the world are resumed', re.IGNORECASE)),
-
-            # Manual Events (Invoked via .emit())
-            # Currently does not work as expected, as the self
-            # parameter of the listener ends up being not the server class
-            EventParser('initiate.backup', check_type='manual'),
-            EventParser('initiate.map.render', check_type='manual'),
-            EventParser('preemption', check_type='manual'),
         ]
 
     async def send_command(self, command: str, sleep: int = 0):
@@ -94,10 +86,7 @@ class BedrockServer:
 
             # This is a bit slow, should try reduce from O(n) to O(1)
             for event in self.parsers:
-                if event.check_type == 'manual':
-                    parsed_line = False
-
-                elif event.check_type == 'findall':
+                if event.check_type == 'findall':
                     matches = event.regex.findall(line)
                     if matches:
                         parsed_line = True
@@ -243,10 +232,10 @@ class BedrockServer:
     @events.on('backup.resume')
     async def on_backup_resume(self, line: str):
         logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
+        self.status = 'started'
 
     @events.on('initiate.backup')
     async def on_initiate_backup(self):
-        logger.info(self.__class__.__name__)
         if self.status == 'started':
             await self.send_command('save hold')
             self.status = 'backup'
@@ -255,6 +244,14 @@ class BedrockServer:
 
     @events.on('initiate.map.render')
     async def on_initiate_backup(self):
+        if self.status == 'started':
+            await self.send_command('save hold')
+            self.status = 'map_update'
+        else:
+            logger.warn('Cannot initiate map update because the server is not running.')
+
+    @events.on('preemption')
+    async def on_preemption(self):
         if self.status == 'started':
             await self.send_command('save hold')
             self.status = 'map_update'

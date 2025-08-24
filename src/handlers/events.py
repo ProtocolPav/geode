@@ -42,7 +42,9 @@ class EventHandler:
             EventParser('backup.resume', re.compile(r'Changes to the world are resumed', re.IGNORECASE)),
 
             # Manual Events (Invoked via .emit())
-            EventParser('backup.initiate', check_type='manual'),
+            EventParser('initiate.backup', check_type='manual'),
+            EventParser('initiate.map.render', check_type='manual'),
+            EventParser('preemption', check_type='manual'),
         ]
         self.listeners: dict[str, Callable] = {}
 
@@ -109,7 +111,7 @@ class EventHandler:
         given event.
         """
         if self.listeners.get(event, None):
-            await self.listeners[event](args)
+            await self.listeners[event](*args)
         else:
             logger.info(f'The Event {event} is not registered.')
 

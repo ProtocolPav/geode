@@ -16,7 +16,7 @@ from src.handlers.events import EventHandler
 
 class BedrockServer:
     __process: asyncio.subprocess.Process | None
-    __tasks: asyncio.TaskGroup
+    __tasks: list[asyncio.Task]
     events: EventHandler = EventHandler()
     status: Literal['stopped', 'started', 'backup', 'map_update'] = 'stopped'
     executable: str
@@ -58,7 +58,7 @@ class BedrockServer:
                 logger.info(line)
 
     async def start(self):
-        if not self.__process:
+        if not self.__process or self.__process.returncode is not None:
             await installation.check_for_updates()
 
             prop_file = Properties()
@@ -75,28 +75,17 @@ class BedrockServer:
                 cwd='../server/')
             logger.debug(f'Created BedrockServer process PID{self.__process.pid}')
 
-            async with asyncio.TaskGroup() as self.__tasks:
-                self.__tasks.create_task(self.__server_output(), name=f"[{self.__process.pid}] BDS Output")
+            self.__tasks = [
+                asyncio.create_task(self.__server_output(), name=f"[{self.__process.pid}] BDS Output")
+            ]
+
+            await asyncio.gather(*self.__tasks)
 
             logger.debug(f'Current tasks: {self.__tasks}')
 
     async def stop(self):
         if self.__process:
             await self.send_command('stop')
-
-    async def initiate_backup(self):
-        if self.status == 'started':
-            await self.send_command('save hold')
-            self.status = 'backup'
-        else:
-            logger.warn('Cannot initiate backup because the server is not running.')
-
-    async def initiate_map_update(self):
-        if self.status == 'started':
-            await self.send_command('save hold')
-            self.status = 'map_update'
-        else:
-            logger.warn('Cannot initiate map update because the server is not running.')
 
     @events.listen('server.start')
     async def on_server_start(self, line: str):
@@ -119,6 +108,11 @@ class BedrockServer:
         """
         logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
         self.status = 'stopped'
+
+        for task in self.__tasks:
+            task.cancel()
+
+        self.__process.terminate()
         # Clean up pending tasks, like the server output, etc.
         # TO ADD: Disconnect all connected players
         # Log to all the correct locations
@@ -180,7 +174,7 @@ class BedrockServer:
         logger.info(f'{Colors.YELLOW}{file_list}{Colors.END}')
         logger.debug('Backup process starting')
         backup_handler = BackupHandler(file_list, self.properties['level-name'])
-        await backup_handler.map_update()
+        await backup_handler.backup()
         await self.send_command('save resume')
 
     @events.listen('backup.error')
@@ -191,3 +185,20 @@ class BedrockServer:
     @events.listen('backup.resume')
     async def on_backup_resume(self, line: str):
         logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
+
+    @events.listen('initiate.backup')
+    async def on_initiate_backup(self):
+        logger.info(self.__class__.__name__)
+        if self.status == 'started':
+            await self.send_command('save hold')
+            self.status = 'backup'
+        else:
+            logger.warn('Cannot initiate backup because the server is not running.')
+
+    @events.listen('initiate.map.render')
+    async def on_initiate_backup(self):
+        if self.status == 'started':
+            await self.send_command('save hold')
+            self.status = 'map_update'
+        else:
+            logger.warn('Cannot initiate map update because the server is not running.')

@@ -22,13 +22,15 @@ class Geode:
         self.server = server
 
     async def start_server(self):
-        async with asyncio.TaskGroup() as tg:
-            tg.create_task(self.looper.start_looper(self))
-            tg.create_task(self.server.start())
+        asyncio.create_task(self.looper.start_looper(self))
+        asyncio.create_task(self.server.start())
+
+    async def stop_server(self):
+        await self.server.stop()
 
     @looper.loop('Backup Loop', 3600)
     async def backup_loop(self):
         if self.server.status != 'started':
             raise errors.NotRunning()
 
-        await self.server.initiate_backup()
+        await self.server.events.emit('initiate.backup', self.server)

@@ -35,13 +35,15 @@ async def status(request: Request = None):
 @app.route('/server/stop')
 async def stop(request: Request):
     await handler.stop_server()
-    return await status()
+    return json({'response': 'Server has been stopped'})
+    # return await status()
 
 
 @app.route('/server/start')
 async def start(request: Request):
     await handler.start_server()
-    return await status()
+    return json({'response': 'Server has been started'})
+    # return await status()
 
 
 @app.route('/server/preempt')

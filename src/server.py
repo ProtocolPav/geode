@@ -247,8 +247,5 @@ class BedrockServer:
 
     @events.on('preemption')
     async def on_preemption(self):
-        if self.status == 'started':
-            await self.send_command('save hold')
-            self.status = 'map_update'
-        else:
-            logger.warn('Cannot initiate map update because the server is not running.')
+        # Handle Preemption
+        await self.stop()

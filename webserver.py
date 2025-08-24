@@ -8,7 +8,7 @@ import asyncio
 from src import geode
 
 app = Sanic("bedrock_server_app")
-handler = geode.Geode()
+handler: geode.Geode
 
 @app.route('/<text_test:strorempty>')
 async def default(request: Request, text_test: str):
@@ -48,7 +48,7 @@ async def start(request: Request):
 
 @app.route('/server/preempt')
 async def preempt(request: Request):
-    await handler.server.set_status('preemption')
+    await handler.server.emit('preemption')
     return await status()
 
 
@@ -163,16 +163,17 @@ async def get_map(request: Request, layer: str, zoomlevel: int, regionx: int, re
 
 
 @app.listener('after_server_start')
-async def init_core(application, loop: asyncio.AbstractEventLoop):
-    await asyncio.sleep(10)
+async def init_core(application: Sanic, loop: asyncio.AbstractEventLoop):
+    global handler
+    handler = geode.Geode()
     await handler.start_server()
-    # await handler.start_server('started_by_system')
 
 
-@app.listener('before_server_stop')
+@app.listener('after_server_stop')
 async def stop_core(application, loop: asyncio.AbstractEventLoop):
-    handler.server.set_status('preemption')
-    await asyncio.sleep(3)
+    handler.server.emit('preemption')
+    while handler.server.status != 'stopped':
+        await asyncio.sleep(1)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", access_log=False, dev=True)

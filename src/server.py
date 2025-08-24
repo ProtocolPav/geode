@@ -100,6 +100,8 @@ class BedrockServer:
 
             if not parsed_line and line: # Check that a line exists so it wont print empty lines
                 logger.info(line)
+            elif parsed_line:
+                logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
 
     async def start(self):
         if not self.__process or self.__process.returncode is not None:
@@ -135,13 +137,12 @@ class BedrockServer:
         self.__event_emitter.emit(event_name, self, *args, **kwargs)
 
     @events.on('server.start')
-    async def on_server_start(self, line: str):
+    def on_server_start(self, line: str):
         """
         When the server has started and is ready for playing.
 
         :param line: The console log line where the event occurs
         """
-        logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
         self.status = 'started'
         # TO ADD: Disconnect all connected players, in case there was a glitch
         # Log to all the correct locations
@@ -153,7 +154,6 @@ class BedrockServer:
 
         :param line: The console log line where the event occurs
         """
-        logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
         self.status = 'stopped'
 
         for task in self.__tasks:
@@ -172,7 +172,6 @@ class BedrockServer:
         :param line: The console log line where the event occurs
         :param version: The version found
         """
-        logger.info(f'{Colors.BOLD}{Colors.PURPLE}{line}{Colors.END}')
         version_file = Path('../server/version.geode')
         version_file.write_text(version)
 
@@ -185,7 +184,7 @@ class BedrockServer:
         :param gamertag: The gamertag of the connected player
         :param xuid: The xuid of the connected player. Can be None.
         """
-        logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
+        ...
 
     @events.on('player.spawn')
     async def on_player_spawn(self, line: str, gamertag: str, xuid: Optional[str], pfid: Optional[str]):
@@ -197,7 +196,7 @@ class BedrockServer:
         :param xuid: The xuid of the player. Can be None.
         :param pfid: The pfid of the player. Can be None.
         """
-        logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
+        ...
 
     @events.on('player.disconnect')
     async def on_player_disconnect(self, line: str, gamertag: str, xuid: Optional[str], pfid: Optional[str]):
@@ -209,16 +208,14 @@ class BedrockServer:
         :param xuid: The xuid of the player. Can be None.
         :param pfid: The pfid of the player. Can be None.
         """
-        logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
+        ...
 
     @events.on('backup.hold')
     async def on_backup_hold(self, line: str):
-        logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
         await self.send_command('save query')
 
     @events.on('backup.query')
     async def on_backup_query(self, line: str, *file_list: tuple):
-        logger.info(f'{Colors.YELLOW}{file_list}{Colors.END}')
         logger.debug('Backup process starting')
         backup_handler = BackupHandler(file_list, self.properties['level-name'])
         await backup_handler.backup()
@@ -226,12 +223,10 @@ class BedrockServer:
 
     @events.on('backup.error')
     async def on_backup_error(self, line: str):
-        logger.warn(f'{Colors.YELLOW}{line}{Colors.END}')
         await self.send_command('save query')
 
     @events.on('backup.resume')
     async def on_backup_resume(self, line: str):
-        logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
         self.status = 'started'
 
     @events.on('initiate.backup')

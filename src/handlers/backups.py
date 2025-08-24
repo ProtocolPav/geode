@@ -124,12 +124,13 @@ class BackupHandler:
         with tempfile.TemporaryDirectory(dir=self.backup_path) as temp_dir:
             temp_dir_path = Path(temp_dir)
 
-            self.__copy_files_to_dir(temp_dir_path)
-            self.__copy_extra_files(temp_dir_path)
-            self.__zip_files(temp_dir_path)
+            await asyncio.to_thread(self.__copy_files_to_dir, temp_dir_path)
+            await asyncio.to_thread(self.__copy_extra_files, temp_dir_path)
+            await asyncio.to_thread(self.__zip_files, temp_dir_path)
 
     async def map_update(self):
         with tempfile.TemporaryDirectory(dir=self.backup_path) as temp_dir:
             temp_dir_path = Path(temp_dir)
-            level_path = self.__copy_files_to_dir(temp_dir_path)
+
+            level_path: Path = await asyncio.to_thread(self.__copy_files_to_dir, temp_dir_path)
             await self.__run_unmined('..' / level_path)

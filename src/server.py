@@ -43,7 +43,7 @@ class BedrockServer:
         self.parsers = [
             # Player Events
             EventParser('player.connect', re.compile(r'Player connected: (.*), xuid: ([1-9]+)', re.IGNORECASE)),
-            EventParser('player.spawn', re.compile(r'Player Spawned: (.*), xuid: ([1-9]+)(?:, pfid: ([a-z0-9]+))?', re.IGNORECASE)),
+            EventParser('player.spawn', re.compile(r'Player Spawned: (.*?)\s+xuid: (\d+)(?:, pfid: ([a-z0-9]+))?', re.IGNORECASE)),
             EventParser('player.disconnect', re.compile(r'Player disconnected: (.*), xuid: ([1-9]+)(?:, pfid: ([a-z0-9]+))?', re.IGNORECASE)),
 
             # Server Events

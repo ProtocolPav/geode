@@ -37,9 +37,12 @@ class LoopHandler:
         async def task_function(geode):
             bold_name = f'{Colors.BOLD}{name}{Colors.END}'
             logger.info(f"[Loops] Loading {bold_name} ({callback.__name__}) to loop every {interval} seconds")
+            if delay:
+                logger.info(f"[Loops] {bold_name} ({callback.__name__}) initial delay of {delay} seconds")
 
             while True:
                 try:
+                    await asyncio.sleep(delay)
                     logger.info(f"[Loops] Running {bold_name}...")
                     await callback(geode)
                     await asyncio.sleep(interval)

@@ -42,6 +42,8 @@ class EventHandler:
             EventParser('backup.resume', re.compile(r'Changes to the world are resumed', re.IGNORECASE)),
 
             # Manual Events (Invoked via .emit())
+            # Currently does not work as expected, as the self
+            # parameter of the listener ends up being not the server class
             EventParser('initiate.backup', check_type='manual'),
             EventParser('initiate.map.render', check_type='manual'),
             EventParser('preemption', check_type='manual'),

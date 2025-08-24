@@ -1,8 +1,5 @@
 import asyncio
 
-from pyventus.events import AsyncIOEventEmitter
-
-from src import errors
 from src.handlers.loops import LoopHandler
 from src.server import BedrockServer
 from src.handlers.config import ConfigHandler
@@ -33,6 +30,13 @@ class Geode:
     @looper.loop('Backup Loop', 3600)
     async def backup_loop(self):
         if self.server.status != 'started':
-            raise errors.NotRunning()
+            raise Exception(f'Server is not in an acceptable state to backup. Current state: {self.server.status}. Expected: started')
 
         self.server.emit('initiate.backup')
+
+    @looper.loop('Map Render Loop', 3600, 60)
+    async def map_render_loop(self):
+        if self.server.status != 'started':
+            raise Exception(f'Server is not in an acceptable state to render a map. Current state: {self.server.status}. Expected: started')
+
+        self.server.emit('initiate.map.render')

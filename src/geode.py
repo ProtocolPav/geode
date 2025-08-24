@@ -1,5 +1,7 @@
 import asyncio
 
+from pyventus.events import AsyncIOEventEmitter
+
 from src import errors
 from src.handlers.loops import LoopHandler
 from src.server import BedrockServer
@@ -33,4 +35,4 @@ class Geode:
         if self.server.status != 'started':
             raise errors.NotRunning()
 
-        await self.server.events.emit('initiate.backup', self.server)
+        self.server.emit('initiate.backup')

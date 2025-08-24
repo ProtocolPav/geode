@@ -67,7 +67,7 @@ class BedrockServer:
         Send a Minecraft command to the server.
 
         :param command: The command to send
-        :param sleep: (Optional) The amount of seconds to sleep after the command is sent
+        :param sleep: (Optional) The number of seconds to sleep after the command is sent
         """
         logger.debug(f'{Colors.GREY}Running Command {Colors.BLUE}{command}{Colors.END}')
         self.__process.stdin.write(f'{command}\n'.encode())
@@ -137,7 +137,7 @@ class BedrockServer:
         self.__event_emitter.emit(event_name, self, *args, **kwargs)
 
     @events.on('server.start')
-    def on_server_start(self, line: str):
+    async def on_server_start(self, line: str):
         """
         When the server has started and is ready for playing.
 

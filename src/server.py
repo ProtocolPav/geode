@@ -92,6 +92,7 @@ class BedrockServer:
 
             parsed_line = False
 
+            # This is a bit slow, should try reduce from O(n) to O(1)
             for event in self.parsers:
                 if event.check_type == 'manual':
                     parsed_line = False

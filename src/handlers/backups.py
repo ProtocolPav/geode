@@ -22,12 +22,13 @@ class BackupHandler:
         self.backup_location = self.config['backup']['location']
         self.bucket_name = self.config['backup']['bucket_name']
 
-    def __copy_files_to_dir(self, dst: Path):
+    def __copy_files_to_dir(self, dst: Path) -> Path:
         """
         Copies files to the specified destination directory.
         The copied files will also be truncated to the specified length by the Bedrock Server.
 
         :param dst: The destination directory path.
+        :return: The path to the copied level directory
         """
         for file_name, file_length in self.file_list:
             file_path = self.world_path / Path(file_name)
@@ -70,13 +71,18 @@ class BackupHandler:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(extra_file, target)
 
-    def __zip_files(self, src: Path):
+    def __zip_files(self, src: Path) -> Path:
         file_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         destination = self.backup_path / Path(f'{self.level_name}_{file_date}.zip')
 
         with zipfile.ZipFile(destination, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             for file_path in src.glob('**/*'):
                 zip_file.write(file_path, file_path.relative_to(src))
+
+        return destination
+
+    def __upload_to_cloud(self, file_path: Path):
+        ...
 
     @staticmethod
     async def __run_unmined(world_path: Path):

@@ -8,6 +8,7 @@ from pathlib import Path
 from sanic.log import logger, Colors
 
 from src.handlers.config import ConfigHandler
+from src.cloud_services.base import get_cloud_service
 
 class BackupHandler:
     def __init__(self, file_list: tuple, level_name: str):
@@ -21,6 +22,8 @@ class BackupHandler:
         self.config = ConfigHandler()
         self.backup_location = self.config['backup']['location']
         self.bucket_name = self.config['backup']['bucket_name']
+
+        self.cloud_service = get_cloud_service()
 
     def __copy_files_to_dir(self, dst: Path) -> Path:
         """
@@ -73,7 +76,7 @@ class BackupHandler:
 
     def __zip_files(self, src: Path) -> Path:
         file_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        destination = self.backup_path / Path(f'{self.level_name}_{file_date}.zip')
+        destination = src / Path(f'{self.level_name}_{file_date}.zip')
 
         with zipfile.ZipFile(destination, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             for file_path in src.glob('**/*'):
@@ -81,8 +84,15 @@ class BackupHandler:
 
         return destination
 
-    def __upload_to_cloud(self, file_path: Path):
-        ...
+    def __upload_to_cloud(self, src: Path, file_path: Path):
+        destination_file_path = f'{self.bucket_name}/hourly/{file_path.relative_to(src)}'
+
+        if self.cloud_service.service == "local":
+            destination_file_path = f'{self.backup_path}/hourly/{file_path.relative_to(src)}'
+
+        logger.info(f'Uploading {file_path} to {destination_file_path}')
+        self.cloud_service.upload_backup(self.bucket_name, file_path, destination_file_path)
+        logger.info(f'{Colors.GREEN}Backup uploaded successfully!{Colors.END}')
 
     @staticmethod
     async def __run_unmined(world_path: Path):
@@ -132,7 +142,8 @@ class BackupHandler:
 
             await asyncio.to_thread(self.__copy_files_to_dir, temp_dir_path)
             await asyncio.to_thread(self.__copy_extra_files, temp_dir_path)
-            await asyncio.to_thread(self.__zip_files, temp_dir_path)
+            zip_file_name = await asyncio.to_thread(self.__zip_files, temp_dir_path)
+            await asyncio.to_thread(self.__upload_to_cloud, temp_dir_path, zip_file_name)
 
     async def map_update(self):
         with tempfile.TemporaryDirectory(dir=self.backup_path) as temp_dir:

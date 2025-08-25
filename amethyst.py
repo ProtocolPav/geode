@@ -659,23 +659,27 @@ class BedrockServer:
         base_cmd = f"sudo ./unmined/unmined-cli web render --world='{world_path}'"
         common_params = (
             "--imageformat=png --zoomin=2 "
-            "--area='b((2111, 2111), (-2112, -2112))' "
             "--log-level=error --shadows=3d --chunkprocessors=1"
         )
+
+        common_area = "--area='b((2111, 2111), (-2112, -2112))'"
 
         # Define all render tasks
         render_tasks = [
             f"{base_cmd} --output='./unmined/overworld' --dimension=overworld "
-            f"--mapsettings='./unmined/config/Everthorn.json' {common_params}",
+            f"--mapsettings='./unmined/config/Everthorn.json' {common_params} {common_area}",
 
             f"{base_cmd} --output='./unmined/nether' --dimension=nether "
-            f"--mapsettings='./unmined/config/Nether.json' {common_params}",
+            f"--mapsettings='./unmined/config/Nether.json' {common_params} {common_area}",
 
             f"{base_cmd} --output='./unmined/subway' --dimension=overworld "
-            f"--mapsettings='./unmined/config/Subway.json' {common_params}"
+            f"--mapsettings='./unmined/config/Subway.json' {common_params} {common_area}",
+
+            f"{base_cmd} --output='./unmined/the_end' --dimension=the_end "
+            f"--mapsettings='./unmined/config/End.json' {common_params} --area='b((4111, 4111), (-4112, -4112))'"
         ]
 
-        render_names = ['overworld', 'nether', 'subway']
+        render_names = ['overworld', 'nether', 'subway', 'the_end']
         log('generation', f'Configured {len(render_tasks)} render tasks: {", ".join(render_names)}')
 
         try:

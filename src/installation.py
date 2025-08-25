@@ -77,7 +77,6 @@ async def install_unmined(client: httpx.AsyncClient, unmined_dir: Path):
         logger.debug(f'Installing Unmined CLI...')
 
         async with client.stream('GET', data_url, headers={'User-Agent': 'Geode/1.0 (Minecraft)'}) as response:
-            logger.info(response.headers)
             size_in_MB = f'{Colors.GREY}{round(int(response.headers.get("x-dlm-filesize", 0))/1000/1000, 1)}MB{Colors.END}'
             logger.info(f'{Colors.BOLD}{Colors.BLUE}Downloading Unmined CLI...{Colors.END} | {size_in_MB}')
 

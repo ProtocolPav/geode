@@ -3,7 +3,7 @@ httpx==0.23.0
 jproperties==2.1.1
 psutil==5.9.5
 demoji==1.1.0
-google-cloud-storage==2.18.2
+google-cloud-storage==3.3.0
 pyyaml==6.0.2
 pyventus==0.7.1
 #boto3==1.35.65

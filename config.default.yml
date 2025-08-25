@@ -13,12 +13,12 @@ backup:
 
   daily_backups:
     enabled: true
-    hour: 2  # UTC hour when backup occurs (e.g., 2 = between 02:00 and 03:00)
+    hour: 11  # UTC hour when backup occurs (e.g., 2 = between 02:00 and 03:00)
     cloud_subdirectory: "daily"
 
   monthly_backups:
     enabled: true
-    day: "start"  # Options: 'start', 'middle', 'end', or specific day (e.g., 22)
+    day: 25  # specific day (e.g., 22, 1)
     cloud_subdirectory: "monthly"
 
   include_addons: true # Backup the addons that are on your world

@@ -20,7 +20,6 @@ class BackupHandler:
         self.backup_path.mkdir(parents=True, exist_ok=True)
 
         self.config = ConfigHandler()
-        self.backup_location = self.config['backup']['location']
         self.bucket_name = self.config['backup']['bucket_name']
 
         self.cloud_service = get_cloud_service()
@@ -86,10 +85,19 @@ class BackupHandler:
         return destination
 
     def __upload_to_cloud(self, src: Path, file_path: Path):
-        destination_file_path = f'{self.bucket_name}/hourly/{file_path.relative_to(src)}'
+        backup_type = self.config['backup']['hourly_backups']['cloud_subdirectory']
+        daily_backups = self.config['backup']['daily_backups']
+        monthly_backups = self.config['backup']['monthly_backups']
+
+        if monthly_backups['enabled'] and monthly_backups['day'] == datetime.now().day and datetime.now().hour == 0:
+            backup_type = monthly_backups['cloud_subdirectory']
+        elif daily_backups['enabled'] and daily_backups['hour'] == datetime.now().hour:
+            backup_type = daily_backups['cloud_subdirectory']
+
+        destination_file_path = f'{self.bucket_name}/{backup_type}/{file_path.relative_to(src)}'
 
         if self.cloud_service.service == "local":
-            destination_file_path = f'{self.backup_path}/hourly/{file_path.relative_to(src)}'
+            destination_file_path = f'{self.backup_path}/{backup_type}/{file_path.relative_to(src)}'
 
         logger.info(f'Uploading {file_path} to {destination_file_path}')
         self.cloud_service.upload_backup(self.bucket_name, file_path, destination_file_path)

@@ -1,22 +1,32 @@
-FROM ubuntu:24.04
+FROM debian:bookworm-slim
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install apt-utils -yqq && rm -rf /var/cache/apt/*
+# Install Python and required system packages
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+    python3 python3-venv python3-pip \
+    openssl \
+    findutils \
+    libicu-dev libcurl4 libcrypt1 && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install apt-utils -yqq && DEBIAN_FRONTEND=noninteractive apt-get install python3 pip sudo curl unzip screen net-tools gawk openssl findutils pigz libicu-dev libcurl4 libc6 libcrypt1 libcurl4-openssl-dev ca-certificates binfmt-support -yqq && rm -rf /var/cache/apt/*
+# Create and activate a virtual environment
+ENV VENV_PATH=/opt/venv
+RUN python3 -m venv $VENV_PATH
 
+# Ensure venv Python/pip are preferred
+ENV PATH="$VENV_PATH/bin:$PATH"
+
+# Copy requirements and install into venv
 COPY requirements.txt amethyst/requirements.txt
-RUN pip install -r amethyst/requirements.txt --break-system-packages
+RUN pip install --no-cache-dir -r amethyst/requirements.txt
 
-# IPV4 Ports
+# Expose ports
 EXPOSE 19132/tcp
 EXPOSE 19132/udp
-
-# IPV6 Ports
 EXPOSE 19133/tcp
 EXPOSE 19133/udp
-
-# API Port
 EXPOSE 8000
 
-ENV PYTHONPATH "${PYTHONPATH}:/amethyst/"
-WORKDIR amethyst
+# Set environment + workdir
+ENV PYTHONPATH="${PYTHONPATH}:/amethyst/"
+WORKDIR /amethyst

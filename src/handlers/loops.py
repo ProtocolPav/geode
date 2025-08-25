@@ -3,9 +3,6 @@ from collections.abc import Callable
 
 from sanic.log import logger, Colors
 
-from src import errors
-
-
 class LoopHandler:
     def __init__(self):
         self.__loops = []

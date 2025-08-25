@@ -2,7 +2,6 @@ import asyncio.subprocess
 import asyncio
 import platform
 import re
-from dataclasses import dataclass
 
 from jproperties import Properties
 from typing_extensions import Literal, Optional
@@ -13,15 +12,9 @@ from pathlib import Path
 from sanic.log import logger, Colors
 
 from src.handlers.backups import BackupHandler
+from src.models import EventParser
 
 from pyventus.events import EventLinker, AsyncIOEventEmitter
-
-@dataclass
-class EventParser:
-    name: str
-    regex: re.Pattern
-    check_type: Literal['match', 'findall'] = 'match'
-
 
 class BedrockServer:
     __process: asyncio.subprocess.Process | None
@@ -254,3 +247,11 @@ class BedrockServer:
     async def on_preemption(self):
         # Handle Preemption
         await self.stop()
+
+    @events.on('broadcast.message')
+    async def on_broadcast_message(self, content: str):
+        await self.send_command('say [Broadcast] [Message]')
+
+    @events.on('broadcast.announcement')
+    async def on_broadcast_announcement(self, content: str):
+        await self.send_command('say [Broadcast] [Message]')

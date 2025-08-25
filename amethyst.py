@@ -666,16 +666,16 @@ class BedrockServer:
 
         # Define all render tasks
         render_tasks = [
-            # f"{base_cmd} --output='./unmined/overworld' --dimension=overworld "
-            # f"--mapsettings='./unmined/config/Everthorn.json' {common_params} {common_area}",
-            #
-            # f"{base_cmd} --output='./unmined/nether' --dimension=nether "
-            # f"--mapsettings='./unmined/config/Nether.json' {common_params} {common_area}",
-            #
-            # f"{base_cmd} --output='./unmined/subway' --dimension=overworld "
-            # f"--mapsettings='./unmined/config/Subway.json' {common_params} {common_area}",
+            f"{base_cmd} --output='./unmined/overworld' --dimension=overworld "
+            f"--mapsettings='./unmined/config/Everthorn.json' {common_params} {common_area}",
 
-            f"{base_cmd} --output='./unmined/the_end' --dimension=the_end "
+            f"{base_cmd} --output='./unmined/nether' --dimension=nether "
+            f"--mapsettings='./unmined/config/Nether.json' {common_params} {common_area}",
+
+            f"{base_cmd} --output='./unmined/subway' --dimension=overworld "
+            f"--mapsettings='./unmined/config/Subway.json' {common_params} {common_area}",
+
+            f"{base_cmd} --output='./unmined/the_end' --dimension=end "
             f"--mapsettings='./unmined/config/End.json' {common_params} --area='b((4111, 4111), (-4112, -4112))'"
         ]
 
@@ -697,9 +697,6 @@ class BedrockServer:
                 )
                 processes.append(process)
                 log('generation', f'{render_names[i]} render process started with PID: {process.pid}')
-
-                while process.returncode is None:
-                    print(await process.stdout.readline())
 
             log('generation', f'All {len(processes)} render processes launched, waiting for completion')
 

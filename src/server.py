@@ -218,12 +218,13 @@ class BedrockServer:
     async def on_backup_query(self, line: str, *file_list: tuple):
         backup_handler = BackupHandler(file_list, self.properties['level-name'])
 
-        if self.status == 'map_update':
-            await backup_handler.map_update()
-        elif self.status == 'backup':
-            await backup_handler.backup()
-
-        await self.send_command('save resume')
+        try:
+            if self.status == 'map_update':
+                await backup_handler.map_update()
+            elif self.status == 'backup':
+                await backup_handler.backup()
+        finally:
+            await self.send_command('save resume')
 
     @events.on('backup.error')
     async def on_backup_error(self, line: str):

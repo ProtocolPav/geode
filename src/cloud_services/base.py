@@ -21,7 +21,7 @@ class CloudService(ABC):
 
 
 def get_cloud_service() -> CloudService:
-    provider = os.environ.get("CLOUD_PROVIDER", "local")  # default local
+    provider = os.environ.get("CLOUD_SERVICE", "local")  # default local
     module_name = f"src.cloud_services.{provider}_service"
     class_name = f"{provider.capitalize()}Service"
 

@@ -29,4 +29,6 @@ EXPOSE 8000
 
 # Set environment + workdir
 ENV PYTHONPATH="${PYTHONPATH}:/amethyst/"
+ENV CLOUD_SERVICE='local'
+
 WORKDIR /amethyst

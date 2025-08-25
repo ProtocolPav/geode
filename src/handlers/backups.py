@@ -80,7 +80,8 @@ class BackupHandler:
 
         with zipfile.ZipFile(destination, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             for file_path in src.glob('**/*'):
-                zip_file.write(file_path, file_path.relative_to(src))
+                if file_path.suffix != '.zip':
+                    zip_file.write(file_path, file_path.relative_to(src))
 
         return destination
 

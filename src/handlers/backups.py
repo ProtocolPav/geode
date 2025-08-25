@@ -45,7 +45,7 @@ class BackupHandler:
                     f.truncate(int(file_length))
 
         level_path = [x for x in (dst / 'worlds').iterdir()]
-        return dst / 'worlds' / level_path[0]
+        return level_path[0]
 
     def __copy_extra_files(self, dst: Path):
         extra_files = []

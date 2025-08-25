@@ -85,23 +85,57 @@ class BackupHandler:
         return destination
 
     def __upload_to_cloud(self, src: Path, file_path: Path):
-        backup_type = self.config['backup']['hourly_backups']['cloud_subdirectory']
-        daily_backups = self.config['backup']['daily_backups']
-        monthly_backups = self.config['backup']['monthly_backups']
-
-        if monthly_backups['enabled'] and monthly_backups['day'] == datetime.now().day and datetime.now().hour == 0:
-            backup_type = monthly_backups['cloud_subdirectory']
-        elif daily_backups['enabled'] and daily_backups['hour'] == datetime.now().hour:
-            backup_type = daily_backups['cloud_subdirectory']
-
-        destination_file_path = f'{self.bucket_name}/{backup_type}/{file_path.relative_to(src)}'
-
-        if self.cloud_service.service == "local":
-            destination_file_path = f'{self.backup_path}/{backup_type}/{file_path.relative_to(src)}'
-
+        backup_type = self._determine_backup_type()
+        destination_file_path = self._build_destination_path(backup_type, src, file_path)
+        
         logger.info(f'Uploading {file_path} to {destination_file_path}')
         self.cloud_service.upload_backup(self.bucket_name, file_path, destination_file_path)
         logger.info(f'{Colors.GREEN}Backup uploaded successfully!{Colors.END}')
+
+    def _determine_backup_type(self) -> str:
+        """
+        Determines the appropriate backup type based on current time and configuration.
+        
+        Returns:
+            str: The backup subdirectory name to use
+        """
+        now = datetime.now()
+        
+        monthly_config = self.config['backup']['monthly_backups']
+        daily_config = self.config['backup']['daily_backups']
+        
+        # Check for monthly backup (highest priority)
+        if (monthly_config['enabled'] and 
+            monthly_config['day'] == now.day and 
+            now.hour == 0):
+            return monthly_config['cloud_subdirectory']
+        
+        # Check for daily backup (medium priority)
+        if (daily_config['enabled'] and 
+            daily_config['hour'] == now.hour):
+            return daily_config['cloud_subdirectory']
+        
+        # Default to hourly backup (lowest priority)
+        return self.config['backup']['hourly_backups']['cloud_subdirectory']
+
+    def _build_destination_path(self, backup_type: str, src: Path, file_path: Path) -> str:
+        """
+        Builds the destination path for the backup file.
+        
+        Args:
+            backup_type: The backup subdirectory type
+            src: The source directory path
+            file_path: The file being backed up
+        
+        Returns:
+            str: The complete destination path
+        """
+        relative_path = file_path.relative_to(src)
+        
+        if self.cloud_service.service == "local":
+            return f'{self.backup_path}/{backup_type}/{relative_path}'
+        
+        return f'{self.bucket_name}/{backup_type}/{relative_path}'
 
     @staticmethod
     async def __run_unmined(world_path: Path):

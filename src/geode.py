@@ -28,10 +28,10 @@ class Geode:
         await self.server.stop()
 
     async def schedule_message(self, message: Message):
-        async def send_message(geode: Geode):
-            geode.server.emit('broadcast.message', message.content)
+        async def send(geode: Geode):
+            geode.server.emit(f'broadcast.{message.type}', message.content)
 
-        self.looper.add_loop(send_message, 'Message Loop', message.interval_seconds, repetitions=message.repetitions)
+        self.looper.add_loop(send, 'Message Loop', message.interval_seconds, repetitions=message.repetitions)
 
     @looper.loop('Backup Loop', 3600, 60)
     async def backup_loop(self):

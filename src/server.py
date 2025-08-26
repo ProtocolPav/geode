@@ -3,6 +3,7 @@ import asyncio
 import platform
 import re
 
+import demoji
 from jproperties import Properties
 from typing_extensions import Literal, Optional
 
@@ -248,8 +249,27 @@ class BedrockServer:
 
     @events.on('broadcast.message')
     async def on_broadcast_message(self, content: str):
-        await self.send_command(f'say @a {content}')
+        processed_message = demoji.replace_with_desc(content)
+        processed_message = processed_message.translate(str.maketrans({'’': "\'",
+                                                                       '“': '\"',
+                                                                       '”': '\"',
+                                                                       '‘': "\'"}))
+
+        header = " "
+        await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{header}{processed_message}"}}]}}')
+        # Relay to Discord Chat
 
     @events.on('broadcast.announcement')
     async def on_broadcast_announcement(self, content: str):
-        await self.send_command('say [Broadcast] [Message]')
+        await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')
+        self.emit('broadcast.message', content)
+
+    @events.on('broadcast.discord')
+    async def on_broadcast_discord(self, user: str, content: str):
+        processed_message = demoji.replace_with_desc(content)
+        processed_message = processed_message.translate(str.maketrans({'’': "\'",
+                                                                       '“': '\"',
+                                                                       '”': '\"',
+                                                                       '‘': "\'"}))
+
+        await self.send_command(f'tellraw @a {{"rawtext": [{{"text": " §7{user}:§r {processed_message}"}}]}}')

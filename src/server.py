@@ -25,6 +25,7 @@ class BedrockServer:
     status: Literal['stopped', 'started', 'backup', 'map_update'] = 'stopped'
     executable: str
     properties: dict[str, str]
+    online: list[str] = []
 
     def __init__(self):
         if platform.system().lower() == 'linux':
@@ -136,6 +137,7 @@ class BedrockServer:
         :param line: The console log line where the event occurs
         """
         self.status = 'started'
+        self.online = []
         # TO ADD: Disconnect all connected players, in case there was a glitch
         # Log to all the correct locations
 
@@ -152,6 +154,8 @@ class BedrockServer:
             task.cancel()
 
         self.__process.terminate()
+
+        self.online = []
         # Clean up pending tasks, like the server output, etc.
         # TO ADD: Disconnect all connected players
         # Log to all the correct locations
@@ -176,7 +180,7 @@ class BedrockServer:
         :param gamertag: The gamertag of the connected player
         :param xuid: The xuid of the connected player. Can be None.
         """
-        ...
+        self.online.append(gamertag)
 
     @events.on('player.spawn')
     async def on_player_spawn(self, line: str, gamertag: str, xuid: Optional[str], pfid: Optional[str]):
@@ -200,7 +204,7 @@ class BedrockServer:
         :param xuid: The xuid of the player. Can be None.
         :param pfid: The pfid of the player. Can be None.
         """
-        ...
+        self.online.remove(gamertag)
 
     @events.on('backup.hold')
     async def on_backup_hold(self, line: str):
@@ -212,7 +216,9 @@ class BedrockServer:
 
         try:
             if self.status == 'map_update':
+                self.emit('broadcast.message', f'A Map Update is in progress. Expect reduced server performance.')
                 await backup_handler.map_update()
+                self.emit('broadcast.message', f'Map update complete!')
             elif self.status == 'backup':
                 await backup_handler.backup()
         finally:
@@ -244,7 +250,11 @@ class BedrockServer:
 
     @events.on('preemption')
     async def on_preemption(self):
-        # Handle Preemption
+        self.emit('broadcast.announcement', 'Server is being preempted. Geode will shut down the server to prevent corruption.')
+
+        for player in self.online:
+            await self.send_command(f'kick "{player}" by §l§uGeode§r due to server preemption')
+
         await self.stop()
 
     @events.on('broadcast.message')

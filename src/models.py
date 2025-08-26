@@ -1,7 +1,8 @@
+import asyncio
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Literal
+from typing import Callable, Literal
 
 
 @dataclass
@@ -12,10 +13,15 @@ class EventParser:
 
 
 @dataclass
+class Loop:
+    name: str
+    callback: Callable
+    task: asyncio.Task = None
+
+
+@dataclass
 class Message:
     content: str
     type: Literal['message', 'announcement']
-    sent_time: datetime
     repetitions: int = 1
-    sent: int = 0
-    interval: timedelta = timedelta(minutes=1)
+    interval_seconds: int = 1

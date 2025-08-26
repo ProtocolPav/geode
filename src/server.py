@@ -120,8 +120,6 @@ class BedrockServer:
 
             await asyncio.gather(*self.__tasks)
 
-            logger.debug(f'Current tasks: {self.__tasks}')
-
     async def stop(self):
         if self.__process:
             await self.send_command('stop')
@@ -250,7 +248,7 @@ class BedrockServer:
 
     @events.on('broadcast.message')
     async def on_broadcast_message(self, content: str):
-        await self.send_command('say [Broadcast] [Message]')
+        await self.send_command(f'say @a {content}')
 
     @events.on('broadcast.announcement')
     async def on_broadcast_announcement(self, content: str):

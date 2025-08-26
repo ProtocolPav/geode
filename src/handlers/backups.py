@@ -67,9 +67,9 @@ class BackupHandler:
         for extra_file in extra_files:
             target = dst / extra_file.relative_to(self.server_path)
 
-            if extra_file.is_dir():
+            if extra_file.exists() and extra_file.is_dir():
                 shutil.copytree(extra_file, target)
-            else:
+            elif extra_file.exists():
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(extra_file, target)
 

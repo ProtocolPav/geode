@@ -1,7 +1,7 @@
 import asyncio
 import uuid
 
-from src.handlers.loops import LoopHandler
+from src.handlers.loop import LoopHandler
 from src.models import Message
 from src.server import BedrockServer
 from src.handlers.config import ConfigHandler

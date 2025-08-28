@@ -12,7 +12,7 @@ class CloudService(ABC):
         pass
 
     @abstractmethod
-    def download_backup(self, bucket_name: str, dest_path: Path, file_path: Path):
+    def download_backup(self, bucket_name: str, dest_path: Path, blob_name: str):
         pass
 
     @abstractmethod

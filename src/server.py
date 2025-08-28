@@ -12,7 +12,7 @@ from pathlib import Path
 
 from sanic.log import logger, Colors
 
-from src.handlers.backups import BackupHandler
+from src.handlers.backup import BackupHandler
 from src.models import EventParser
 
 from pyventus.events import EventLinker, AsyncIOEventEmitter

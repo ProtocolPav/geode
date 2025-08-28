@@ -1,7 +1,11 @@
+import os
+
 from google.cloud import storage
 
 from .base import CloudService
 from pathlib import Path
+
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "../google-credentials.json"
 
 class GCloudService(CloudService):
     service = "gcloud"
@@ -21,7 +25,10 @@ class GCloudService(CloudService):
         blob.upload_from_filename(file_path, if_generation_match=0)
 
     def download_backup(self, bucket_name: str, dest_path: Path, file_path: Path):
-        pass
+        storage_client = storage.Client()
+        bucket = storage_client.get_bucket(bucket_name)
+        blob = bucket.blob(file_path)
+        blob.download_to_file(dest_path)
 
     def list_backups(self, bucket_name: str, glob_filter: str = '*') -> list[storage.Blob]:
         """

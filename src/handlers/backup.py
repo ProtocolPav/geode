@@ -24,6 +24,8 @@ class BackupHandler:
 
         self.cloud_service = get_cloud_service()
 
+        self.backup_date = datetime.now()
+
     def __copy_files_to_dir(self, dst: Path) -> Path:
         """
         Copies files to the specified destination directory.
@@ -44,8 +46,7 @@ class BackupHandler:
                 with open(target, 'a') as f:
                     f.truncate(int(file_length))
 
-        level_path = [x for x in (dst / 'worlds').iterdir()]
-        return level_path[0]
+        return dst / 'worlds' / self.level_name
 
     def __copy_extra_files(self, dst: Path):
         extra_files = []
@@ -74,7 +75,7 @@ class BackupHandler:
                 shutil.copy2(extra_file, target)
 
     def __zip_files(self, src: Path) -> Path:
-        file_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        file_date = self.backup_date.strftime("%Y-%m-%d_%H-%M-%S")
         destination = src / Path(f'{self.level_name}_{file_date}.zip')
 
         with zipfile.ZipFile(destination, 'w', zipfile.ZIP_DEFLATED) as zip_file:

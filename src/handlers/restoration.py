@@ -1,3 +1,5 @@
+import tempfile
+import zipfile
 from pathlib import Path
 
 from src.cloud_services.base import get_cloud_service
@@ -21,4 +23,9 @@ class RestorationHandler:
     def __unzip_backup(self, dst: Path):
         self.cloud_service.download_backup(self.bucket_name, dst, self.backup_name)
 
-        
+        with zipfile.ZipFile(dst, 'r') as zip_ref:
+            zip_ref.extractall(dst / 'tmp')
+
+    def restore_backup(self):
+        with tempfile.TemporaryDirectory(dir=self.backup_path) as temp_dir:
+            temp_dir_path = Path(temp_dir)

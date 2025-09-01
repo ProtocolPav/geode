@@ -123,7 +123,7 @@ class BedrockServer:
             await asyncio.gather(*self.__tasks)
 
     async def stop(self):
-        if self.__process:
+        if self.__process and self.__process.returncode is None:
             await self.send_command('stop')
 
     def emit(self, event_name: str, *args, **kwargs):

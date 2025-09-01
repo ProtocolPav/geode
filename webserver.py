@@ -1,179 +1,34 @@
-import os
-
-from sanic import Sanic, Request, file
-from sanic.response import json, text
-from sanic.log import LOGGING_CONFIG_DEFAULTS, Colors
-from datetime import datetime, timedelta
 import asyncio
-from src import geode
+import json
 
-app = Sanic("bedrock_server_app")
+from sanic import Sanic, Request, HTTPResponse
+from sanic_ext.extensions.openapi import openapi
+
+from src import geode
+from src.routes import blueprint_group
+
+app = Sanic("geode")
+app.config.OAS_URL_PREFIX = "/api/docs"
+app.config.SWAGGER_UI_CONFIGURATION = {"docExpansion": "list"}
+
 handler: geode.Geode
 
-@app.route('/<text_test:strorempty>')
-async def default(request: Request, text_test: str):
-    return text(f"Webserver ok. Text send: {text_test}. {request.args}")
 
-
-@app.route('/amethyst/version')
-async def version(request: Request):
-    return text(f"{handler.version}")
-
-
-@app.route('/server/details')
-async def status(request: Request = None):
-    return json({'server_online': handler.server.running(),
-                 'server_status': handler.server.status[0],
-                 'status_check': handler.server.status_check(),
-                 'update': handler.server.update,
-                 'server_start': f"{handler.server.start}",
-                 'uptime': f"{datetime.now() - handler.server.start}",
-                 'usage': handler.system_log,
-                 'last_backup': f"{handler.previous_backup}"})
-
-
-@app.route('/server/stop')
-async def stop(request: Request):
-    await handler.stop_server()
-    return json({'response': 'Server has been stopped'})
-    # return await status()
-
-
-@app.route('/server/start')
-async def start(request: Request):
-    await handler.start_server()
-    return json({'response': 'Server has been started'})
-    # return await status()
-
-
-@app.route('/server/preempt')
-async def preempt(request: Request):
-    await handler.server.emit('preemption')
-    return await status()
-
-
-@app.route('/server/backup')
-async def backup(request: Request):
-    await handler.server.send_command('save hold', sleep=5)
-    await handler.server.send_command('save query', sleep=10)
-    await handler.server.send_command('save resume')
-    return json({"backup_successful": True})
-
-
-@app.route('/server/update')
-async def update(request: Request):
-    if handler.server.running():
-        return json({'response': 'Error. Server is running!'})
-
-    else:
-        await handler.server.check_for_updates()
-        return json({'response': handler.server.update})
-
-
-@app.route('/commands/message')
-async def message(request: Request):
-    if request.args.get('msg', []):
-        await handler.server.send_message(request.args['msg'][0])
-        return text('Message has been sent!')
-    else:
-        return text('Please include msg as an argument. Example: thorny-bds:8000/commands/message?msg=Hello!!!!')
-
-
-@app.route('/commands/message/schedule')
-async def schedule_message(request: Request):
-    interval = int(request.args.get('interval', '7200'))
-    count = int(request.args.get('count', '5'))
-
-    if request.args.get('msg', None):
-        handler.messages.append({'content': request.args['msg'][0],
-                                 'type': 'message',
-                                 'time': datetime.now()})
-        for i in range(1, count-1):
-            handler.messages.append({'content': request.args['msg'][0],
-                                     'type': 'message',
-                                     'time': datetime.now() + timedelta(seconds=interval*i)})
-
-        handler.messages.sort(key=lambda x: x['time'])
-
-        return text(f'Message has been scheduled to be sent {count} times. Once every {interval} seconds.')
-    else:
-        return text('Please include msg as an argument. Example: thorny-bds:8000/commands/message/schedule?msg=Hello!!!!')
-
-
-@app.route('/commands/announce')
-async def announce(request: Request):
-    if request.args.get('msg', None):
-        await handler.server.send_announce(request.args['msg'][0])
-        return text('Announcement has been sent!')
-    else:
-        return text('Please include msg as an argument. Example: thorny-bds:8000/commands/announce?msg=Hello!!!!')
-
-
-async def server_response(request: Request = None):
-    await asyncio.sleep(0.3)
-    return {'response': handler.server.console_logs[-1]}
-
-
-@app.route('/commands/give/<gamertag:str>/<item:str>/<amount:int>')
-async def give_item(request: Request, gamertag: str, item: str, amount: int):
-    gamertag = gamertag.replace("%20", " ")
-    await handler.server.send_command(f'give "{gamertag}" {item} {amount}')
-    return json(await server_response())
-
-
-@app.route('/commands/clear/<gamertag:str>/<item:str>/<amount:int>')
-async def clear(request: Request, gamertag: str, item: str, amount: int):
-    gamertag = gamertag.replace("%20", " ")
-    await handler.server.send_test_for('name="%s", hasitem={item=%s, quantity=%s..}' % (gamertag, item, amount))
-
-    response = await server_response()
-
-    if gamertag in response['response']:
-        await handler.server.send_command(f'clear "{gamertag}" {item} 0 {amount}')
-
-    return json(await server_response())
-
-
-@app.route('/whitelist/add/<gamertag:str>')
-async def whitelist_add(request: Request, gamertag: str):
-    gamertag = gamertag.replace("%20", " ")
-    await handler.server.send_command(f'whitelist add "{gamertag}"')
-    return json(await server_response())
-
-
-@app.route('/whitelist/remove/<gamertag:str>')
-async def whitelist_remove(request: Request, gamertag: str):
-    gamertag = gamertag.replace("%20", " ")
-    await handler.server.send_command(f'whitelist remove "{gamertag}"')
-    return json(await server_response())
-
-
-@app.route('/kick/<gamertag:str>')
-async def kick(request: Request, gamertag: str):
-    gamertag = gamertag.replace("%20", " ")
-    await handler.server.send_command(f'kick "{gamertag}"')
-    return json(await server_response())
-
-@app.route('/map/<layer:str>/<zoomlevel:int>/<regionx:int>/<regionz:int>/<x:int>/<z:int>')
-async def get_map(request: Request, layer: str, zoomlevel: int, regionx: int, regionz: int, x: int, z: int):
-    if os.path.exists(f'../unmined/{layer}/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png'):
-        return await file(f'../unmined/{layer}/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png')
-
-    return json({}, 404)
-
-
-@app.listener('after_server_start')
-async def init_core(application: Sanic, loop: asyncio.AbstractEventLoop):
+@app.before_server_start
+async def init_handler(application: Sanic):
     global handler
     handler = geode.Geode()
     await handler.start_server()
+    application.ext.dependency(handler)
 
-
-@app.listener('after_server_stop')
-async def stop_core(application, loop: asyncio.AbstractEventLoop):
+@app.after_server_stop
+async def stop_handler(application: Sanic):
     handler.server.emit('preemption')
     while handler.server.status != 'stopped':
         await asyncio.sleep(1)
 
+app.blueprint(blueprint_group)
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", access_log=False, dev=True)
+    #app.run(host="0.0.0.0", fast=True)
+    app.run(host="0.0.0.0", dev=True)

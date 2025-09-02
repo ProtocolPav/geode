@@ -8,11 +8,11 @@ class CloudService(ABC):
     service: str
 
     @abstractmethod
-    def upload_backup(self, bucket_name: str, file_path: Path, dest_path: str):
+    def upload_backup(self, bucket_name: str, backup_path: Path, cloud_dest_path: str):
         pass
 
     @abstractmethod
-    def download_backup(self, bucket_name: str, dest_path: Path, blob_name: str):
+    def download_backup(self, bucket_name: str, local_dest_path: Path, cloud_backup_name: str):
         pass
 
     @abstractmethod

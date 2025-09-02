@@ -10,25 +10,32 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "../google-credentials.json"
 class GCloudService(CloudService):
     service = "gcloud"
 
-    def upload_backup(self, bucket_name: str, file_path: Path, dest_path: str):
+    def upload_backup(self, bucket_name: str, backup_path: Path, cloud_dest_path: str):
         """
-        Uploads the backup file to the bucket, to the path specified.
+        Uploads the backup file specified in backup_path to the path specified in cloud_dest_path.
 
         :param bucket_name: The name of the bucket to upload to
-        :param file_path: The local path to the file to upload
-        :param dest_path: The storage path to the file in the bucket
+        :param backup_path: The local path to the file to upload
+        :param cloud_dest_path: The storage path to the file in the bucket
         """
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(bucket_name)
-        blob = bucket.blob(dest_path)
+        blob = bucket.blob(cloud_dest_path)
 
-        blob.upload_from_filename(file_path, if_generation_match=0)
+        blob.upload_from_filename(backup_path, if_generation_match=0)
 
-    def download_backup(self, bucket_name: str, dest_path: Path, blob_name: str):
+    def download_backup(self, bucket_name: str, local_dest_path: Path, cloud_backup_name: str):
+        """
+        Downloads the backup file from Google Cloud, specified by cloud_backup_name to the local_dest_path.
+
+        :param bucket_name: The name of the bucket to download from
+        :param local_dest_path: The local path to the file to download
+        :param cloud_backup_name: The storage path to the file in the bucket
+        """
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(bucket_name)
-        blob = bucket.blob(blob_name)
-        blob.download_to_file(dest_path)
+        blob = bucket.blob(cloud_backup_name)
+        blob.download_to_file(local_dest_path)
 
     def list_backups(self, bucket_name: str, glob_filter: str = '*') -> list[storage.Blob]:
         """

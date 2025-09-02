@@ -4,6 +4,7 @@ import platform
 import re
 
 import demoji
+import httpx
 from jproperties import Properties
 from typing_extensions import Literal, Optional
 
@@ -13,6 +14,7 @@ from pathlib import Path
 from sanic.log import logger, Colors
 
 from src.handlers.backup import BackupHandler
+from src.handlers.relay import RelayHandler
 from src.models import EventParser
 
 from pyventus.events import EventLinker, AsyncIOEventEmitter
@@ -138,8 +140,9 @@ class BedrockServer:
         """
         self.status = 'started'
         self.online = []
+
+        await RelayHandler.relay_start()
         # TO ADD: Disconnect all connected players, in case there was a glitch
-        # Log to all the correct locations
 
     @events.on('server.stop')
     async def on_server_stop(self, line: str):
@@ -273,6 +276,8 @@ class BedrockServer:
     async def on_broadcast_announcement(self, content: str):
         await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')
         self.emit('broadcast.message', content)
+
+        await RelayHandler.relay_announcement(content)
 
     @events.on('broadcast.discord')
     async def on_broadcast_discord(self, user: str, content: str):

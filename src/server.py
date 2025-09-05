@@ -131,6 +131,13 @@ class BedrockServer:
     def emit(self, event_name: str, *args, **kwargs):
         self.__event_emitter.emit(event_name, self, *args, **kwargs)
 
+    async def initiate_save(self, save_type: Literal['backup', 'map_update']):
+        if self.status == 'started':
+            await self.send_command('save hold')
+            self.status = save_type
+        else:
+            logger.warn('Cannot initiate backup because the server is not running.')
+
     @events.on('server.start')
     async def on_server_start(self, line: str):
         """
@@ -235,22 +242,6 @@ class BedrockServer:
     async def on_backup_resume(self, line: str):
         self.status = 'started'
 
-    @events.on('initiate.backup')
-    async def on_initiate_backup(self):
-        if self.status == 'started':
-            await self.send_command('save hold')
-            self.status = 'backup'
-        else:
-            logger.warn('Cannot initiate backup because the server is not running.')
-
-    @events.on('initiate.map.render')
-    async def on_initiate_backup(self):
-        if self.status == 'started':
-            await self.send_command('save hold')
-            self.status = 'map_update'
-        else:
-            logger.warn('Cannot initiate map update because the server is not running.')
-
     @events.on('preemption')
     async def on_preemption(self):
         self.emit('broadcast.announcement', 'Server is being preempted. Geode will shut down the server to prevent corruption.')
@@ -270,7 +261,8 @@ class BedrockServer:
 
         header = " "
         await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{header}{processed_message}"}}]}}')
-        # Relay to Discord Chat
+
+        await RelayHandler.relay_message(content)
 
     @events.on('broadcast.announcement')
     async def on_broadcast_announcement(self, content: str):

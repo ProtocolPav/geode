@@ -39,11 +39,11 @@ class Geode:
         if self.server.status != 'started':
             raise Exception(f'Server is not in an acceptable state to backup. Current state: {self.server.status}. Expected: started')
 
-        self.server.emit('initiate.backup')
+        await self.server.initiate_save('backup')
 
     @looper.loop('Map Render Loop', 3600)
     async def map_render_loop(self):
         if self.server.status != 'started':
             raise Exception(f'Server is not in an acceptable state to render a map. Current state: {self.server.status}. Expected: started')
 
-        self.server.emit('initiate.map.render')
+        await self.server.initiate_save('map_update')

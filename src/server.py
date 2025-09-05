@@ -123,10 +123,14 @@ class BedrockServer:
             ]
 
             await asyncio.gather(*self.__tasks)
+        else:
+            raise Exception('Cannot start the server because it is already running')
 
     async def stop(self):
         if self.__process and self.__process.returncode is None:
             await self.send_command('stop')
+        else:
+            raise Exception('Cannot stop the server because it is not running')
 
     def emit(self, event_name: str, *args, **kwargs):
         self.__event_emitter.emit(event_name, self, *args, **kwargs)
@@ -226,9 +230,9 @@ class BedrockServer:
 
         try:
             if self.status == 'map_update':
-                self.emit('broadcast.message', f'A Map Update is in progress. Expect reduced server performance.')
+                self.emit('broadcast.announcement', f'A Map Update is in progress. Expect reduced server performance.')
                 await backup_handler.map_update()
-                self.emit('broadcast.message', f'Map update complete!')
+                self.emit('broadcast.message', f'Map Update complete!')
             elif self.status == 'backup':
                 await backup_handler.backup()
         finally:
@@ -244,7 +248,7 @@ class BedrockServer:
 
     @events.on('preemption')
     async def on_preemption(self):
-        self.emit('broadcast.announcement', 'Server is being preempted. Geode will shut down the server to prevent corruption.')
+        await RelayHandler.relay_preemption()
 
         for player in self.online:
             await self.send_command(f'kick "{player}" by §l§uGeode§r due to server preemption')
@@ -268,8 +272,6 @@ class BedrockServer:
     async def on_broadcast_announcement(self, content: str):
         await self.send_command('execute at @a run playsound random.toast @p ~ ~3 ~ 100 0.2')
         self.emit('broadcast.message', content)
-
-        await RelayHandler.relay_announcement(content)
 
     @events.on('broadcast.discord')
     async def on_broadcast_discord(self, user: str, content: str):

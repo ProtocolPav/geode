@@ -29,16 +29,25 @@ class RelayHandler:
 
     @classmethod
     async def relay_start(cls):
+        version_file = Path('../server/version.geode')
+        version = version_file.read_text()
         await cls.relay('start',
                         "Server Start",
-                        "The server has started.\n\n"
+                        f"The server has started. Running Minecraft Version **{version}**\n"
                                      "-# *Powered by **Geode***")
 
     @classmethod
     async def relay_stop(cls):
         await cls.relay('stop',
                         "Server Stop",
-                        "The server has stopped. Be patient, and it will be back up soon!\n\n"
+                        "The server has stopped. Be patient, and it will be back up soon!\n"
+                        "-# *Powered by **Geode***")
+
+    @classmethod
+    async def relay_preemption(cls):
+        await cls.relay('crash',
+                        "Server Preemption Detected",
+                        "The server is shutting down to keep your builds safe and prevent world corruption!\n"
                         "-# *Powered by **Geode***")
 
     @classmethod

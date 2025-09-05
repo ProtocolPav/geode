@@ -1,4 +1,4 @@
-from sanic import Blueprint
+from sanic import Blueprint, json as sanic_json
 
 from sanic_ext import validate, openapi
 from sanic_ext.extensions.openapi.definitions import RequestBody
@@ -13,18 +13,24 @@ controls_blueprint = Blueprint('controls', '/controls')
 async def stop(request, geode: Geode):
     await geode.server.stop()
 
+    return sanic_json({'response': 'Server has been stopped'})
+
 @controls_blueprint.post('/start')
 async def start(request, geode: Geode):
     await geode.server.start()
 
+    return sanic_json({'response': 'Server has started'})
+
 @controls_blueprint.post('/message')
 @openapi.definition(
     body=RequestBody(Message, required=True),
-    summary="User profile update"
+    summary="Schedule a server message"
 )
 @validate(json=Message)
 async def schedule_message(request, geode: Geode, body: Message):
     await geode.schedule_message(body)
+
+    return sanic_json({'response': 'Scheduled message'})
 
 @controls_blueprint.post('/restore')
 async def restore(request, geode: Geode):

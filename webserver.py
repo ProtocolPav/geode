@@ -1,8 +1,8 @@
 import asyncio
-import json
+import re
 
-from sanic import Sanic, Request, HTTPResponse
-from sanic_ext.extensions.openapi import openapi
+from sanic import Sanic
+import logging.config
 
 from src import geode
 from src.routes import blueprint_group
@@ -10,6 +10,91 @@ from src.routes import blueprint_group
 app = Sanic("geode")
 app.config.OAS_URL_PREFIX = "/api/docs"
 app.config.SWAGGER_UI_CONFIGURATION = {"docExpansion": "list"}
+
+
+class PlainFormatter(logging.Formatter):
+    """Formatter that strips ANSI escape codes from log messages"""
+
+    def __init__(self, fmt=None, datefmt=None):
+        super().__init__(fmt, datefmt)
+        # Regex pattern to match ANSI escape codes
+        self.ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+
+    def format(self, record):
+        # Strip ANSI codes from the message
+        record.msg = self.ansi_escape.sub('', str(record.msg))
+        return super().format(record)
+
+logging.config.dictConfig({
+    'version': 1,
+    'disable_existing_loggers': False,
+    'loggers': {
+        'sanic.root': {
+            'level': 'DEBUG',
+            'handlers': ['console', 'file']
+        },
+        'sanic.error': {
+            'level': 'INFO',
+            'handlers': ['error_console'],
+            'propagate': True,
+            'qualname': 'sanic.error'
+        },
+        'sanic.access': {
+            'level': 'INFO',
+            'handlers': ['access_console'],
+            'propagate': True,
+            'qualname': 'sanic.access'
+        },
+        'sanic.server': {
+            'level': 'INFO',
+            'handlers': ['console'],
+            'propagate': True,
+            'qualname': 'sanic.server'
+        },
+        'sanic.websockets': {
+            'level': 'INFO',
+            'handlers': ['console'],
+            'propagate': True,
+            'qualname': 'sanic.websockets'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'generic',
+            'stream': 'ext://sys.stdout',
+            'level': 'INFO'  # Added level to keep console at INFO
+        },
+        'error_console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'generic',
+            'stream': 'ext://sys.stderr'
+        },
+        'access_console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'access',
+            'stream': 'ext://sys.stdout'
+        },
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'formatter': 'plain',
+            'filename': 'geode.log',
+            'maxBytes': 10485760,  # 10MB
+            'backupCount': 0,  # No backup files
+            'level': 'DEBUG'
+        }
+    },
+    'formatters': {
+        'generic': {'class': 'sanic.logging.formatter.AutoFormatter'},
+        'access': {'class': 'sanic.logging.formatter.AutoAccessFormatter'},
+        'plain': {  # Add plain formatter without colors
+            "()": PlainFormatter,
+            'format': '%(asctime)s [%(levelname)s] %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S'
+        }
+    }
+})
+
 
 handler: geode.Geode
 

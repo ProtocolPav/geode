@@ -16,7 +16,6 @@ class Geode:
     def __init__(self, server: BedrockServer = BedrockServer()):
         self.version = 'v1.0'
 
-        logger.info('Geode is starting...')
         logger.info(f'Running Geode {Colors.PURPLE}{self.version}{Colors.END}')
         logger.info(self.config)
         self.server = server
@@ -33,14 +32,8 @@ class Geode:
 
     @looper.loop('Backup Loop', 3600, 60)
     async def backup_loop(self):
-        if self.server.status != 'started':
-            raise Exception(f'Server is not in an acceptable state to backup. Current state: {self.server.status}. Expected: started')
-
         await self.server.initiate_save('backup')
 
     @looper.loop('Map Render Loop', 3600)
     async def map_render_loop(self):
-        if self.server.status != 'started':
-            raise Exception(f'Server is not in an acceptable state to render a map. Current state: {self.server.status}. Expected: started')
-
         await self.server.initiate_save('map_update')

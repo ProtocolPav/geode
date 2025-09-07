@@ -107,7 +107,8 @@ class BedrockServer:
             prop_file = Properties()
             prop_file.load(open('../server/server.properties', 'rb'))
             self.properties = prop_file.properties
-            logger.debug(f'Loaded properties: {self.properties}')
+            for prop, val in self.properties.items():
+                logger.debug(f'{Colors.GREY}{prop}{Colors.END} = {val}')
 
             self.__process = await asyncio.subprocess.create_subprocess_exec(
                 program=self.executable,

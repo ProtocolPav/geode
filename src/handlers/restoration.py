@@ -6,8 +6,7 @@ from src.cloud_services.base import get_cloud_service
 from src.handlers.config import ConfigHandler
 
 class RestorationHandler:
-    def __init__(self, level_name: str, backup_name: str):
-        self.level_name = level_name
+    def __init__(self, backup_name: str):
         self.server_path = Path('../server/')
         self.world_path = Path('../server/worlds/')
         self.backup_path = Path('../server/backups/')

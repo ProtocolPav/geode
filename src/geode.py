@@ -25,9 +25,6 @@ class Geode:
         asyncio.create_task(self.looper.start_looper(self), name='Looper')
         asyncio.create_task(self.server.start(), name='Server')
 
-    async def stop_server(self):
-        await self.server.stop()
-
     async def schedule_message(self, message: Message):
         async def send(geode: Geode):
             geode.server.emit(f'broadcast.{message.type}', message.content)

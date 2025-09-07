@@ -34,6 +34,6 @@ async def schedule_message(request, geode: Geode, body: Message):
 
 @controls_blueprint.post('/restore')
 async def restore(request, geode: Geode):
-    restoration = RestorationHandler('dsadsa', 'server/backups/hourly/test_2025-09-02_17-12-47.zip')
+    restoration = RestorationHandler('server/backups/hourly/test_2025-09-02_17-12-47.zip')
 
     await restoration.restore_backup()

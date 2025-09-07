@@ -17,7 +17,6 @@ class Geode:
         self.version = 'v1.0'
 
         logger.info(f'Running Geode {Colors.PURPLE}{self.version}{Colors.END}')
-        logger.info(self.config)
         self.server = server
 
     async def start_server(self):

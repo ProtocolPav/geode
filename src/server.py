@@ -279,7 +279,8 @@ class BedrockServer:
         header = " "
         await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{header}{processed_message}"}}]}}')
 
-        await RelayHandler.relay_message(content)
+        if len(self.online) > 0:
+            await RelayHandler.relay_message(content)
 
     @events.on('broadcast.announcement')
     async def on_broadcast_announcement(self, content: str):

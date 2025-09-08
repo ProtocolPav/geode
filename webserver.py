@@ -80,8 +80,8 @@ logging.config.dictConfig({
             'class': 'logging.handlers.RotatingFileHandler',
             'formatter': 'plain',
             'filename': 'geode.log',
-            'maxBytes': 10485760,  # 10MB
-            'backupCount': 0,  # No backup files
+            'maxBytes': 1000000,
+            'backupCount': 1,
             'level': 'DEBUG'
         }
     },

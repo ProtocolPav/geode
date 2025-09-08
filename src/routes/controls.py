@@ -1,3 +1,5 @@
+import asyncio.tasks
+
 from sanic import Blueprint, json as sanic_json
 
 from sanic_ext import validate, openapi
@@ -12,15 +14,25 @@ controls_blueprint = Blueprint('controls', '/controls')
 
 @controls_blueprint.post('/stop')
 async def stop(request, geode: Geode):
-    await geode.stop_server()
+    await geode.server.stop()
 
     return sanic_json({'response': 'Server has been stopped'})
 
 @controls_blueprint.post('/start')
 async def start(request, geode: Geode):
-    await geode.start_server()
+    await geode.server.start()
 
     return sanic_json({'response': 'Server has started'})
+
+@controls_blueprint.post('/kill')
+async def kill(request, geode: Geode):
+    await geode.server.kill()
+
+    return sanic_json({'response': 'Server has been killed'})
+
+@controls_blueprint.get('/tasks')
+async def tasks(request, geode: Geode):
+    return sanic_json({'response': [task.get_name() for task in asyncio.tasks.all_tasks()]}, default=str)
 
 @controls_blueprint.post('/message')
 @openapi.definition(

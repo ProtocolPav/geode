@@ -1,4 +1,5 @@
 import asyncio
+import os
 import re
 
 from sanic import Sanic
@@ -103,7 +104,7 @@ handler: geode.Geode
 async def init_handler(application: Sanic):
     global handler
     handler = geode.Geode()
-    await handler.start_server()
+    await handler.server.start()
     application.ext.dependency(handler)
 
 @app.after_server_stop
@@ -115,5 +116,5 @@ async def stop_handler(application: Sanic):
 app.blueprint(blueprint_group)
 
 if __name__ == "__main__":
-    #app.run(host="0.0.0.0", fast=True)
+    #app.run(host="0.0.0.0", single_process=True)
     app.run(host="0.0.0.0", dev=True)

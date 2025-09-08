@@ -117,21 +117,29 @@ class BedrockServer:
                 stderr=asyncio.subprocess.PIPE,
                 limit= 1024 * 512,
                 cwd='../server/')
-            logger.debug(f'Created BedrockServer process PID{self.__process.pid}')
+            logger.debug(f'Created Bedrock Server process with PID{self.__process.pid}')
 
             self.__tasks = [
-                asyncio.create_task(self.__server_output(), name=f"[{self.__process.pid}] BDS Output")
+                asyncio.create_task(self.__server_output(), name=f"Bedrock Server Output")
             ]
-
-            await asyncio.gather(*self.__tasks)
         else:
             raise Exception('Cannot start the server because it is already running')
 
     async def stop(self):
         if self.__process and self.__process.returncode is None:
+            await self.send_command('save resume')
             await self.send_command('stop')
         else:
             raise Exception('Cannot stop the server because it is not running')
+
+    async def kill(self):
+        for task in self.__tasks:
+            task.cancel()
+
+        self.__process.terminate()
+        await self.__process.wait()
+
+        self.status = 'stopped'
 
     def emit(self, event_name: str, *args, **kwargs):
         self.__event_emitter.emit(event_name, self, *args, **kwargs)

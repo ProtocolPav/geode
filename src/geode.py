@@ -16,12 +16,16 @@ class Geode:
     def __init__(self, server: BedrockServer = BedrockServer()):
         self.version = 'v1.0'
 
+        asyncio.create_task(self.looper.start_looper(self), name='Looper')
+
         logger.info(f'Running Geode {Colors.PURPLE}{self.version}{Colors.END}')
         self.server = server
 
     async def start_server(self):
-        asyncio.create_task(self.looper.start_looper(self), name='Looper')
-        asyncio.create_task(self.server.start(), name='Server')
+        if self.server.status == 'stopped':
+            await self.server.start()
+        else:
+            raise Exception(f'Cannot start the server because of status. Expected: stopped. Current: {self.server.status}')
 
     async def stop_server(self):
         if self.server.status == 'started':

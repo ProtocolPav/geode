@@ -29,12 +29,6 @@ class RestorationHandler:
         with zipfile.ZipFile(dst / 'download.zip', 'r') as zip_ref:
             zip_ref.extractall(dst / 'restoration')
 
-    def __backup_current(self, src: Path):
-        for file in (src / 'restoration').iterdir():
-            # Follow just like how Backup Extra Files does
-            # and backup the current files to allow an undo point
-            print(Path(file).relative_to(src / 'restoration'))
-
     def __copy_files(self, src: Path):
         for file in (src / 'restoration').iterdir():
             relative_file = Path(file).relative_to(src / 'restoration')

@@ -23,6 +23,12 @@ class Geode:
         asyncio.create_task(self.looper.start_looper(self), name='Looper')
         asyncio.create_task(self.server.start(), name='Server')
 
+    async def stop_server(self):
+        if self.server.status == 'started':
+            await self.server.stop()
+        else:
+            raise Exception(f'Cannot stop the server because of status. Expected: started. Current: {self.server.status}')
+
     async def schedule_message(self, message: Message):
         async def send(geode: Geode):
             geode.server.emit(f'broadcast.{message.type}', message.content)

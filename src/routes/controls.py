@@ -11,7 +11,7 @@ controls_blueprint = Blueprint('controls', '/controls')
 
 @controls_blueprint.post('/stop')
 async def stop(request, geode: Geode):
-    await geode.server.stop()
+    await geode.stop_server()
 
     return sanic_json({'response': 'Server has been stopped'})
 

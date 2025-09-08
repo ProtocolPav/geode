@@ -21,18 +21,6 @@ class Geode:
         logger.info(f'Running Geode {Colors.PURPLE}{self.version}{Colors.END}')
         self.server = server
 
-    async def start_server(self):
-        if self.server.status == 'stopped':
-            await self.server.start()
-        else:
-            raise Exception(f'Cannot start the server because of status. Expected: stopped. Current: {self.server.status}')
-
-    async def stop_server(self):
-        if self.server.status == 'started':
-            await self.server.stop()
-        else:
-            raise Exception(f'Cannot stop the server because of status. Expected: started. Current: {self.server.status}')
-
     async def schedule_message(self, message: Message):
         async def send(geode: Geode):
             geode.server.emit(f'broadcast.{message.type}', message.content)

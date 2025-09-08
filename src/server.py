@@ -101,7 +101,7 @@ class BedrockServer:
                 logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
 
     async def start(self):
-        if not self.__process or self.__process.returncode is not None:
+        if not self.__process or self.__process.returncode is not None and self.status == 'stopped':
             await installation.check_for_updates()
 
             prop_file = Properties()
@@ -122,15 +122,19 @@ class BedrockServer:
             self.__tasks = [
                 asyncio.create_task(self.__server_output(), name=f"Bedrock Server Output")
             ]
-        else:
+        elif self.__process and self.__process.returncode is None:
             raise Exception('Cannot start the server because it is already running')
+        elif self.status != 'stopped':
+            raise Exception(f'Cannot start the server. Required Status: stopped. Current status: {self.status}')
 
     async def stop(self):
-        if self.__process and self.__process.returncode is None:
+        if self.__process and self.__process.returncode is None and self.status == 'started':
             await self.send_command('save resume')
             await self.send_command('stop')
-        else:
+        elif not self.__process or self.__process.returncode is not None:
             raise Exception('Cannot stop the server because it is not running')
+        elif self.status != 'started':
+            raise Exception(f'Cannot stop the server. Required Status: started. Current status: {self.status}')
 
     async def kill(self):
         for task in self.__tasks:

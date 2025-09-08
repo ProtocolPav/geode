@@ -1,4 +1,5 @@
 import os
+from typing import Iterator
 
 from google.cloud import storage
 
@@ -7,7 +8,7 @@ from pathlib import Path
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "../google-credentials.json"
 
-class GCloudService(CloudService):
+class GcloudService(CloudService):
     service = "gcloud"
 
     def upload_backup(self, bucket_name: str, backup_path: Path, cloud_dest_path: str):
@@ -37,7 +38,7 @@ class GCloudService(CloudService):
         blob = bucket.blob(cloud_backup_name)
         blob.download_to_file(local_dest_path)
 
-    def list_backups(self, bucket_name: str, glob_filter: str = '*') -> list[storage.Blob]:
+    def list_backups(self, bucket_name: str, glob_filter: str = '**/**/*.zip') -> list[str]:
         """
         Returns a list of blobs in the bucket that match the glob filter
 
@@ -46,5 +47,5 @@ class GCloudService(CloudService):
         """
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(bucket_name)
-        blobs = bucket.list_blobs(match_glob=glob_filter)
-        return list(blobs)
+        blobs: Iterator[storage.Blob] = bucket.list_blobs(match_glob=glob_filter)
+        return [blob.name for blob in blobs]

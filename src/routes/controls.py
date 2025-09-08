@@ -17,7 +17,7 @@ async def stop(request, geode: Geode):
 
 @controls_blueprint.post('/start')
 async def start(request, geode: Geode):
-    await geode.server.start()
+    await geode.start_server()
 
     return sanic_json({'response': 'Server has started'})
 
@@ -34,6 +34,10 @@ async def schedule_message(request, geode: Geode, body: Message):
 
 @controls_blueprint.post('/restore')
 async def restore(request, geode: Geode):
-    restoration = RestorationHandler('server/backups/hourly/test_2025-09-02_17-12-47.zip')
+    if geode.server.status == 'stopped':
+        restoration = RestorationHandler('server/backups/hourly/test_2025-09-07_14-39-04.zip')
 
-    await restoration.restore_backup()
+        await restoration.restore_backup()
+        return sanic_json({'response': 'Restoring backup'})
+    else:
+        return sanic_json({'response': 'BAD'})

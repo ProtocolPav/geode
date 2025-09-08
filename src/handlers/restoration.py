@@ -1,6 +1,10 @@
+import asyncio
+import shutil
 import tempfile
 import zipfile
 from pathlib import Path
+
+from sanic.log import logger
 
 from src.cloud_services.base import get_cloud_service
 from src.handlers.config import ConfigHandler
@@ -20,13 +24,37 @@ class RestorationHandler:
         self.cloud_service = get_cloud_service()
 
     def __unzip_backup(self, dst: Path):
-        self.cloud_service.download_backup(self.bucket_name, dst / self.backup_name, self.backup_name)
+        self.cloud_service.download_backup(self.bucket_name, dst / 'download.zip', self.backup_name)
 
-        with zipfile.ZipFile(dst / self.backup_name, 'r') as zip_ref:
+        with zipfile.ZipFile(dst / 'download.zip', 'r') as zip_ref:
             zip_ref.extractall(dst / 'restoration')
+
+    def __backup_current(self, src: Path):
+        for file in (src / 'restoration').iterdir():
+            # Follow just like how Backup Extra Files does
+            # and backup the current files to allow an undo point
+            print(Path(file).relative_to(src / 'restoration'))
+
+    def __copy_files(self, src: Path):
+        for file in (src / 'restoration').iterdir():
+            relative_file = Path(file).relative_to(src / 'restoration')
+
+            if file.is_dir():
+                logger.info(f'Removing {self.server_path / relative_file}')
+                shutil.rmtree(self.server_path / relative_file, ignore_errors=True)
+
+                logger.info(f'Copying {file} to {self.server_path / relative_file}')
+                shutil.copytree(file, self.server_path / relative_file)
+            else:
+                logger.info(f'Removing {self.server_path / relative_file}')
+                Path(self.server_path / relative_file).unlink()
+
+                logger.info(f'Copying {file} to {self.server_path / relative_file}')
+                shutil.copy2(file, self.server_path / relative_file)
 
     async def restore_backup(self):
         with tempfile.TemporaryDirectory(dir=self.backup_path) as temp_dir:
             temp_dir_path = Path(temp_dir)
 
-            self.__unzip_backup(temp_dir_path)
+            await asyncio.to_thread(self.__unzip_backup, temp_dir_path)
+            await asyncio.to_thread(self.__copy_files, temp_dir_path)

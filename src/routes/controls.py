@@ -1,6 +1,7 @@
 import asyncio.tasks
+from pathlib import Path
 
-from sanic import Blueprint, json as sanic_json
+from sanic import Request, Blueprint, json as sanic_json
 
 from sanic_ext import validate, openapi
 from sanic_ext.extensions.openapi.definitions import RequestBody
@@ -59,3 +60,39 @@ async def restore(request, geode: Geode):
 @controls_blueprint.get('/backups')
 async def list_backups(request, geode: Geode):
     return sanic_json({'response': get_cloud_service().list_backups(ConfigHandler()['backup']['bucket_name'])}, default=str)
+
+
+@controls_blueprint.get('/logs')
+async def log_tail(request: Request, geode: Geode):
+    response = await request.respond(content_type="text/event-stream")
+    log_file = Path('./geode.log')
+    last_size = 0
+
+    try:
+        if log_file.exists():
+            with log_file.open() as file:
+                content = file.read()
+                if content:
+                    await response.send(f"{content}")
+                last_size = file.tell()
+
+        while not request.transport.is_closing() and not request.app.ctx.preemption:
+            if log_file.exists():
+                current_size = log_file.stat().st_size
+
+                if current_size < last_size:
+                    last_size = 0
+
+                if current_size > last_size:
+                    with log_file.open() as file:
+                        file.seek(last_size)
+                        new_content = file.read()
+                        if new_content:
+                            await response.send(f"{new_content}")
+                        last_size = current_size
+
+            await asyncio.sleep(0)
+
+    except Exception:
+        pass
+

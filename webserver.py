@@ -103,13 +103,15 @@ handler: geode.Geode
 @app.before_server_start
 async def init_handler(application: Sanic):
     global handler
+    application.ctx.preemption = False
     handler = geode.Geode()
     await handler.server.start()
     application.ext.dependency(handler)
 
-@app.after_server_stop
+@app.before_server_stop
 async def stop_handler(application: Sanic):
     handler.server.emit('preemption')
+    application.ctx.preemption = True
     while handler.server.status != 'stopped':
         await asyncio.sleep(1)
 

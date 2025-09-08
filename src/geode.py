@@ -1,5 +1,4 @@
 import asyncio
-import uuid
 
 from src.handlers.loop import LoopHandler
 from src.models import Message
@@ -25,7 +24,8 @@ class Geode:
         async def send(geode: Geode):
             geode.server.emit(f'broadcast.{message.type}', message.content)
 
-        self.looper.add_loop(send, f'Message {uuid.uuid4()}', message.interval_seconds, repetitions=message.repetitions)
+        message_id = message.content[:20].replace(' ', '_') + f'-i{message.interval_seconds}-r{message.repetitions}'
+        self.looper.add_loop(send, f'Message {message_id}', message.interval_seconds, repetitions=message.repetitions)
 
     @looper.loop('Backup Loop', 3600, 60)
     async def backup_loop(self):

@@ -3,6 +3,7 @@ from sanic import Blueprint, json as sanic_json
 from sanic_ext import validate, openapi
 from sanic_ext.extensions.openapi.definitions import RequestBody
 
+from src.cloud_services.base import get_cloud_service
 from src.geode import Geode
 from src.handlers.restoration import RestorationHandler
 from src.models import Message
@@ -41,3 +42,7 @@ async def restore(request, geode: Geode):
         return sanic_json({'response': 'Restoring backup'})
     else:
         return sanic_json({'response': 'BAD'})
+
+@controls_blueprint.get('/backups')
+async def list_backups(request, geode: Geode):
+    return sanic_json({'response': get_cloud_service().list_backups('')}, default=str)

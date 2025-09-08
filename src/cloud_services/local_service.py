@@ -28,5 +28,7 @@ class LocalService(CloudService):
         Path(f"../{local_dest_path}").parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(f"../{cloud_backup_name}", local_dest_path)
 
-    def list_backups(self, bucket_name: str, glob_filter: str = '*') -> list:
-        pass
+    def list_backups(self, bucket_name: str, glob_filter: str = '**/**/*.zip') -> list:
+        backup_path = Path('../server/backups')
+
+        return list(backup_path.glob(glob_filter))

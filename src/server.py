@@ -148,13 +148,6 @@ class BedrockServer:
     def emit(self, event_name: str, *args, **kwargs):
         self.__event_emitter.emit(event_name, self, *args, **kwargs)
 
-    async def initiate_save(self, save_type: Literal['backup', 'map_update']):
-        if self.status != 'started':
-            raise Exception(f'Server is not in an acceptable state to {save_type}. Current state: {self.status}. Expected: started')
-
-        await self.send_command('save hold')
-        self.status = save_type
-
     @events.on('server.start')
     async def on_server_start(self, line: str):
         """

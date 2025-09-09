@@ -1,5 +1,7 @@
 import asyncio
 
+from typing_extensions import Literal
+
 from src.handlers.loop import LoopHandler
 from src.handlers.restoration import RestorationHandler
 from src.models import Message
@@ -28,10 +30,17 @@ class Geode:
         message_id = message.content[:20].replace(' ', '_') + f'-i{message.interval_seconds}-r{message.repetitions}'
         self.looper.add_loop(send, f'Message {message_id}', message.interval_seconds, repetitions=message.repetitions)
 
+    async def initiate_save(self, save_type: Literal['backup', 'map_update']):
+        if self.server.status != 'started':
+            raise Exception(f'Server cannot launch a {save_type}. Current state: {self.server.status}. Expected: started')
+
+        await self.server.send_command('save hold')
+        self.server.status = save_type
+
     async def restore_backup(self, backup_path: str):
         logger.info(f'Restoring backup {Colors.YELLOW}{backup_path}{Colors.END}')
         logger.info('Backing up current save...')
-        await self.server.initiate_save('backup')
+        await self.initiate_save('backup')
 
         while self.server.status != 'started':
             await asyncio.sleep(1)
@@ -51,8 +60,8 @@ class Geode:
 
     @looper.loop('Backup Loop', 3600, 60)
     async def backup_loop(self):
-        await self.server.initiate_save('backup')
+        await self.initiate_save('backup')
 
     @looper.loop('Map Render Loop', 3600)
     async def map_render_loop(self):
-        await self.server.initiate_save('map_update')
+        await self.initiate_save('map_update')

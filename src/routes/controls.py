@@ -67,7 +67,6 @@ async def restore(request, geode: Geode, body: RestoreBackup):
 async def list_backups(request, geode: Geode):
     return sanic_json({'response': get_cloud_service().list_backups(ConfigHandler()['backup']['bucket_name'])}, default=str)
 
-
 @controls_blueprint.get('/logs')
 async def log_tail(request: Request, geode: Geode):
     response = await request.respond(content_type="text/event-stream")
@@ -79,7 +78,9 @@ async def log_tail(request: Request, geode: Geode):
             with log_file.open() as file:
                 content = file.read()
                 if content:
-                    await response.send(f"{content}")
+                    # Send each line separately
+                    for line in content.splitlines():
+                        await response.send(f"data: {line}\n\n")
                 last_size = file.tell()
 
         while not request.transport.is_closing() and not request.app.ctx.preemption:
@@ -94,11 +95,12 @@ async def log_tail(request: Request, geode: Geode):
                         file.seek(last_size)
                         new_content = file.read()
                         if new_content:
-                            await response.send(f"{new_content}")
+                            # Send each line separately
+                            for line in new_content.splitlines():
+                                await response.send(f"data: {line}\n\n")
                         last_size = current_size
 
             await asyncio.sleep(0)
 
     except Exception:
         pass
-

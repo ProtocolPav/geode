@@ -148,13 +148,6 @@ class BedrockServer:
     def emit(self, event_name: str, *args, **kwargs):
         self.__event_emitter.emit(event_name, self, *args, **kwargs)
 
-    async def initiate_save(self, save_type: Literal['backup', 'map_update']):
-        if self.status != 'started':
-            raise Exception(f'Server is not in an acceptable state to {save_type}. Current state: {self.status}. Expected: started')
-
-        await self.send_command('save hold')
-        self.status = save_type
-
     @events.on('server.start')
     async def on_server_start(self, line: str):
         """
@@ -186,6 +179,17 @@ class BedrockServer:
         # Clean up pending tasks, like the server output, etc.
         # TO ADD: Disconnect all connected players
         # Log to all the correct locations
+
+    @events.on('server.crash')
+    async def on_server_crash(self, line: str):
+        """
+        When the server has stopped.
+
+        :param line: The console log line where the event occurs
+        """
+        await self.on_server_stop(line)
+
+        await RelayHandler.relay_preemption()
 
     @events.on('server.version')
     async def on_server_version(self, line: str, version: str):

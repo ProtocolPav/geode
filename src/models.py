@@ -25,3 +25,9 @@ class Message:
     type: Literal['message', 'announcement']
     repetitions: int = 1
     interval_seconds: int = 1
+
+
+@dataclass
+class RestoreBackup:
+    backup_path: str
+    restore_type: str

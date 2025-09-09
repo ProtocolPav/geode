@@ -51,6 +51,14 @@ class RelayHandler:
                         "-# *Powered by **Geode***")
 
     @classmethod
+    async def relay_crash(cls):
+        await cls.relay('crash',
+                        "The Server Crashed",
+                        "The server has crashed unexpectedly. Please wait for a CM to restart the server and check"
+                        "that the server is okay to continue playing!\n"
+                        "-# *Powered by **Geode***")
+
+    @classmethod
     async def relay_message(cls, content: str):
         await cls.relay('other',
                         "Server Message",

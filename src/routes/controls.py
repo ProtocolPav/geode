@@ -10,7 +10,7 @@ from src.cloud_services.base import get_cloud_service
 from src.geode import Geode
 from src.handlers.config import ConfigHandler
 from src.handlers.restoration import RestorationHandler
-from src.models import Message
+from src.models import Message, RestoreBackup
 
 controls_blueprint = Blueprint('controls', '/controls')
 
@@ -32,6 +32,12 @@ async def kill(request, geode: Geode):
 
     return sanic_json({'response': 'Server has been killed'})
 
+@controls_blueprint.post('/restart')
+async def restart(request, geode: Geode):
+    await geode.restart_server()
+
+    return sanic_json({'response': 'Server has restarted'})
+
 @controls_blueprint.get('/tasks')
 async def tasks(request, geode: Geode):
     return sanic_json({'response': [task.get_name() for task in asyncio.tasks.all_tasks()]}, default=str)
@@ -48,14 +54,14 @@ async def schedule_message(request, geode: Geode, body: Message):
     return sanic_json({'response': 'Scheduled message'})
 
 @controls_blueprint.post('/restore')
-async def restore(request, geode: Geode):
-    if geode.server.status == 'stopped':
-        restoration = RestorationHandler('server/backups/hourly/test_2025-09-07_14-39-04.zip')
-
-        await restoration.restore_backup()
-        return sanic_json({'response': 'Restoring backup'})
-    else:
-        return sanic_json({'response': 'BAD'})
+@openapi.definition(
+    body=RequestBody(RestoreBackup, required=True),
+    summary="Restore a backup"
+)
+@validate(json=RestoreBackup)
+async def restore(request, geode: Geode, body: RestoreBackup):
+    await geode.restore_backup(body.backup_path)
+    return sanic_json({'response': 'Restored backup'})
 
 @controls_blueprint.get('/backups')
 async def list_backups(request, geode: Geode):

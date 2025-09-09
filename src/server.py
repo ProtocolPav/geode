@@ -180,6 +180,17 @@ class BedrockServer:
         # TO ADD: Disconnect all connected players
         # Log to all the correct locations
 
+    @events.on('server.crash')
+    async def on_server_crash(self, line: str):
+        """
+        When the server has stopped.
+
+        :param line: The console log line where the event occurs
+        """
+        await self.on_server_stop(line)
+
+        await RelayHandler.relay_preemption()
+
     @events.on('server.version')
     async def on_server_version(self, line: str, version: str):
         """

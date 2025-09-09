@@ -31,20 +31,19 @@ class RestorationHandler:
 
     def __copy_files(self, src: Path):
         for file in (src / 'restoration').iterdir():
-            relative_file = Path(file).relative_to(src / 'restoration')
+            server_path_file = self.server_path / Path(file).relative_to(src / 'restoration')
 
+            logger.debug(f'Removing {server_path_file}')
+            if server_path_file.exists() and file.is_dir():
+                shutil.rmtree(server_path_file, ignore_errors=True)
+            elif not file.is_dir():
+                server_path_file.unlink()
+
+            logger.debug(f'Copying {file} to {server_path_file}')
             if file.is_dir():
-                logger.info(f'Removing {self.server_path / relative_file}')
-                shutil.rmtree(self.server_path / relative_file, ignore_errors=True)
-
-                logger.info(f'Copying {file} to {self.server_path / relative_file}')
-                shutil.copytree(file, self.server_path / relative_file)
+                shutil.copytree(file, server_path_file)
             else:
-                logger.info(f'Removing {self.server_path / relative_file}')
-                Path(self.server_path / relative_file).unlink()
-
-                logger.info(f'Copying {file} to {self.server_path / relative_file}')
-                shutil.copy2(file, self.server_path / relative_file)
+                shutil.copy2(file, server_path_file)
 
     async def restore_backup(self):
         with tempfile.TemporaryDirectory(dir=self.backup_path) as temp_dir:

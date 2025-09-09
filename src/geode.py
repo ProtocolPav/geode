@@ -1,6 +1,7 @@
 import asyncio
 
 from src.handlers.loop import LoopHandler
+from src.handlers.restoration import RestorationHandler
 from src.models import Message
 from src.server import BedrockServer
 from src.handlers.config import ConfigHandler
@@ -26,6 +27,27 @@ class Geode:
 
         message_id = message.content[:20].replace(' ', '_') + f'-i{message.interval_seconds}-r{message.repetitions}'
         self.looper.add_loop(send, f'Message {message_id}', message.interval_seconds, repetitions=message.repetitions)
+
+    async def restore_backup(self, backup_path: str):
+        logger.info(f'Restoring backup {Colors.YELLOW}{backup_path}{Colors.END}')
+        logger.info('Backing up current save...')
+        await self.server.initiate_save('backup')
+
+        while self.server.status != 'started':
+            await asyncio.sleep(1)
+
+        logger.info('Backup complete. Stopping server...')
+        await self.server.stop()
+
+        while self.server.status != 'stopped':
+            await asyncio.sleep(1)
+
+        logger.info('Downloading and applying the restored backup...')
+        restoration_handler = RestorationHandler(backup_path)
+        await restoration_handler.restore_backup()
+
+        logger.info('Backup restoration complete.')
+        await self.server.start()
 
     @looper.loop('Backup Loop', 3600, 60)
     async def backup_loop(self):

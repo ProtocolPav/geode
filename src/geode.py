@@ -30,6 +30,14 @@ class Geode:
         message_id = message.content[:20].replace(' ', '_') + f'-i{message.interval_seconds}-r{message.repetitions}'
         self.looper.add_loop(send, f'Message {message_id}', message.interval_seconds, repetitions=message.repetitions)
 
+    async def restart_server(self):
+        await self.server.stop()
+
+        while self.server.status != 'stopped':
+            await asyncio.sleep(1)
+
+        await self.server.start()
+
     async def initiate_save(self, save_type: Literal['backup', 'map_update']):
         if self.server.status != 'started':
             raise Exception(f'Server cannot launch a {save_type}. Current state: {self.server.status}. Expected: started')

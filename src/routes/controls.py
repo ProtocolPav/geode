@@ -32,6 +32,12 @@ async def kill(request, geode: Geode):
 
     return sanic_json({'response': 'Server has been killed'})
 
+@controls_blueprint.post('/restart')
+async def restart(request, geode: Geode):
+    await geode.restart_server()
+
+    return sanic_json({'response': 'Server has restarted'})
+
 @controls_blueprint.get('/tasks')
 async def tasks(request, geode: Geode):
     return sanic_json({'response': [task.get_name() for task in asyncio.tasks.all_tasks()]}, default=str)

@@ -1,7 +1,12 @@
+import os.path
 import shutil
+from datetime import datetime
 
 from .base import CloudService
 from pathlib import Path
+
+from ..models.backups import Backup, BackupsList
+
 
 class LocalService(CloudService):
     service = "local"
@@ -28,7 +33,18 @@ class LocalService(CloudService):
         Path(f"../{local_dest_path}").parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(f"../{cloud_backup_name}", local_dest_path)
 
-    def list_backups(self, bucket_name: str, glob_filter: str = '**/**/*.zip') -> list:
+    def list_backups(self, bucket_name: str, glob_filter: str = '**/**/*.zip') -> BackupsList:
         backup_path = Path('../server/backups')
+        backups = []
 
-        return list(backup_path.glob(glob_filter))
+        for i in list(backup_path.glob(glob_filter)):
+            backups.append(Backup(
+                name=i.name,
+                type=str(i.parts[-2]),
+                full_path=str(i),
+                timestamp=datetime.fromtimestamp(os.path.getctime(i)),
+                size_bytes=os.path.getsize(i),
+            )
+        )
+
+        return BackupsList(root=backups)

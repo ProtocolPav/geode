@@ -3,6 +3,8 @@ import importlib
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+from src.models.backups import BackupsList
+
 
 class CloudService(ABC):
     service: str
@@ -16,7 +18,7 @@ class CloudService(ABC):
         pass
 
     @abstractmethod
-    def list_backups(self, bucket_name: str, glob_filter: str = '*') -> list:
+    def list_backups(self, bucket_name: str, glob_filter: str = '*') -> BackupsList:
         pass
 
 

@@ -1,10 +1,12 @@
 import asyncio.tasks
 from pathlib import Path
 
-from sanic import Request, Blueprint, json as sanic_json
+from google.api_core.exceptions import InternalServerError
+import sanic
+from sanic import Request, Blueprint
 
 from sanic_ext import validate, openapi
-from sanic_ext.extensions.openapi.definitions import RequestBody
+from sanic_ext.extensions.openapi.definitions import RequestBody, Response
 
 from src.cloud_services.base import get_cloud_service
 from src.geode import Geode
@@ -15,32 +17,44 @@ from src.models import Message, RestoreBackup
 controls_blueprint = Blueprint('controls', '/controls')
 
 @controls_blueprint.post('/stop')
+@openapi.definition(response=[
+    Response(status=201, description="Server stopped"),
+    Response(InternalServerError, status=500, description="Unable to stop")
+])
 async def stop(request, geode: Geode):
     await geode.server.stop()
 
-    return sanic_json({'response': 'Server has been stopped'})
+    return sanic.empty(status=201)
 
 @controls_blueprint.post('/start')
+@openapi.definition(response=[
+    Response(status=201, description="Server started"),
+    Response(InternalServerError, status=500, description="Unable to start")
+])
 async def start(request, geode: Geode):
     await geode.server.start()
 
-    return sanic_json({'response': 'Server has started'})
+    return sanic.empty(status=201)
 
 @controls_blueprint.post('/kill')
+@openapi.definition(response=[
+    Response(status=201, description="Server killed"),
+    Response(InternalServerError, status=500, description="Unable to kill server")
+])
 async def kill(request, geode: Geode):
     await geode.server.kill()
 
-    return sanic_json({'response': 'Server has been killed'})
+    return sanic.empty(status=201)
 
 @controls_blueprint.post('/restart')
+@openapi.definition(response=[
+    Response(status=201, description="Server restarted"),
+    Response(InternalServerError, status=500, description="Unable to restart server")
+])
 async def restart(request, geode: Geode):
     await geode.restart_server()
 
-    return sanic_json({'response': 'Server has restarted'})
-
-@controls_blueprint.get('/tasks')
-async def tasks(request, geode: Geode):
-    return sanic_json({'response': [task.get_name() for task in asyncio.tasks.all_tasks()]}, default=str)
+    return sanic.empty(status=201)
 
 @controls_blueprint.post('/message')
 @openapi.definition(
@@ -51,7 +65,7 @@ async def tasks(request, geode: Geode):
 async def schedule_message(request, geode: Geode, body: Message):
     await geode.schedule_message(body)
 
-    return sanic_json({'response': 'Scheduled message'})
+    return sanic.json({'response': 'Scheduled message'})
 
 @controls_blueprint.post('/restore')
 @openapi.definition(
@@ -61,11 +75,11 @@ async def schedule_message(request, geode: Geode, body: Message):
 @validate(json=RestoreBackup)
 async def restore(request, geode: Geode, body: RestoreBackup):
     await geode.restore_backup(body.backup_path)
-    return sanic_json({'response': 'Restored backup'})
+    return sanic.json({'response': 'Restored backup'})
 
 @controls_blueprint.get('/backups')
 async def list_backups(request, geode: Geode):
-    return sanic_json({'response': get_cloud_service().list_backups(ConfigHandler()['backup']['bucket_name'])}, default=str)
+    return sanic.json({'response': get_cloud_service().list_backups(ConfigHandler()['backup']['bucket_name'])}, default=str)
 
 @controls_blueprint.get('/logs')
 async def log_tail(request: Request, geode: Geode):

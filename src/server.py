@@ -2,10 +2,12 @@ import asyncio.subprocess
 import asyncio
 import platform
 import re
+from datetime import datetime
 
 import demoji
 import httpx
 from jproperties import Properties
+from sanic import InternalServerError
 from typing_extensions import Literal, Optional
 
 from src import installation
@@ -27,6 +29,8 @@ class BedrockServer:
     status: Literal['stopped', 'started', 'backup', 'map_update'] = 'stopped'
     executable: str
     properties: dict[str, str]
+    start_time: datetime
+    version: str
     online: list[str] = []
 
     def __init__(self):
@@ -119,22 +123,24 @@ class BedrockServer:
                 cwd='../server/')
             logger.debug(f'Created Bedrock Server process with PID{self.__process.pid}')
 
+            self.start_time = datetime.now()
+
             self.__tasks = [
                 asyncio.create_task(self.__server_output(), name=f"Bedrock Server Output")
             ]
         elif self.__process and self.__process.returncode is None:
-            raise Exception('Cannot start the server because it is already running')
+            raise InternalServerError('Cannot start the server because it is already running')
         elif self.status != 'stopped':
-            raise Exception(f'Cannot start the server. Required Status: stopped. Current status: {self.status}')
+            raise InternalServerError(f'Cannot start the server. Required Status: stopped. Current status: {self.status}')
 
     async def stop(self):
         if self.__process and self.__process.returncode is None and self.status == 'started':
             await self.send_command('save resume')
             await self.send_command('stop')
         elif not self.__process or self.__process.returncode is not None:
-            raise Exception('Cannot stop the server because it is not running')
+            raise InternalServerError('Cannot stop the server because it is not running')
         elif self.status != 'started':
-            raise Exception(f'Cannot stop the server. Required Status: started. Current status: {self.status}')
+            raise InternalServerError(f'Cannot stop the server. Required Status: started. Current status: {self.status}')
 
     async def kill(self):
         for task in self.__tasks:
@@ -201,6 +207,8 @@ class BedrockServer:
         """
         version_file = Path('../server/version.geode')
         version_file.write_text(version)
+
+        self.version = version
 
     @events.on('player.connect')
     async def on_player_connect(self, line: str, gamertag: str, xuid: Optional[str]):

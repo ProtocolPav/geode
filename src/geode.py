@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 
 from typing_extensions import Literal
 
@@ -17,6 +18,7 @@ class Geode:
 
     def __init__(self, server: BedrockServer = BedrockServer()):
         self.version = 'v1.0'
+        self.start_time = datetime.now()
 
         asyncio.create_task(self.looper.start_looper(self), name='Looper')
 

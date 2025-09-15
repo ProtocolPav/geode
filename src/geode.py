@@ -29,7 +29,7 @@ class Geode:
         async def send(geode: Geode):
             geode.server.emit(f'broadcast.{message.type}', message.content)
 
-        message_id = message.content[:20].replace(' ', '_') + f'-i{message.interval_seconds}-r{message.repetitions}'
+        message_id = f"{message.content[:40].strip()}... ({message.interval_seconds} seconds) ({message.repetitions} reps)"
         self.looper.add_loop(send, f'Message {message_id}', message.interval_seconds, repetitions=message.repetitions)
 
     async def restart_server(self):

@@ -25,6 +25,16 @@ async def list_backups(request, geode: Geode):
 
     return sanic.json(backups.model_dump(), default=str)
 
+@backups_blueprint.post('/')
+@openapi.definition(
+    response=Response(status=201, description="Backup Initiated"),
+    summary="Initiate a backup"
+)
+async def initiate_backup(request, geode: Geode):
+    await geode.initiate_save('backup')
+
+    return sanic.empty(status=201)
+
 @backups_blueprint.post('/restore')
 @openapi.definition(
     body=RequestBody(RestoreBackup, required=True),
@@ -32,7 +42,7 @@ async def list_backups(request, geode: Geode):
     summary="Restore a backup"
 )
 @validate(json=RestoreBackup)
-async def restore(request, geode: Geode, body: RestoreBackup):
+async def restore_backup(request, geode: Geode, body: RestoreBackup):
     await geode.restore_backup(body.full_path)
 
     return sanic.empty(status=201)

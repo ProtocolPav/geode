@@ -13,9 +13,26 @@ from src.geode import Geode
 from src.handlers.config import ConfigHandler
 from src.handlers.restoration import RestorationHandler
 from src.models import Message, RestoreBackup
-from src.models.info import Status, TasksList, Task, Uptime, Version
+from src.models.info import Status, TasksList, Task, Uptime, Version, Info
 
 information_blueprint = Blueprint('information', '/info')
+
+@information_blueprint.get('/')
+@openapi.definition(response=[
+    Response(Info.doc_schema(), status=200)
+])
+async def info(request, geode: Geode):
+    root = [Task(name=task.get_name(), coro=task.get_coro().__qualname__) for task in asyncio.tasks.all_tasks()]
+    task_list = TasksList(root=root)
+
+    response = Info(status=geode.server.status,
+                    tasks=task_list,
+                    server_start=geode.server.start_time,
+                    geode_start=geode.start_time,
+                    minecraft_version=geode.server.version,
+                    geode_version=geode.version)
+
+    return sanic.json(response.model_dump(), default=str)
 
 @information_blueprint.get('/tasks')
 @openapi.definition(response=[

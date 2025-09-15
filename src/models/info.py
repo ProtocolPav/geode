@@ -27,3 +27,6 @@ class Uptime(BaseModel):
 class Version(BaseModel):
     minecraft_version: str
     geode_version: str
+
+class Info(Status, Uptime, Version):
+    tasks: TasksList

@@ -12,7 +12,6 @@ from src.cloud_services.base import get_cloud_service
 from src.geode import Geode
 from src.handlers.config import ConfigHandler
 from src.handlers.restoration import RestorationHandler
-from src.models import Message, RestoreBackup
 from src.models.info import Status, TasksList, Task, Uptime, Version, Info
 
 information_blueprint = Blueprint('information', '/info')

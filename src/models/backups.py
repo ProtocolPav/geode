@@ -5,9 +5,11 @@ from sanic_ext.extensions.openapi import openapi
 
 from src.utils.base import BaseList, BaseModel
 
-@openapi.component()
-class Backup(BaseModel):
+class BackupBaseModel(BaseModel):
     full_path: str
+
+@openapi.component()
+class Backup(BackupBaseModel):
     name: str
     type: str
     timestamp: datetime
@@ -15,3 +17,6 @@ class Backup(BaseModel):
 
 class BackupsList(BaseList[Backup]):
     pass
+
+class RestoreBackup(BackupBaseModel):
+    restore_type: str

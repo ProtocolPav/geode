@@ -12,7 +12,7 @@ from src.cloud_services.base import get_cloud_service
 from src.geode import Geode
 from src.handlers.config import ConfigHandler
 from src.handlers.restoration import RestorationHandler
-from src.models import Message, RestoreBackup
+from src.models import Message
 
 controls_blueprint = Blueprint('controls', '/controls')
 
@@ -66,20 +66,6 @@ async def schedule_message(request, geode: Geode, body: Message):
     await geode.schedule_message(body)
 
     return sanic.json({'response': 'Scheduled message'})
-
-@controls_blueprint.post('/restore')
-@openapi.definition(
-    body=RequestBody(RestoreBackup, required=True),
-    summary="Restore a backup"
-)
-@validate(json=RestoreBackup)
-async def restore(request, geode: Geode, body: RestoreBackup):
-    await geode.restore_backup(body.backup_path)
-    return sanic.json({'response': 'Restored backup'})
-
-@controls_blueprint.get('/backups')
-async def list_backups(request, geode: Geode):
-    return sanic.json({'response': get_cloud_service().list_backups(ConfigHandler()['backup']['bucket_name'])}, default=str)
 
 @controls_blueprint.get('/logs')
 async def log_tail(request: Request, geode: Geode):

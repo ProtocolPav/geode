@@ -5,6 +5,7 @@ from pathlib import Path
 from google.api_core.exceptions import InternalServerError
 import sanic
 from sanic import Request, Blueprint
+from sanic.log import logger
 
 from sanic_ext import validate, openapi
 from sanic_ext.extensions.openapi.definitions import RequestBody, Response
@@ -15,6 +16,27 @@ from src.handlers.config import ConfigHandler
 from src.handlers.restoration import RestorationHandler
 
 maps_blueprint = Blueprint('maps', '/maps')
+
+# For serving the default Unmined Web HTML, if wanted
+maps_blueprint.static("/webpage/", "../unmined/", index="index.html", name="webpage")
+
+@maps_blueprint.get("/webpage")
+@openapi.definition(
+    summary="Default Unmined Web UI",
+    description="Serves the default Unmined generated HTML (and related static assets).",
+    response=[
+        Response(
+            status=200,
+            content={"text/html": {"schema": {"type": "string"}}},
+            description="Unmined Web HTML"
+        ),
+        Response(status=404, description="Not found")
+    ]
+)
+async def webpage_placeholder(_):
+    # This is just so OpenAPI sees it — Sanic's static handler will actually serve the content
+    return sanic.text("This route is served statically, see ../unmined/")
+
 
 @maps_blueprint.get('/<layer:str>/<zoomlevel:int>/<regionx:int>/<regionz:int>/<x:int>/<z:int>')
 @openapi.definition(

@@ -17,11 +17,3 @@ class Loop:
     name: str
     callback: Callable
     task: asyncio.Task = None
-
-
-@dataclass
-class Message:
-    content: str
-    type: Literal['message', 'announcement']
-    repetitions: int = 1
-    interval_seconds: int = 1

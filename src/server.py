@@ -320,11 +320,11 @@ class BedrockServer:
         self.emit('broadcast.message', content)
 
     @events.on('broadcast.discord')
-    async def on_broadcast_discord(self, user: str, content: str):
+    async def on_broadcast_discord(self, sender: str, content: str):
         processed_message = demoji.replace_with_desc(content)
         processed_message = processed_message.translate(str.maketrans({'’': "\'",
                                                                        '“': '\"',
                                                                        '”': '\"',
                                                                        '‘': "\'"}))
 
-        await self.send_command(f'tellraw @a {{"rawtext": [{{"text": " §7{user}:§r {processed_message}"}}]}}')
+        await self.send_command(f'tellraw @a {{"rawtext": [{{"text": " §7{sender}:§r {processed_message}"}}]}}')

@@ -12,7 +12,6 @@ from src.cloud_services.base import get_cloud_service
 from src.geode import Geode
 from src.handlers.config import ConfigHandler
 from src.handlers.restoration import RestorationHandler
-from src.models import Message
 
 controls_blueprint = Blueprint('controls', '/controls')
 
@@ -55,17 +54,6 @@ async def restart(request, geode: Geode):
     await geode.restart_server()
 
     return sanic.empty(status=201)
-
-@controls_blueprint.post('/message')
-@openapi.definition(
-    body=RequestBody(Message, required=True),
-    summary="Schedule a server message"
-)
-@validate(json=Message)
-async def schedule_message(request, geode: Geode, body: Message):
-    await geode.schedule_message(body)
-
-    return sanic.json({'response': 'Scheduled message'})
 
 @controls_blueprint.get('/logs')
 async def log_tail(request: Request, geode: Geode):

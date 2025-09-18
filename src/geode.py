@@ -5,7 +5,7 @@ from typing_extensions import Literal
 
 from src.handlers.loop import LoopHandler
 from src.handlers.restoration import RestorationHandler
-from src.models import Message
+from src.models.messages import DiscordMessage, Message
 from src.server import BedrockServer
 from src.handlers.config import ConfigHandler
 
@@ -31,6 +31,10 @@ class Geode:
 
         message_id = f"{message.content[:40].strip()}... ({message.interval_seconds} seconds) ({message.repetitions} reps)"
         self.looper.add_loop(send, f'Message {message_id}', message.interval_seconds, repetitions=message.repetitions)
+
+    async def relay_discord_message(self, message: DiscordMessage):
+        if len(self.server.online) > 0:
+            self.server.emit(f'broadcast.discord', sender=message.sender, content=message.content)
 
     async def restart_server(self):
         await self.server.stop()

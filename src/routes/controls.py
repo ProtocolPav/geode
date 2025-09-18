@@ -12,6 +12,7 @@ from src.cloud_services.base import get_cloud_service
 from src.geode import Geode
 from src.handlers.config import ConfigHandler
 from src.handlers.restoration import RestorationHandler
+from src.models.controls import Command
 
 controls_blueprint = Blueprint('controls', '/controls')
 
@@ -52,6 +53,18 @@ async def kill(request, geode: Geode):
 ])
 async def restart(request, geode: Geode):
     await geode.restart_server()
+
+    return sanic.empty(status=201)
+
+@controls_blueprint.post('/command')
+@openapi.definition(
+    body=RequestBody(Command, required=True),
+    response=Response(status=201, description="Command Sent"),
+    summary="Send a command"
+)
+@validate(json=Command)
+async def restore_backup(request, geode: Geode, body: Command):
+    await geode.server.send_command(body.command)
 
     return sanic.empty(status=201)
 

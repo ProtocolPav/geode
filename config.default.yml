@@ -29,6 +29,7 @@ backup:
 # Discord Relay Configuration
 discord_relay:
   nexuscore_api_key: ""
+  discord_guild_id: "1213827104945471538" # Temporarily needed. In future the API Key will automatically know the guild.
   relay_events:
     server_start_stop: true
     server_crashes: true

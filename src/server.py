@@ -17,6 +17,7 @@ from sanic.log import logger, Colors
 
 from src.handlers.backup import BackupHandler
 from src.handlers.relay import RelayHandler
+from src.handlers.config import ConfigHandler
 from src.models import EventParser
 
 from pyventus.events import EventLinker, AsyncIOEventEmitter
@@ -25,6 +26,7 @@ class BedrockServer:
     __process: asyncio.subprocess.Process | None
     __tasks: list[asyncio.Task]
     __event_emitter = AsyncIOEventEmitter()
+    config: ConfigHandler = ConfigHandler()
     events: EventLinker = EventLinker
     status: Literal['stopped', 'started', 'backup', 'map_update'] = 'stopped'
     executable: str
@@ -151,6 +153,24 @@ class BedrockServer:
 
         self.status = 'stopped'
 
+    async def disconnect_all(self):
+        async with httpx.AsyncClient() as client:
+            sent_successfully = False
+            discord_guild_id = self.config['discord_relay']['discord_guild_id']
+            while not sent_successfully:
+                try:
+                    online = await client.get(f"http://nexuscore:8000/api/v0.2/guilds/{discord_guild_id}/online")
+
+                    logger.info(f"Disconnecting all Online Players: {len(online.json())}")
+                    for user in online.json():
+                        await client.post(f"http://nexuscore:8000/api/v0.2/events/connection",
+                                          json={'type': 'disconnect', 'thorny_id': user['thorny_id']})
+                    sent_successfully = True
+
+                except httpx.TimeoutException:
+                    logger.debug(f"TimeoutException raised while disconnecting all. Retrying in 30 seconds.")
+                    await asyncio.sleep(30)
+
     def emit(self, event_name: str, *args, **kwargs):
         self.__event_emitter.emit(event_name, self, *args, **kwargs)
 
@@ -165,7 +185,7 @@ class BedrockServer:
         self.online = []
 
         await RelayHandler.relay_start()
-        # TO ADD: Disconnect all connected players, in case there was a glitch
+        await self.disconnect_all()
 
     @events.on('server.stop')
     async def on_server_stop(self, line: str):
@@ -182,8 +202,8 @@ class BedrockServer:
         self.__process.terminate()
 
         self.online = []
+        await self.disconnect_all()
         # Clean up pending tasks, like the server output, etc.
-        # TO ADD: Disconnect all connected players
         # Log to all the correct locations
 
     @events.on('server.crash')

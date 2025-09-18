@@ -17,7 +17,7 @@ RUN python3 -m venv $VENV_PATH
 ENV PATH="$VENV_PATH/bin:$PATH"
 
 # Copy requirements and install into venv
-COPY requirements.txt amethyst/requirements.txt
+COPY . amethyst/
 RUN pip install --no-cache-dir -r amethyst/requirements.txt
 
 # Expose ports
@@ -32,3 +32,5 @@ ENV PYTHONPATH="${PYTHONPATH}:/amethyst/"
 ENV CLOUD_SERVICE='local'
 
 WORKDIR /amethyst
+
+CMD ["python3", "-u", "webserver.py"]

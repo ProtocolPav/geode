@@ -36,10 +36,10 @@ class BedrockServer:
     online: list[str] = []
 
     def __init__(self):
-        if platform.system().lower() == 'linux':
+        if platform.system().lower() == 'linux' and platform.machine().lower() == 'x86_64':
             self.executable = './bedrock_server'
         else:
-            raise OSError('Geode only supports Debian-based Linux distributions, we advise you to run Geode via Docker.')
+            raise OSError('Geode only supports x86_64 Debian-based Linux distributions, we advise you to run Geode via Docker.')
 
         self.__process = None
 

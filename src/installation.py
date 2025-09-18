@@ -1,3 +1,4 @@
+import os
 import tarfile
 import tempfile
 import httpx
@@ -67,6 +68,8 @@ async def install(plat: str, version: str, client: httpx.AsyncClient, server_dir
                     else:
                         zip_file.extract(item.filename, server_dir)
 
+            for i in server_dir.iterdir():
+                os.chmod(i, 0o755)
             logger.info(f'{Colors.BOLD}{Colors.CYAN}Server Version {version} Installed!{Colors.END} | {size_in_MB}')
 
 async def install_unmined(client: httpx.AsyncClient, unmined_dir: Path):

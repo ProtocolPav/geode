@@ -1,17 +1,13 @@
 import asyncio.tasks
 from pathlib import Path
 
-from google.api_core.exceptions import InternalServerError
 import sanic
 from sanic import Request, Blueprint
 
 from sanic_ext import validate, openapi
 from sanic_ext.extensions.openapi.definitions import RequestBody, Response
 
-from src.cloud_services.base import get_cloud_service
 from src.geode import Geode
-from src.handlers.config import ConfigHandler
-from src.handlers.restoration import RestorationHandler
 from src.models.controls import Command
 
 controls_blueprint = Blueprint('controls', '/controls')
@@ -19,7 +15,7 @@ controls_blueprint = Blueprint('controls', '/controls')
 @controls_blueprint.post('/stop')
 @openapi.definition(response=[
     Response(status=201, description="Server stopped"),
-    Response(InternalServerError, status=500, description="Unable to stop")
+    Response(status=500, description="Unable to stop")
 ])
 async def stop(request, geode: Geode):
     await geode.server.stop()
@@ -29,7 +25,7 @@ async def stop(request, geode: Geode):
 @controls_blueprint.post('/start')
 @openapi.definition(response=[
     Response(status=201, description="Server started"),
-    Response(InternalServerError, status=500, description="Unable to start")
+    Response(status=500, description="Unable to start")
 ])
 async def start(request, geode: Geode):
     await geode.server.start()
@@ -39,7 +35,7 @@ async def start(request, geode: Geode):
 @controls_blueprint.post('/kill')
 @openapi.definition(response=[
     Response(status=201, description="Server killed"),
-    Response(InternalServerError, status=500, description="Unable to kill server")
+    Response(status=500, description="Unable to kill server")
 ])
 async def kill(request, geode: Geode):
     await geode.server.kill()
@@ -49,7 +45,7 @@ async def kill(request, geode: Geode):
 @controls_blueprint.post('/restart')
 @openapi.definition(response=[
     Response(status=201, description="Server restarted"),
-    Response(InternalServerError, status=500, description="Unable to restart server")
+    Response(status=500, description="Unable to restart server")
 ])
 async def restart(request, geode: Geode):
     await geode.restart_server()

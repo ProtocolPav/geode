@@ -1,0 +1,4 @@
+# Include base deps
+-r local.txt
+
+google-cloud-storage==3.3.1

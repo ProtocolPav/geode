@@ -1,9 +1,4 @@
-from datetime import datetime
-
-from pydantic import Field
-from sanic_ext.extensions.openapi import openapi
-
-from src.utils.base import BaseList, BaseModel
+from src.utils.base import BaseModel
 
 class Command(BaseModel):
     command: str

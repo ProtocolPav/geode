@@ -1,5 +1,7 @@
 FROM debian:bookworm-slim
 
+ARG CLOUD_SERVICE='local'
+
 # Install Python and required system packages
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
@@ -18,7 +20,7 @@ ENV PATH="$VENV_PATH/bin:$PATH"
 
 # Copy requirements and install into venv
 COPY . amethyst/
-RUN pip install --no-cache-dir -r amethyst/requirements.txt
+RUN pip install --no-cache-dir -r amethyst/requirements/${CLOUD_SERVICE}.txt
 
 # Expose ports
 EXPOSE 19132/tcp
@@ -29,7 +31,7 @@ EXPOSE 8000
 
 # Set environment + workdir
 ENV PYTHONPATH="${PYTHONPATH}:/amethyst/"
-ENV CLOUD_SERVICE='local'
+ENV CLOUD_SERVICE=${CLOUD_SERVICE}
 
 WORKDIR /amethyst
 

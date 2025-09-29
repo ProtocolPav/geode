@@ -1,45 +1,38 @@
-FROM ubuntu:21.10 AS build
+FROM debian:bookworm-slim
 
-RUN apt install libssl1.1 && rm -rf /var/cache/apt/*
+ARG CLOUD_SERVICE='local'
 
-FROM ubuntu:22.04
+# Install Python and required system packages
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+    python3 python3-venv python3-pip \
+    openssl \
+    findutils \
+    libicu-dev libcurl4 libcrypt1 && \
+    rm -rf /var/lib/apt/lists/*
 
-COPY --from=build /usr/lib/x86_64-linux-gnu/libssl.so.1.1 /usr/lib/x86_64-linux-gnu/libssl.so.1.1
-COPY --from=build /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1 /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1
+# Create and activate a virtual environment
+ENV VENV_PATH=/opt/venv
+RUN python3 -m venv $VENV_PATH
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install apt-utils -yqq && rm -rf /var/cache/apt/*
+# Ensure venv Python/pip are preferred
+ENV PATH="$VENV_PATH/bin:$PATH"
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install apt-utils -yqq && DEBIAN_FRONTEND=noninteractive apt-get install python3 pip sudo curl unzip screen net-tools gawk openssl findutils pigz libcurl4 libc6 libicu-dev libcrypt1 libcurl4-openssl-dev ca-certificates binfmt-support -yqq && rm -rf /var/cache/apt/*
+# Copy requirements and install into venv
+COPY . amethyst/
+RUN pip install --no-cache-dir -r amethyst/requirements/${CLOUD_SERVICE}.txt
 
-COPY requirements.txt /requirements.txt
-RUN pip install -r /requirements.txt
-
-SHELL ["/bin/bash", "-c"]
-
-#RUN echo "Installing AWS CLI for backups to s3"
-#RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip && sudo ./aws/install
-RUN echo "Installing gcloud CLI for backups to gcloud"
-RUN curl -O "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-437.0.1-linux-x86_64.tar.gz"  \
-    && tar -xf google-cloud-cli-437.0.1-linux-x86_64.tar.gz \
-    && ./google-cloud-sdk/install.sh --quiet \
-    && source /google-cloud-sdk/path.bash.inc
-
-# Set port environment variables
-ENV PortIPV4=19132
-ENV PortIPV6=19133
-
-# Version environment variable (must exist on Microsoft's servers)
-ENV Version=1
-
-# IPV4 Ports
+# Expose ports
 EXPOSE 19132/tcp
-EXPOSE 8000
 EXPOSE 19132/udp
-
-# IPV6 Ports
 EXPOSE 19133/tcp
 EXPOSE 19133/udp
+EXPOSE 8000
 
-ENV PYTHONPATH "${PYTHONPATH}:/amethyst/"
-WORKDIR amethyst
+# Set environment + workdir
+ENV PYTHONPATH="${PYTHONPATH}:/amethyst/"
+ENV CLOUD_SERVICE=${CLOUD_SERVICE}
 
+WORKDIR /amethyst
+
+CMD ["python3", "-u", "webserver.py"]

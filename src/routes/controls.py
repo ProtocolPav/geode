@@ -59,7 +59,7 @@ async def restart(request, geode: Geode):
     summary="Send a command"
 )
 @validate(json=Command)
-async def restore_backup(request, geode: Geode, body: Command):
+async def send_command(request, geode: Geode, body: Command):
     await geode.server.send_command(body.command)
 
     return sanic.empty(status=201)

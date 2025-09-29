@@ -1,13 +1,25 @@
 ![Amethyst](https://github.com/ProtocolPav/amethyst/assets/88209234/e35dd7d2-62ff-4ab3-bdcd-581799ef0170)
 
-# Amethyst
-A Minecraft Bedrock Server designed to expand the capabilities of BDS
+# Geode
+A wrapper for the default Minecraft Bedrock Dedicated Server.
+## Why Geode?
+Other Minecraft Servers use their own custom implementation of the Bedrock Protocol.
+This means other servers can have their own plugins and can allow for a deeper connection
+to the Minecraft world. 
+
+While this is amazing, these servers are sparse, since they need to build Minecraft from the ground up.
+They take very long to develop, and any new minecraft updates require
+the developers to update their Server code.
+
+Geode on the other hand, installs the default Minecraft Bedrock Dedicated Server and
+controls it via commands. If you're looking for a vanilla server, this is it.
+
 ## Features
-- Unlike other Bedrock Servers, Amethyst is built around the native BDS software, meaning that it will not break with new updates
-- Control your Bedrock Server from anywhere on the web
-- Create and restore backups automatically
-- Regular server restarts to ensure stability
-- Discord connectivity
-## Extended Featureset with Amethyst Connect Addon
-- Extend your connectivity with the addon designed for your minecraft server
-- Create new plugins or use pre-existing ones
+Geode manages the Bedrock Dedicated Server, exposing common controls such as
+start, stop, restart. 
+
+Geode can also schedule automatic backups, and can upload them to your desired
+cloud storage service. 
+
+Additionally, Geode uses the Unmined Mapping Tool to generate map tiles,
+which can then be viewed via a web viewer.

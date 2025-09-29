@@ -7,6 +7,7 @@ steps:
         docker build \
         -t europe-docker.pkg.dev/single-inquiry-391907/everthorn/geode:$SHORT_SHA \
         -t europe-docker.pkg.dev/single-inquiry-391907/everthorn/geode:gcloud \
+        --build-arg CLOUD_SERVICE=gcloud \
         .
 
   - name: 'gcr.io/cloud-builders/docker'

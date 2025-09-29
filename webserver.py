@@ -1,176 +1,122 @@
-import os.path
-
-import httpx
-from sanic import Sanic, Request, file
-from sanic.response import json, text
-from datetime import datetime, timedelta
-from amethyst import Amethyst
 import asyncio
+import os
+import re
 
-app = Sanic("bedrock_server_app")
-handler = Amethyst()
+from sanic import Sanic
+import logging.config
 
+from src import geode
+from src.routes import blueprint_group
 
-@app.route('/<text_test:strorempty>')
-async def default(request: Request, text_test: str):
-    return text(f"Webserver ok. Text send: {text_test}. {request.args}")
-
-
-@app.route('/amethyst/version')
-async def version(request: Request):
-    return text(f"{handler.version}")
-
-
-@app.route('/server/details')
-async def status(request: Request = None):
-    return json({'server_online': handler.server.running(),
-                 'server_status': handler.server.status[0],
-                 'status_check': handler.server.status_check(),
-                 'update': handler.server.update,
-                 'server_start': f"{handler.server.start}",
-                 'uptime': f"{datetime.now() - handler.server.start}",
-                 'usage': handler.system_log,
-                 'last_backup': f"{handler.previous_backup}"})
+app = Sanic("geode")
+app.config.OAS_URL_PREFIX = "/api/docs"
+app.config.SWAGGER_UI_CONFIGURATION = {"docExpansion": "list"}
 
 
-@app.route('/server/stop')
-async def stop(request: Request):
-    await handler.stop_server()
-    return await status()
+class PlainFormatter(logging.Formatter):
+    """Formatter that strips ANSI escape codes from log messages"""
+
+    def __init__(self, fmt=None, datefmt=None):
+        super().__init__(fmt, datefmt)
+        # Regex pattern to match ANSI escape codes
+        self.ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+
+    def format(self, record):
+        # Strip ANSI codes from the message
+        record.msg = self.ansi_escape.sub('', str(record.msg))
+        return super().format(record)
+
+logging.config.dictConfig({
+    'version': 1,
+    'disable_existing_loggers': False,
+    'loggers': {
+        'sanic.root': {
+            'level': 'DEBUG',
+            'handlers': ['console', 'file']
+        },
+        'sanic.error': {
+            'level': 'INFO',
+            'handlers': ['error_console'],
+            'propagate': True,
+            'qualname': 'sanic.error'
+        },
+        'sanic.access': {
+            'level': 'INFO',
+            'handlers': ['access_console'],
+            'propagate': True,
+            'qualname': 'sanic.access'
+        },
+        'sanic.server': {
+            'level': 'INFO',
+            'handlers': ['console'],
+            'propagate': True,
+            'qualname': 'sanic.server'
+        },
+        'sanic.websockets': {
+            'level': 'INFO',
+            'handlers': ['console'],
+            'propagate': True,
+            'qualname': 'sanic.websockets'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'generic',
+            'stream': 'ext://sys.stdout',
+            'level': 'INFO'  # Added level to keep console at INFO
+        },
+        'error_console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'generic',
+            'stream': 'ext://sys.stderr'
+        },
+        'access_console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'access',
+            'stream': 'ext://sys.stdout'
+        },
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'formatter': 'plain',
+            'filename': 'geode.log',
+            'maxBytes': 10000000,
+            'backupCount': 1,
+            'level': 'DEBUG'
+        }
+    },
+    'formatters': {
+        'generic': {'class': 'sanic.logging.formatter.AutoFormatter'},
+        'access': {'class': 'sanic.logging.formatter.AutoAccessFormatter'},
+        'plain': {  # Add plain formatter without colors
+            "()": PlainFormatter,
+            'format': '%(asctime)s [%(levelname)s] %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S'
+        }
+    }
+})
 
 
-@app.route('/server/start')
-async def start(request: Request):
-    await handler.start_server()
-    return await status()
+handler: geode.Geode
 
 
-@app.route('/server/preempt')
-async def preempt(request: Request):
-    await handler.server.set_status('preemption')
-    return await status()
+@app.before_server_start
+async def init_handler(application: Sanic):
+    global handler
+    application.ctx.preemption = False
+    handler = geode.Geode()
+    await handler.server.start()
+    application.ext.dependency(handler)
 
+@app.before_server_stop
+async def stop_handler(application: Sanic):
+    handler.server.emit('preemption')
+    application.ctx.preemption = True
+    while handler.server.status != 'stopped':
+        await asyncio.sleep(1)
 
-@app.route('/server/backup')
-async def backup(request: Request):
-    await handler.server.send_command('save hold', sleep=5)
-    await handler.server.send_command('save query', sleep=10)
-    await handler.server.send_command('save resume')
-    return json({"backup_successful": True})
-
-
-@app.route('/server/update')
-async def update(request: Request):
-    if handler.server.running():
-        return json({'response': 'Error. Server is running!'})
-
-    else:
-        await handler.server.check_for_updates()
-        return json({'response': handler.server.update})
-
-
-@app.route('/commands/message')
-async def message(request: Request):
-    if request.args.get('msg', []):
-        await handler.server.send_message(request.args['msg'][0])
-        return text('Message has been sent!')
-    else:
-        return text('Please include msg as an argument. Example: thorny-bds:8000/commands/message?msg=Hello!!!!')
-
-
-@app.route('/commands/message/schedule')
-async def schedule_message(request: Request):
-    interval = int(request.args.get('interval', '7200'))
-    count = int(request.args.get('count', '5'))
-
-    if request.args.get('msg', None):
-        handler.messages.append({'content': request.args['msg'][0],
-                                 'type': 'message',
-                                 'time': datetime.now()})
-        for i in range(1, count-1):
-            handler.messages.append({'content': request.args['msg'][0],
-                                     'type': 'message',
-                                     'time': datetime.now() + timedelta(seconds=interval*i)})
-
-        handler.messages.sort(key=lambda x: x['time'])
-
-        return text(f'Message has been scheduled to be sent {count} times. Once every {interval} seconds.')
-    else:
-        return text('Please include msg as an argument. Example: thorny-bds:8000/commands/message/schedule?msg=Hello!!!!')
-
-
-@app.route('/commands/announce')
-async def announce(request: Request):
-    if request.args.get('msg', None):
-        await handler.server.send_announce(request.args['msg'][0])
-        return text('Announcement has been sent!')
-    else:
-        return text('Please include msg as an argument. Example: thorny-bds:8000/commands/announce?msg=Hello!!!!')
-
-
-async def server_response(request: Request = None):
-    await asyncio.sleep(0.3)
-    return {'response': handler.server.console_logs[-1]}
-
-
-@app.route('/commands/give/<gamertag:str>/<item:str>/<amount:int>')
-async def give_item(request: Request, gamertag: str, item: str, amount: int):
-    gamertag = gamertag.replace("%20", " ")
-    await handler.server.send_command(f'give "{gamertag}" {item} {amount}')
-    return json(await server_response())
-
-
-@app.route('/commands/clear/<gamertag:str>/<item:str>/<amount:int>')
-async def clear(request: Request, gamertag: str, item: str, amount: int):
-    gamertag = gamertag.replace("%20", " ")
-    await handler.server.send_test_for('name="%s", hasitem={item=%s, quantity=%s..}' % (gamertag, item, amount))
-
-    response = await server_response()
-
-    if gamertag in response['response']:
-        await handler.server.send_command(f'clear "{gamertag}" {item} 0 {amount}')
-
-    return json(await server_response())
-
-
-@app.route('/whitelist/add/<gamertag:str>')
-async def whitelist_add(request: Request, gamertag: str):
-    gamertag = gamertag.replace("%20", " ")
-    await handler.server.send_command(f'whitelist add "{gamertag}"')
-    return json(await server_response())
-
-
-@app.route('/whitelist/remove/<gamertag:str>')
-async def whitelist_remove(request: Request, gamertag: str):
-    gamertag = gamertag.replace("%20", " ")
-    await handler.server.send_command(f'whitelist remove "{gamertag}"')
-    return json(await server_response())
-
-
-@app.route('/kick/<gamertag:str>')
-async def kick(request: Request, gamertag: str):
-    gamertag = gamertag.replace("%20", " ")
-    await handler.server.send_command(f'kick "{gamertag}"')
-    return json(await server_response())
-
-@app.route('/map/<layer:str>/<zoomlevel:int>/<regionx:int>/<regionz:int>/<x:int>/<z:int>')
-async def get_map(request: Request, layer: str, zoomlevel: int, regionx: int, regionz: int, x: int, z: int):
-    if os.path.exists(f'unmined/{layer}/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png'):
-        return await file(f'unmined/{layer}/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png')
-
-    return json({}, 404)
-
-
-@app.listener('after_server_start')
-async def init_core(application, loop: asyncio.AbstractEventLoop):
-    await asyncio.sleep(10)
-    await handler.start_server('started_by_system')
-
-
-@app.listener('before_server_stop')
-async def stop_core(application, loop: asyncio.AbstractEventLoop):
-    handler.server.set_status('preemption')
-    await asyncio.sleep(3)
+app.blueprint(blueprint_group)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", access_log=False)
+    app.run(host="0.0.0.0", single_process=True)
+    #app.run(host="0.0.0.0", dev=True)

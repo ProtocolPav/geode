@@ -7,6 +7,5 @@
 /amethystdata.json
 /config.yml
 /bdsconfig.json
-/unmined/nether/
-/unmined/overworld/
-/unmined/subway/
+/unmined
+*.log*

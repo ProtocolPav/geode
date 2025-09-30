@@ -17,7 +17,7 @@
     "Items": []
   },
   "RendererSettings": {
-    "InhabitedChunksOnly": false,
+    "InhabitedChunksOnly": true,
     "ShadowMode": 0,
     "Shadows": true,
     "ShadowStrength": 37.0,

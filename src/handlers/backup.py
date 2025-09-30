@@ -142,6 +142,7 @@ class BackupHandler:
     async def __run_unmined(world_path: Path):
         base_cmd = f"../unmined/unmined-cli web render --world='{world_path}'"
 
+        # Make dynamic area based on nexuscore border sizes
         common_params = ' '.join([
             "--imageformat=png",
             "--zoomin=2",
@@ -156,7 +157,8 @@ class BackupHandler:
         render_tasks = {
             'overworld': f"{base_cmd} --output='../unmined/overworld' --dimension=overworld --mapsettings='./Everthorn.json' {common_params}",
             'nether': f"{base_cmd} --output='../unmined/nether' --dimension=nether --mapsettings='./Nether.json' {common_params}",
-            'subway': f"{base_cmd} --output='../unmined/subway' --dimension=overworld --mapsettings='./Subway.json' {common_params}"
+            'subway': f"{base_cmd} --output='../unmined/subway' --dimension=overworld --mapsettings='./Subway.json' {common_params}",
+            'the_end': f"{base_cmd} --output='../unmined/the_end' --dimension=end --mapsettings='./End.json' {common_params}"
         }
 
         try:

@@ -136,7 +136,7 @@ class BackupHandler:
         if self.cloud_service.service == "local":
             return f'{self.backup_path}/{backup_type}/{relative_path}'
         
-        return f'{self.bucket_name}/{backup_type}/{relative_path}'
+        return f'{backup_type}/{relative_path}'
 
     @staticmethod
     async def __run_unmined(world_path: Path):

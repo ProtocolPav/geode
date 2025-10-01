@@ -201,6 +201,7 @@ class BedrockServer:
 
         self.__process.terminate()
 
+        await RelayHandler.relay_stop()
         self.online = []
         await self.disconnect_all()
         # Clean up pending tasks, like the server output, etc.
@@ -215,7 +216,7 @@ class BedrockServer:
         """
         await self.on_server_stop(line)
 
-        await RelayHandler.relay_preemption()
+        await RelayHandler.relay_crash()
 
     @events.on('server.version')
     async def on_server_version(self, line: str, version: str):

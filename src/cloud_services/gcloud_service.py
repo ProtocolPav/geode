@@ -38,7 +38,7 @@ class GcloudService(CloudService):
         storage_client = storage.Client()
         bucket = storage_client.get_bucket(bucket_name)
         blob = bucket.blob(cloud_backup_name)
-        blob.download_to_file(local_dest_path)
+        blob.download_to_filename(local_dest_path)
 
     def list_backups(self, bucket_name: str, glob_filter: str = '**/**/*.zip') -> BackupsList:
         """

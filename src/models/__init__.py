@@ -10,6 +10,7 @@ class EventParser:
     name: str
     regex: re.Pattern
     check_type: Literal['match', 'findall'] = 'match'
+    print_type: Literal['full', 'ignore'] = 'full'
 
 
 @dataclass

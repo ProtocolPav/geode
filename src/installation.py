@@ -1,4 +1,5 @@
 import os
+import shutil
 import tarfile
 import tempfile
 import httpx
@@ -6,6 +7,11 @@ import zipfile
 from pathlib import Path
 import platform
 from sanic.log import logger, Colors
+
+
+def copy_if_not_exists(src, dst):
+    if not os.path.exists(dst):
+        shutil.copy2(src, dst)
 
 
 async def check_for_updates():
@@ -93,6 +99,7 @@ async def install_unmined(client: httpx.AsyncClient, unmined_dir: Path):
             root_dir = extraction_dir / Path(tar_file.getnames()[0])
             tar_file.extractall(extraction_dir)
 
-        root_dir.rename(unmined_dir)
+        shutil.copytree(root_dir, unmined_dir, dirs_exist_ok=True, copy_function=copy_if_not_exists)
+        shutil.rmtree(root_dir)
 
         logger.info(f'{Colors.BOLD}{Colors.CYAN}Unmined CLI Installed!{Colors.END} | {size_in_MB}')

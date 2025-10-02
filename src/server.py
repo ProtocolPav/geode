@@ -60,7 +60,7 @@ class BedrockServer:
             # Backup Events
             EventParser('backup.hold', re.compile(r'Saving', re.IGNORECASE)),
             EventParser('backup.hold.error', re.compile(r'The command is already running', re.IGNORECASE)),
-            EventParser('backup.query', re.compile(r'(?:^|,\s*)([^:]+):(\d+)(?=\s*(?:,|$))', re.IGNORECASE), 'findall'),
+            EventParser('backup.query', re.compile(r'(?:^|,\s*)([^:]+):(\d+)(?=\s*(?:,|$))', re.IGNORECASE), 'findall', 'ignore'),
             EventParser('backup.error', re.compile(r'A previous save has not been completed', re.IGNORECASE)),
             EventParser('backup.resume', re.compile(r'Changes to the world are resumed', re.IGNORECASE)),
         ]
@@ -86,6 +86,7 @@ class BedrockServer:
             line = '] '.join(line.split('] ')[1:]) if line.split('] ')[1:] else line
 
             parsed_line = False
+            propagate_line = True
 
             # This is a bit slow, should try reduce from O(n) to O(1)
             for event in self.parsers:
@@ -93,17 +94,19 @@ class BedrockServer:
                     matches = event.regex.findall(line)
                     if matches:
                         parsed_line = True
+                        propagate_line = event.print_type == 'full'
                         self.emit(event.name, line, *matches)
                         break
 
                 elif match := event.regex.search(line):
                     parsed_line = True
+                    propagate_line = event.print_type == 'full'
                     self.emit(event.name, line, *match.groups())
                     break
 
             if not parsed_line and line: # Check that a line exists so it wont print empty lines
                 logger.info(line)
-            elif parsed_line:
+            elif parsed_line and propagate_line:
                 logger.info(f'{Colors.YELLOW}{line}{Colors.END}')
 
     async def start(self):

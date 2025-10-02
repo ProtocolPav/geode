@@ -12,6 +12,7 @@ async def check_for_updates():
     server_dir = Path('../server/')
     server_dir.mkdir(parents=True, exist_ok=True)
     unmined_dir = Path('../unmined/')
+    unmined_executable = unmined_dir / 'unmined-cli'
 
     plat = platform.system().lower()
 
@@ -31,7 +32,7 @@ async def check_for_updates():
     if should_install:
         await install(plat, version, client, server_dir)
 
-    if unmined_dir.exists():
+    if unmined_executable.exists():
         logger.debug('Unmined CLI already installed')
     else:
         await install_unmined(client, unmined_dir)

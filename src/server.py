@@ -45,9 +45,9 @@ class BedrockServer:
 
         self.parsers = [
             # Player Events
-            EventParser('player.connect', re.compile(r'Player connected: (.*), xuid: ([1-9]+)', re.IGNORECASE)),
+            EventParser('player.connect', re.compile(r'Player connected: (.*), xuid: ([0-9]+)', re.IGNORECASE)),
             EventParser('player.spawn', re.compile(r'Player Spawned: (.*?)\s+xuid: (\d+)(?:, pfid: ([a-z0-9]+))?', re.IGNORECASE)),
-            EventParser('player.disconnect', re.compile(r'Player disconnected: (.*), xuid: ([1-9]+)(?:, pfid: ([a-z0-9]+))?', re.IGNORECASE)),
+            EventParser('player.disconnect', re.compile(r'Player disconnected: (.*), xuid: ([0-9]+)(?:, pfid: ([a-z0-9]+))?', re.IGNORECASE)),
 
             # Server Events
             EventParser('server.start', re.compile(r'^Server started', re.IGNORECASE)),
@@ -244,6 +244,14 @@ class BedrockServer:
         :param xuid: The xuid of the connected player. Can be None.
         """
         self.online.append(gamertag)
+
+        if xuid:
+            async with httpx.AsyncClient() as client:
+                thorny_user = await client.get(f'http://nexuscore:8000/api/v0.2/users/guild/611008530077712395/{gamertag}')
+
+                if thorny_user.status_code == 200:
+                    await client.patch(f'http://nexuscore:8000/api/v0.2/users/{thorny_user.json()["thorny_id"]}',
+                                       json={'xuid': xuid})
 
     @events.on('player.spawn')
     async def on_player_spawn(self, line: str, gamertag: str, xuid: Optional[str], pfid: Optional[str]):

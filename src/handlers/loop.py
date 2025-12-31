@@ -12,20 +12,21 @@ class LoopHandler:
         self.running = False
         self._geode = None
 
-    def loop(self, name: str, interval: int, delay: int = 0):
+    def loop(self, name: str, interval: int, delay: int = 0, send_logs: bool = True):
         """
         Decorator function to add a callback function to the loop handler
 
         :param name: The name of the loop
         :param interval: The interval in seconds between each loop
         :param delay: (Optional) The delay in seconds before starting the loop for the first time
+        :param send_logs: (Optional) Whether the loop handler should send a log each time the loop runs
         """
         def decorator(func):
-            self.add_loop(func, name, interval, delay)
+            self.add_loop(func, name, interval, delay, send_logs=send_logs)
 
         return decorator
 
-    def add_loop(self, callback: Callable, name: str, interval: int, delay: int = 0, repetitions: int = 0):
+    def add_loop(self, callback: Callable, name: str, interval: int, delay: int = 0, repetitions: int = 0, send_logs: bool = True):
         """
         Adds a callback function to the loop handler
 
@@ -34,12 +35,13 @@ class LoopHandler:
         :param interval: The interval in seconds between each loop
         :param delay: (Optional) The delay in seconds before starting the loop for the first time
         :param repetitions: (Optional) How many times should the loop be repeated. Set to 0 for infinite
+        :param send_logs: (Optional) Whether the loop handler should send a log each time the loop runs
         """
         async def task_function(geode):
             bold_name = f'{Colors.BOLD}{name}{Colors.END}'
 
             logger.info(f"[Loops] Loading {bold_name} ({callback.__name__}) to loop every {interval} seconds. "
-                        f"Repetitions: {repetitions if repetitions > 0 else 'Infinite'}")
+                        f"Repetitions: {repetitions if repetitions > 0 else 'Infinite'}. Send Logs: {send_logs}")
 
             if delay:
                 logger.info(f"[Loops] {bold_name} ({callback.__name__}) initial delay of {delay} seconds")
@@ -49,7 +51,7 @@ class LoopHandler:
 
             while repetitions == 0 or loop_i < repetitions:
                 try:
-                    logger.info(f"[Loops] Running {bold_name} ({loop_i})...")
+                    if send_logs: logger.info(f"[Loops] Running {bold_name} ({loop_i})...")
                     await callback(geode)
                     loop_i += 1
                     await asyncio.sleep(interval)

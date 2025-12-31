@@ -82,7 +82,7 @@ class Geode:
     async def map_render_loop(self):
         await self.initiate_save('map_update')
 
-    @looper.loop('Metrics Monitor', 1, 60)
+    @looper.loop('Metrics Monitor', 1, send_logs=False)
     async def metrics_loop(self):
         # 1. Get CPU (Async/Non-blocking)
         cpu = await self.usage.get_cpu_percent()

@@ -5,6 +5,7 @@ from typing_extensions import Literal
 
 from src.handlers.loop import LoopHandler
 from src.handlers.restoration import RestorationHandler
+from src.handlers.usage import UsageHandler
 from src.models.messages import DiscordMessage, Message
 from src.server import BedrockServer
 from src.handlers.config import ConfigHandler
@@ -14,6 +15,7 @@ from sanic.log import logger, Colors
 class Geode:
     config: ConfigHandler = ConfigHandler()
     looper: LoopHandler = LoopHandler()
+    usage: UsageHandler = UsageHandler()
     server: BedrockServer
 
     def __init__(self, server: BedrockServer = BedrockServer()):
@@ -79,3 +81,16 @@ class Geode:
     @looper.loop('Map Render Loop', 3600)
     async def map_render_loop(self):
         await self.initiate_save('map_update')
+
+    @looper.loop('Metrics Monitor', 1, 60)
+    async def metrics_loop(self):
+        # 1. Get CPU (Async/Non-blocking)
+        cpu = await self.usage.get_cpu_percent()
+
+        # 2. Get RAM (Async/Non-blocking)
+        ram = await self.usage.get_memory_usage()
+
+        # 3. Get Disk (Async/Non-blocking)
+        disk = await self.usage.get_disk_usage()
+
+        logger.info(f'CPU: {Colors.YELLOW}{cpu}%{Colors.END} | RAM: {Colors.PURPLE}{ram["usage_mb"]}MB ({ram["percent"]}%){Colors.END} | Disk: {Colors.RED}{disk["used_gb"]}/{disk["total_gb"]}{Colors.END}')

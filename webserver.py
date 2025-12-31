@@ -19,7 +19,7 @@ class PlainFormatter(logging.Formatter):
     def __init__(self, fmt=None, datefmt=None):
         super().__init__(fmt, datefmt)
         # Regex pattern to match ANSI escape codes
-        self.ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+        self.ansi_escape = re.compile(r'\x1b\[[0-9;]*[A-KSTfsu]')
 
     def format(self, record):
         # Strip ANSI codes from the message

@@ -35,4 +35,4 @@ ENV CLOUD_SERVICE=${CLOUD_SERVICE}
 
 WORKDIR /geode
 
-CMD ["python3", "-u", "webserver.py"]
+CMD ["python3", "-u", "src/webserver.py"]

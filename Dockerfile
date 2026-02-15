@@ -19,8 +19,8 @@ RUN python3 -m venv $VENV_PATH
 ENV PATH="$VENV_PATH/bin:$PATH"
 
 # Copy requirements and install into venv
-COPY . amethyst/
-RUN pip install --no-cache-dir -r amethyst/requirements/${CLOUD_SERVICE}.txt
+COPY . geode/
+RUN pip install --no-cache-dir -r geode/requirements/${CLOUD_SERVICE}.txt
 
 # Expose ports
 EXPOSE 19132/tcp
@@ -30,9 +30,9 @@ EXPOSE 19133/udp
 EXPOSE 8000
 
 # Set environment + workdir
-ENV PYTHONPATH="${PYTHONPATH}:/amethyst/"
+ENV PYTHONPATH="${PYTHONPATH}:/geode/"
 ENV CLOUD_SERVICE=${CLOUD_SERVICE}
 
-WORKDIR /amethyst
+WORKDIR /geode
 
 CMD ["python3", "-u", "webserver.py"]

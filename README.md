@@ -5,7 +5,7 @@
 <h1 align="center">Geode</h1>
 
 <p align="center">
-  <strong>A powerful wrapper for Minecraft Bedrock Dedicated Server</strong>
+  <strong>A powerful Minecraft Bedrock Dedicated Server Manager</strong>
 </p>
 
 <p align="center">
@@ -17,23 +17,19 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Minecraft-Bedrock%20Edition-green?style=flat-square" alt="Minecraft Bedrock"/>
-  <img src="https://img.shields.io/badge/Python-3.11+-blue?style=flat-square" alt="Python 3.11+"/>
-  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker" alt="Docker Ready"/>
-  <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="MIT License"/>
+  <img src="https://img.shields.io/badge/Minecraft-Bedrock%20Edition-green?style=flat" alt="Minecraft Bedrock"/>
+  <img src="https://img.shields.io/badge/Python-3.11+-blue?style=flat" alt="Python 3.11+"/>
+  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker" alt="Docker Ready"/>
+  <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat" alt="MIT License"/>
 </p>
 
 ---
 
 ## Why Geode?
 
-Most custom Minecraft Bedrock servers implement their own protocol from scratch. While powerful, this approach means:
+Geode is a wrapper over the official **Bedrock Dedicated Server**, letting you manage your server with only a few clicks.
 
-- Long development cycles to reverse-engineer each update
-- Missing features that exist in vanilla Bedrock
-- Constant maintenance as Minecraft evolves
-
-**Geode takes a different approach.** It wraps the official Bedrock Dedicated Server, giving you vanilla gameplay with enterprise-grade management features. When Mojang releases an update, Geode is ready.
+Set up automatic backups, run commands, and do more with Geode, all while keeping your server **fully Vanilla.**
 
 ## Features
 

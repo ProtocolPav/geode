@@ -155,10 +155,10 @@ class BackupHandler:
         # Make dynamic parameterization, based on user configurations
         # allow people to pass in their own blockstyles.txt via docker, for custom block palletes
         render_tasks = {
-            'overworld': f"{base_cmd} --output='../unmined/overworld' --dimension=overworld --mapsettings='./Everthorn.json' {common_params}",
-            'nether': f"{base_cmd} --output='../unmined/nether' --dimension=nether --mapsettings='./Nether.json' {common_params}",
-            'subway': f"{base_cmd} --output='../unmined/subway' --dimension=overworld --mapsettings='./Subway.json' {common_params}",
-            'the_end': f"{base_cmd} --output='../unmined/the_end' --dimension=end --mapsettings='./End.json' {common_params}"
+            'overworld': f"{base_cmd} --output='../unmined/overworld' --dimension=overworld --mapsettings='./map/Everthorn.json' {common_params}",
+            'nether': f"{base_cmd} --output='../unmined/nether' --dimension=nether --mapsettings='./map/Nether.json' {common_params}",
+            'subway': f"{base_cmd} --output='../unmined/subway' --dimension=overworld --mapsettings='./map/Subway.json' {common_params}",
+            'the_end': f"{base_cmd} --output='../unmined/the_end' --dimension=end --mapsettings='./map/End.json' {common_params}"
         }
 
         try:

@@ -1,7 +1,7 @@
 /* Minecraft Fonts */
 @font-face {
     font-family: 'Minecraft Ten';
-    src: url('../fonts/minecraft-ten.woff2') format('woff2');
+    src: url('../fonts/minecraft-ten.woff') format('woff');
     font-weight: normal;
     font-style: normal;
     font-display: swap;
@@ -17,12 +17,16 @@
 
 /* CSS Variables */
 :root {
-    --color-bg: #2c2c2c;
+    --color-bg: #202020;
     --color-panel: #373737;
     --color-header: #1e1e1e;
     --color-text: #ffffff;
     --color-accent: #4aad35; /* Minecraft green */
+    --color-accent-hover: #5cc347; /* Lighter green */
+    --color-accent-active: #3a9229; /* Darker green */
     --color-danger: #b02e26; /* Minecraft red */
+    --color-danger-hover: #c43c33; /* Lighter red */
+    --color-danger-active: #9a271f; /* Darker red */
     --color-warning: #f6b201; /* Minecraft yellow */
     --color-info: #3a94d4; /* Minecraft blue */
     --color-disabled: #656565;
@@ -30,6 +34,11 @@
     --color-shadow: rgba(0, 0, 0, 0.4);
     --color-highlight: rgba(255, 255, 255, 0.3);
     --color-slot: rgba(0, 0, 0, 0.45);
+    
+    /* Minecraft dirt background pattern */
+    --color-dirt-dark: #543c25;
+    --color-dirt-medium: #6b4f35;
+    --color-dirt-light: #7b5b3d;
     
     --shadow-inset: inset 2px 2px 0px rgba(255, 255, 255, 0.3), 
                    inset -2px -2px 0px rgba(0, 0, 0, 0.25);
@@ -71,57 +80,129 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 0;
-    border-bottom: 2px solid var(--color-border);
-    margin-bottom: 16px;
+    padding: 20px 0;
+    border-bottom: 3px solid var(--color-border);
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.header::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -6px;
+    height: 3px;
+    background-color: rgba(0, 0, 0, 0.5);
 }
 
 .logo-container {
     display: flex;
     align-items: center;
     gap: 16px;
+    position: relative;
 }
 
 .logo {
-    height: 40px;
+    height: 50px;
     width: auto;
     image-rendering: auto;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+    transition: transform 0.3s ease;
+}
+
+.logo:hover {
+    transform: scale(1.05) rotate(-5deg);
 }
 
 .title {
-    font-size: 24px;
-    text-shadow: 2px 2px 0px var(--color-shadow);
+    font-size: 28px;
+    text-shadow: 3px 3px 0px var(--color-shadow);
+    color: var(--color-accent);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    position: relative;
+}
+
+.title::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--color-accent);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    transform: scaleX(0.8);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+}
+
+.logo-container:hover .title::after {
+    transform: scaleX(1);
 }
 
 .server-status {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 8px;
+    gap: 10px;
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 10px 15px;
+    border-radius: 4px;
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-outset);
 }
 
 .status-indicator {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
 }
 
 .status-dot {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     background-color: var(--color-warning);
     border-radius: 50%;
-    box-shadow: 0 0 8px var(--color-warning);
+    box-shadow: 0 0 10px var(--color-warning);
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.status-dot::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.7);
+    opacity: 0;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.7; }
+    70% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
+    100% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
 }
 
 .status-dot.online {
     background-color: var(--color-accent);
-    box-shadow: 0 0 8px var(--color-accent);
+    box-shadow: 0 0 12px var(--color-accent);
 }
 
 .status-dot.offline {
     background-color: var(--color-danger);
-    box-shadow: 0 0 8px var(--color-danger);
+    box-shadow: 0 0 12px var(--color-danger);
+}
+
+.status-text {
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .server-info {
@@ -129,7 +210,11 @@ body {
     gap: 16px;
     font-family: var(--font-minecraft-seven);
     font-size: 14px;
-    opacity: 0.8;
+    opacity: 0.9;
+    background-color: var(--color-slot);
+    padding: 5px 10px;
+    border-radius: 3px;
+    border: 1px solid var(--color-border);
 }
 
 /* Content Layout */
@@ -145,61 +230,130 @@ body {
 /* Panels */
 .panel {
     background-color: var(--color-panel);
-    border: 2px solid var(--color-border);
-    box-shadow: var(--shadow-outset);
+    border: 3px solid var(--color-border);
+    box-shadow: 
+        var(--shadow-outset),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    image-rendering: pixelated;
+    position: relative;
+    transition: transform 0.2s ease;
+}
+
+.panel:hover {
+    transform: translateY(-2px);
+}
+
+.panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: rgba(255, 255, 255, 0.2);
 }
 
 .panel-header {
     background-color: var(--color-header);
-    padding: 8px 16px;
-    border-bottom: 2px solid var(--color-border);
+    padding: 10px 16px;
+    border-bottom: 3px solid var(--color-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
+}
+
+.panel-header::after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 .panel-header h2 {
     font-size: 18px;
     text-shadow: 2px 2px 0px var(--color-shadow);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--color-accent);
 }
 
 .panel-content {
     padding: 16px;
     flex: 1;
     overflow: auto;
+    background-image: repeating-linear-gradient(
+        -45deg,
+        rgba(0, 0, 0, 0.1),
+        rgba(0, 0, 0, 0.1) 10px,
+        rgba(0, 0, 0, 0.15) 10px,
+        rgba(0, 0, 0, 0.15) 20px
+    );
 }
 
 /* Buttons */
 .minecraft-btn {
     display: inline-block;
-    padding: 8px 16px;
+    padding: 10px 18px;
     font-family: var(--font-minecraft-ten);
+    font-size: 16px;
+    letter-spacing: 0.5px;
     background-color: #4c4c4c;
-    border: 2px solid var(--color-border);
+    border: 3px solid var(--color-border);
     color: var(--color-text);
     text-align: center;
-    text-shadow: 1px 1px 0px var(--color-shadow);
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0px var(--color-shadow);
     cursor: pointer;
     box-shadow: var(--shadow-inset), var(--shadow-outset);
-    transition: transform 0.1s, box-shadow 0.1s;
+    transition: all 0.15s ease-out;
     image-rendering: pixelated;
+    position: relative;
+    overflow: hidden;
+}
+
+.minecraft-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: rgba(255, 255, 255, 0.3);
 }
 
 .minecraft-btn:hover {
     background-color: #5c5c5c;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-inset), 2px 4px 0px var(--color-shadow);
 }
 
 .minecraft-btn:active {
-    transform: translate(1px, 1px);
-    box-shadow: var(--shadow-inset), 1px 1px 0px var(--color-shadow);
+    transform: translateY(1px);
+    box-shadow: var(--shadow-inset), 0px 1px 0px var(--color-shadow);
 }
 
 .minecraft-btn.small {
-    padding: 4px 8px;
+    padding: 5px 10px;
     font-size: 14px;
+}
+
+.minecraft-btn.success {
+    background-color: var(--color-accent);
+}
+
+.minecraft-btn.success:hover {
+    background-color: var(--color-accent-hover);
+}
+
+.minecraft-btn.success:active {
+    background-color: var(--color-accent-active);
 }
 
 .minecraft-btn.danger {
@@ -207,7 +361,39 @@ body {
 }
 
 .minecraft-btn.danger:hover {
-    background-color: #c43c33;
+    background-color: var(--color-danger-hover);
+}
+
+.minecraft-btn.danger:active {
+    background-color: var(--color-danger-active);
+}
+
+.minecraft-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: var(--shadow-inset), var(--shadow-outset) !important;
+}
+
+/* Button hover animation */
+.minecraft-btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        to right,
+        transparent 0%,
+        rgba(255, 255, 255, 0.2) 50%,
+        transparent 100%
+    );
+    transition: left 0.5s ease-in-out;
+}
+
+.minecraft-btn:hover::after {
+    left: 100%;
 }
 
 .button-group {
@@ -221,39 +407,111 @@ body {
 .command-input {
     display: flex;
     gap: 8px;
+    margin-top: 10px;
+    position: relative;
+}
+
+.command-input::before {
+    content: '>';
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-accent);
+    font-family: var(--font-minecraft-ten);
+    font-size: 18px;
+    text-shadow: 1px 1px 0px var(--color-shadow);
+    z-index: 1;
 }
 
 .command-input input {
     flex: 1;
-    padding: 8px 12px;
+    padding: 10px 10px 10px 30px;
     font-family: var(--font-minecraft-seven);
-    background-color: var(--color-slot);
-    border: 2px solid var(--color-border);
-    box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.7);
+    font-size: 16px;
+    background-color: rgba(0, 0, 0, 0.65);
+    border: 3px solid var(--color-border);
+    box-shadow: 
+        inset 0 0 10px rgba(0, 0, 0, 0.9),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.1);
     color: var(--color-text);
+    transition: all 0.3s ease;
+}
+
+.command-input input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 
+        inset 0 0 10px rgba(0, 0, 0, 0.9),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+        0 0 8px rgba(74, 173, 53, 0.5);
 }
 
 .command-input input::placeholder {
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.command-input.disabled input {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* Log Container */
 .log-content {
-    background-color: var(--color-slot);
-    border: 2px solid var(--color-border);
-    box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.7);
-    padding: 8px;
-    height: 300px;
+    background-color: rgba(0, 0, 0, 0.65);
+    border: 3px solid var(--color-border);
+    box-shadow: 
+        inset 0 0 10px rgba(0, 0, 0, 0.9),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    height: 400px;
     overflow-y: auto;
     font-family: var(--font-minecraft-seven);
     font-size: 14px;
     white-space: pre-wrap;
     word-break: break-word;
+    position: relative;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-accent) var(--color-slot);
+}
+
+.log-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.log-content::-webkit-scrollbar-track {
+    background: var(--color-slot);
+    border: 1px solid var(--color-border);
+}
+
+.log-content::-webkit-scrollbar-thumb {
+    background-color: var(--color-accent);
+    border-radius: 2px;
+    border: 1px solid var(--color-border);
+}
+
+.log-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 1;
 }
 
 .log-line {
-    margin-bottom: 2px;
-    line-height: 1.3;
+    margin-bottom: 3px;
+    line-height: 1.4;
+    padding: 2px 4px;
+    border-radius: 2px;
+    transition: background-color 0.2s ease;
+}
+
+.log-line:hover {
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .log-line.info {
@@ -262,40 +520,111 @@ body {
 
 .log-line.warning {
     color: var(--color-warning);
+    text-shadow: 0 0 5px rgba(246, 178, 1, 0.4);
 }
 
 .log-line.error {
     color: var(--color-danger);
+    text-shadow: 0 0 5px rgba(176, 46, 38, 0.4);
 }
 
 /* Tasks and Backups */
 .tasks-content, .backups-content {
-    background-color: var(--color-slot);
-    border: 2px solid var(--color-border);
-    box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.7);
-    padding: 8px;
-    max-height: 300px;
+    background-color: rgba(0, 0, 0, 0.65);
+    border: 3px solid var(--color-border);
+    box-shadow: 
+        inset 0 0 10px rgba(0, 0, 0, 0.9),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    height: 250px; /* Fixed height instead of max-height */
     overflow-y: auto;
     font-family: var(--font-minecraft-seven);
     font-size: 14px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-accent) var(--color-slot);
+    position: relative; /* For absolute positioning of children */
+}
+
+.tasks-content::-webkit-scrollbar,
+.backups-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.tasks-content::-webkit-scrollbar-track,
+.backups-content::-webkit-scrollbar-track {
+    background: var(--color-slot);
+    border: 1px solid var(--color-border);
+}
+
+.tasks-content::-webkit-scrollbar-thumb,
+.backups-content::-webkit-scrollbar-thumb {
+    background-color: var(--color-accent);
+    border-radius: 2px;
+    border: 1px solid var(--color-border);
+}
+
+.tasks-list, .backups-list {
+    display: grid;
+    gap: 8px;
 }
 
 .task-item, .backup-item {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 8px;
-    margin-bottom: 4px;
-    border: 1px solid var(--color-border);
+    flex-direction: column;
+    padding: 8px 10px;
+    border: 2px solid var(--color-border);
     background-color: rgba(255, 255, 255, 0.05);
+    box-shadow: var(--shadow-outset);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.task-name, .backup-name {
+    margin-bottom: 4px;
+    color: var(--color-accent);
+    text-shadow: 1px 1px 0px var(--color-shadow);
+}
+
+.task-details, .backup-date {
+    font-size: 12px;
+    opacity: 0.8;
 }
 
 .backup-item {
     cursor: pointer;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.backup-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 4px;
+    background-color: var(--color-accent);
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
 
 .backup-item:hover {
     background-color: rgba(255, 255, 255, 0.1);
+    transform: translateX(2px);
+}
+
+.backup-item:hover::before {
+    opacity: 1;
+}
+
+.more-info {
+    text-align: center;
+    margin-top: 8px;
+    font-style: italic;
+    opacity: 0.7;
 }
 
 /* Footer */
@@ -314,86 +643,186 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(0, 0, 0, 0.8);
     z-index: 1000;
     justify-content: center;
     align-items: center;
+    backdrop-filter: blur(3px);
 }
 
 .modal.active {
     display: flex;
+    animation: fade-in 0.3s ease-out forwards;
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .modal-content {
     background-color: var(--color-panel);
-    border: 2px solid var(--color-border);
-    box-shadow: var(--shadow-outset);
-    max-width: 400px;
+    border: 4px solid var(--color-border);
+    box-shadow: 
+        var(--shadow-outset),
+        0 10px 30px rgba(0, 0, 0, 0.7);
+    max-width: 500px;
     width: 90%;
     max-height: 80vh;
     overflow: auto;
+    animation: scale-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    position: relative;
+}
+
+@keyframes scale-in {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.modal-content .panel-content {
+    padding: 20px;
+}
+
+.modal-content .panel-header {
+    background-color: var(--color-accent);
+}
+
+.modal-content .panel-header h2 {
+    color: #fff;
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
 }
 
 .close-btn {
-    font-size: 24px;
+    font-size: 26px;
     cursor: pointer;
     color: var(--color-text);
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    transition: all 0.2s ease;
 }
 
 .close-btn:hover {
-    color: var(--color-danger);
+    color: #fff;
+    background-color: var(--color-danger);
+    transform: scale(1.1);
+}
+
+.modal-content #modal-message {
+    font-size: 16px;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.modal-content .button-group {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.modal-content .minecraft-btn {
+    min-width: 120px;
 }
 
 /* Toast */
 .toast-container {
     position: fixed;
-    bottom: 16px;
-    right: 16px;
+    bottom: 20px;
+    right: 20px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
     z-index: 999;
 }
 
 .toast {
     padding: 12px 16px;
-    min-width: 250px;
+    min-width: 280px;
     background-color: var(--color-panel);
-    border: 2px solid var(--color-border);
-    box-shadow: var(--shadow-outset);
+    border: 3px solid var(--color-border);
+    box-shadow: 
+        var(--shadow-outset),
+        0 5px 15px rgba(0, 0, 0, 0.5);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    animation: slide-in 0.3s ease-out forwards;
+    animation: slide-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    position: relative;
+    overflow: hidden;
+}
+
+.toast::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 8px;
 }
 
 .toast.closing {
-    animation: slide-out 0.3s ease-in forwards;
+    animation: slide-out 0.3s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
 }
 
 .toast-content {
     flex: 1;
+    font-family: var(--font-minecraft-seven);
+    padding-left: 10px;
+    text-shadow: 1px 1px 0 var(--color-shadow);
 }
 
 .toast-close {
     cursor: pointer;
-    margin-left: 8px;
+    margin-left: 12px;
+    font-size: 20px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.toast-close:hover {
+    background-color: rgba(0, 0, 0, 0.4);
+    transform: scale(1.1);
 }
 
 .toast.success {
-    border-left: 4px solid var(--color-accent);
+    border-left-color: var(--color-accent);
+}
+
+.toast.success::before {
+    background-color: var(--color-accent);
 }
 
 .toast.error {
-    border-left: 4px solid var(--color-danger);
+    border-left-color: var(--color-danger);
+}
+
+.toast.error::before {
+    background-color: var(--color-danger);
 }
 
 .toast.warning {
-    border-left: 4px solid var(--color-warning);
+    border-left-color: var(--color-warning);
+}
+
+.toast.warning::before {
+    background-color: var(--color-warning);
 }
 
 .toast.info {
-    border-left: 4px solid var(--color-info);
+    border-left-color: var(--color-info);
+}
+
+.toast.info::before {
+    background-color: var(--color-info);
 }
 
 /* Panel-specific Styles */

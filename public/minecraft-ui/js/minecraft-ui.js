@@ -5,7 +5,8 @@
 
 // Constants
 const API_BASE_URL = '/'; // Base URL for API endpoints
-const REFRESH_INTERVAL = 5000; // Refresh interval in milliseconds
+const REFRESH_INTERVAL = 3000; // Refresh interval in milliseconds for frequent updates
+const BACKUP_REFRESH_INTERVAL = 30000; // Refresh interval for backups (30 seconds)
 
 // UI Elements
 const elements = {
@@ -14,6 +15,7 @@ const elements = {
     statusText: document.querySelector('.status-text'),
     uptime: document.querySelector('.uptime'),
     version: document.querySelector('.version'),
+    geodeVersion: document.querySelector('.geode-version'),
     
     // Control buttons
     startBtn: document.getElementById('start-btn'),
@@ -59,19 +61,31 @@ function init() {
     // Add event listeners
     setupEventListeners();
     
-    // Initial data fetches
+    // Initial data fetches - immediately and with slight delays to prevent overwhelming the server
     fetchServerInfo();
-    fetchTasks();
-    fetchBackups();
+    
+    // Stagger the initial fetches
+    setTimeout(() => {
+        fetchTasks();
+    }, 500);
+    
+    setTimeout(() => {
+        fetchBackups();
+    }, 1000);
     
     // Setup log streaming
     setupLogStream();
     
-    // Setup regular updates
+    // Setup regular updates for server info and tasks (high frequency)
     updateInterval = setInterval(() => {
         fetchServerInfo();
         fetchTasks();
     }, REFRESH_INTERVAL);
+    
+    // Setup less frequent updates for backups
+    setInterval(() => {
+        fetchBackups();
+    }, BACKUP_REFRESH_INTERVAL);
 }
 
 // Setup event listeners for UI interactions
@@ -107,45 +121,65 @@ function setupEventListeners() {
 
 // API Interactions
 
+// Helper function to fetch with retry
+async function fetchWithRetry(url, maxRetries = 3, retryDelay = 1000) {
+    let lastError = null;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+            
+            const data = await response.json();
+            return { success: true, data };
+        } catch (error) {
+            console.warn(`Attempt ${attempt + 1}/${maxRetries} failed for ${url}:`, error);
+            lastError = error;
+            
+            if (attempt < maxRetries - 1) {
+                // Wait before next retry
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+            }
+        }
+    }
+    
+    return { success: false, error: lastError };
+}
+
 // Fetch server information (status, uptime, version)
 async function fetchServerInfo() {
-    try {
-        const response = await fetch(`${API_BASE_URL}info/`);
-        if (!response.ok) throw new Error('Failed to fetch server info');
-        
-        const data = await response.json();
-        updateServerInfo(data);
-    } catch (error) {
+    const result = await fetchWithRetry(`${API_BASE_URL}info/`);
+    
+    if (result.success) {
+        updateServerInfo(result.data);
+    } else {
+        console.error('Error fetching server info:', result.error);
+        // Only show toast for persistent errors
         showToast('Error fetching server info', 'error');
-        console.error('Error fetching server info:', error);
     }
 }
 
 // Fetch active tasks
 async function fetchTasks() {
-    try {
-        const response = await fetch(`${API_BASE_URL}info/tasks`);
-        if (!response.ok) throw new Error('Failed to fetch tasks');
-        
-        const data = await response.json();
-        updateTasksUI(data);
-    } catch (error) {
-        showToast('Error fetching tasks', 'error');
-        console.error('Error fetching tasks:', error);
+    const result = await fetchWithRetry(`${API_BASE_URL}info/tasks`);
+    
+    if (result.success) {
+        updateTasksUI(result.data);
+    } else {
+        console.error('Error fetching tasks:', result.error);
+        // Avoid spam toasts for background fetches
     }
 }
 
 // Fetch backups list
 async function fetchBackups() {
-    try {
-        const response = await fetch(`${API_BASE_URL}backups/`);
-        if (!response.ok) throw new Error('Failed to fetch backups');
-        
-        const data = await response.json();
-        updateBackupsUI(data);
-    } catch (error) {
-        showToast('Error fetching backups', 'error');
-        console.error('Error fetching backups:', error);
+    const result = await fetchWithRetry(`${API_BASE_URL}backups/`);
+    
+    if (result.success) {
+        updateBackupsUI(result.data);
+    } else {
+        console.error('Error fetching backups:', result.error);
+        // Avoid spam toasts for background fetches
     }
 }
 
@@ -261,9 +295,9 @@ function updateServerInfo(data) {
     serverStatus = data.status;
     elements.statusText.textContent = capitalizeFirstLetter(serverStatus);
     
-    // Update status indicator
+// Update status indicator
     elements.statusDot.className = 'status-dot';
-    if (serverStatus === 'running') {
+    if (serverStatus === 'started' || serverStatus === 'running') {
         elements.statusDot.classList.add('online');
     } else if (serverStatus === 'stopped') {
         elements.statusDot.classList.add('offline');
@@ -271,23 +305,57 @@ function updateServerInfo(data) {
     
     // Update version info
     if (data.minecraft_version) {
-        elements.version.textContent = `Version: ${data.minecraft_version}`;
+        elements.version.textContent = `MC Version: ${data.minecraft_version}`;
     }
     
-    // Update uptime
+    // Update Geode version
+    if (data.geode_version) {
+        elements.geodeVersion.textContent = `Geode: ${data.geode_version}`;
+    }
+    
+    // Store the start time globally so we can update uptime continuously
     const serverStart = data.server_start;
-    if (serverStart && serverStatus === 'running') {
-        const startTime = new Date(serverStart);
-        const now = new Date();
-        const uptimeMs = now - startTime;
-        
-        const hours = Math.floor(uptimeMs / (1000 * 60 * 60));
-        const minutes = Math.floor((uptimeMs % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((uptimeMs % (1000 * 60)) / 1000);
-        
-        elements.uptime.textContent = `Uptime: ${padZero(hours)}:${padZero(minutes)}:${padZero(seconds)}`;
+    
+    // Debug uptime calculation
+    console.log('Server status:', serverStatus, 'Server start:', serverStart);
+    
+    // Check if server is in running-like state (match both 'running' and 'started')
+    const isRunning = serverStatus === 'started' || serverStatus === 'running';
+    console.log('Is server running?', isRunning);
+    
+    if (serverStart && isRunning) {
+        try {
+            const startTime = new Date(serverStart);
+            console.log('Parsed server start time:', startTime, 'Valid:', !isNaN(startTime.getTime()));
+            
+            if (!isNaN(startTime.getTime())) {
+                // Store as a timestamp number for more reliable comparison
+                window.serverStartTimestamp = startTime.getTime();
+                
+                // Update immediately
+                updateUptime();
+                
+                // Start a timer to update the uptime every second if it's not already running
+                if (!window.uptimeInterval) {
+                    console.log('Starting uptime interval');
+                    window.uptimeInterval = setInterval(updateUptime, 1000);
+                }
+            } else {
+                console.error('Invalid server start time:', serverStart);
+                elements.uptime.textContent = 'Uptime: Invalid date';
+            }
+        } catch (e) {
+            console.error('Error parsing server start time:', e);
+            elements.uptime.textContent = 'Uptime: Parse error';
+        }
     } else {
         elements.uptime.textContent = 'Uptime: --:--:--';
+        // Clear the interval if the server is not running
+        if (window.uptimeInterval) {
+            console.log('Clearing uptime interval');
+            clearInterval(window.uptimeInterval);
+            window.uptimeInterval = null;
+        }
     }
     
     // Update button states based on server status
@@ -296,16 +364,28 @@ function updateServerInfo(data) {
 
 // Update tasks list in the UI
 function updateTasksUI(data) {
-    if (!data.root || data.root.length === 0) {
+    console.log('Tasks data:', data); // Debug log
+    
+    // Handle direct array response OR object with root property
+    let tasks = data;
+    if (!Array.isArray(data) && data && data.root) {
+        tasks = data.root;
+    }
+    
+    // Defensive check - if data is null/undefined or doesn't have the expected structure
+    if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
         elements.tasksContainer.innerHTML = '<p>No active tasks.</p>';
         return;
     }
+    
+    // For debugging:
+    console.log(`Found ${tasks.length} tasks`);
     
     const tasksList = document.createElement('div');
     tasksList.className = 'tasks-list';
     
     // Show only a limited number of tasks
-    const tasksToShow = data.root.slice(0, 10); // Show max 10 tasks
+    const tasksToShow = tasks.slice(0, 10); // Show max 10 tasks
     
     tasksToShow.forEach(task => {
         const taskItem = document.createElement('div');
@@ -317,9 +397,12 @@ function updateTasksUI(data) {
         
         const taskDetails = document.createElement('div');
         taskDetails.className = 'task-details';
-        taskDetails.textContent = task.coro || '';
+        taskDetails.textContent = task.coro ? `Function: ${task.coro}` : '';
         
         taskItem.appendChild(taskName);
+        if (task.coro) {
+            taskItem.appendChild(taskDetails);
+        }
         
         tasksList.appendChild(taskItem);
     });
@@ -329,17 +412,38 @@ function updateTasksUI(data) {
     elements.tasksContainer.appendChild(tasksList);
     
     // Add task count if there are more tasks
-    if (data.root.length > 10) {
+    if (tasks.length > 10) {
         const moreInfo = document.createElement('p');
         moreInfo.className = 'more-info';
-        moreInfo.textContent = `... and ${data.root.length - 10} more tasks`;
+        moreInfo.textContent = `... and ${tasks.length - 10} more tasks`;
         elements.tasksContainer.appendChild(moreInfo);
     }
 }
 
 // Update backups list in the UI
 function updateBackupsUI(data) {
-    if (!data.backups || data.backups.length === 0) {
+    console.log('Backups data:', data); // Debug log
+    
+    // Defensive check with more logging
+    if (!data) {
+        console.error('Backups data is null or undefined');
+        elements.backupsContainer.innerHTML = '<p>No backups available.</p>';
+        return;
+    }
+    
+    // Check if data is a direct array or has a nested structure
+    let backups = [];
+    if (Array.isArray(data)) {
+        console.log('Backups is direct array');
+        backups = data;
+    } else if (data.root && Array.isArray(data.root)) {
+        console.log('Backups using root structure');
+        backups = data.root;
+    } else if (data.backups && Array.isArray(data.backups)) {
+        console.log('Backups using backups property');
+        backups = data.backups;
+    } else {
+        console.error('Could not find backups array in', data);
         elements.backupsContainer.innerHTML = '<p>No backups available.</p>';
         return;
     }
@@ -347,10 +451,20 @@ function updateBackupsUI(data) {
     const backupsList = document.createElement('div');
     backupsList.className = 'backups-list';
     
-    // Sort backups by date (newest first)
-    const sortedBackups = [...data.backups].sort((a, b) => {
-        return new Date(b.created_at) - new Date(a.created_at);
-    });
+    // Sort backups by date (newest first) - with null checking
+    let sortedBackups = [];
+    try {
+        if (backups && Array.isArray(backups) && backups.length > 0) {
+            sortedBackups = backups.slice().sort((a, b) => {
+                // Use timestamp instead of created_at
+                return new Date(b.timestamp || 0) - new Date(a.timestamp || 0);
+            });
+        } else {
+            console.warn('No valid backups array to sort');
+        }
+    } catch (error) {
+        console.error('Error sorting backups:', error);
+    }
     
     sortedBackups.forEach(backup => {
         const backupItem = document.createElement('div');
@@ -362,7 +476,7 @@ function updateBackupsUI(data) {
         
         const backupDate = document.createElement('div');
         backupDate.className = 'backup-date';
-        backupDate.textContent = formatDate(backup.created_at);
+        backupDate.textContent = formatDate(backup.timestamp);
         
         backupItem.appendChild(backupName);
         backupItem.appendChild(backupDate);
@@ -379,15 +493,26 @@ function updateBackupsUI(data) {
         backupsList.appendChild(backupItem);
     });
     
-    // Clear and update the container
-    elements.backupsContainer.innerHTML = '';
-    elements.backupsContainer.appendChild(backupsList);
+    // Clear and update the container with proper error checking
+    if (backupsList.childNodes.length > 0) {
+        console.log(`Displaying ${backupsList.childNodes.length} backups`);
+        requestAnimationFrame(() => {
+            elements.backupsContainer.innerHTML = '';
+            elements.backupsContainer.appendChild(backupsList);
+        });
+    } else {
+        console.warn('No backup items were created');
+        elements.backupsContainer.innerHTML = '<p>No valid backups available.</p>';
+    }
 }
 
 // Update button states based on server status
 function updateButtonStates() {
-    const isRunning = serverStatus === 'running';
+    // Account for both 'running' and 'started' status
+    const isRunning = serverStatus === 'running' || serverStatus === 'started';
     const isStopped = serverStatus === 'stopped';
+    
+    console.log('Button state update - Status:', serverStatus, 'Running:', isRunning, 'Stopped:', isStopped);
     
     // Enable/disable buttons based on server status
     elements.startBtn.disabled = isRunning;
@@ -527,6 +652,41 @@ function capitalizeFirstLetter(string) {
 // Helper function to pad numbers with leading zero
 function padZero(num) {
     return num.toString().padStart(2, '0');
+}
+
+// Update uptime display
+function updateUptime() {
+    try {
+        // Check if we have a valid server start timestamp
+        if (window.serverStartTimestamp) {
+            const now = Date.now(); // More efficient than new Date()
+            const uptimeMs = now - window.serverStartTimestamp;
+            
+            // Log occasionally for debugging
+            if (Math.floor(uptimeMs / 1000) % 30 === 0) { // Log every 30 seconds
+                console.log('Updating uptime:', uptimeMs, 'ms');
+            }
+            
+            const hours = Math.floor(uptimeMs / (1000 * 60 * 60));
+            const minutes = Math.floor((uptimeMs % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((uptimeMs % (1000 * 60)) / 1000);
+            
+            // Force DOM update
+            elements.uptime.textContent = `Uptime: ${padZero(hours)}:${padZero(minutes)}:${padZero(seconds)}`;
+        } else if (window.serverStartTime) {
+            // Backward compatibility with old code
+            const now = new Date();
+            const uptimeMs = now - window.serverStartTime;
+            
+            const hours = Math.floor(uptimeMs / (1000 * 60 * 60));
+            const minutes = Math.floor((uptimeMs % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((uptimeMs % (1000 * 60)) / 1000);
+            
+            elements.uptime.textContent = `Uptime: ${padZero(hours)}:${padZero(minutes)}:${padZero(seconds)}`;
+        }
+    } catch (error) {
+        console.error('Error updating uptime:', error);
+    }
 }
 
 // Helper function to format dates

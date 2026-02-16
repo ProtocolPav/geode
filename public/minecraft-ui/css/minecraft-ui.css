@@ -71,7 +71,7 @@ body {
 .minecraft-ui {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    min-height: 100vh; /* Allow growing beyond viewport for scrolling */
     max-width: 1280px;
     margin: 0 auto;
     padding: 0 16px;
@@ -165,13 +165,11 @@ body {
    Content Grid Layout
    ========================================= */
 .content {
-    flex: 1;
     display: grid;
     grid-template-columns: 320px 1fr;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: auto auto auto;
     gap: 12px;
     margin-bottom: 12px;
-    min-height: 0; /* Critical for flex children with overflow */
 }
 
 /* =========================================
@@ -183,8 +181,6 @@ body {
     box-shadow: var(--shadow-outset);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    min-height: 0; /* Allow shrinking in grid/flex */
 }
 
 .panel-header {
@@ -207,11 +203,6 @@ body {
 
 .panel-content {
     padding: 12px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /* Prevent panel-content from overflowing */
-    min-height: 0;
 }
 
 /* =========================================
@@ -225,29 +216,11 @@ body {
 .logs-panel {
     grid-row: 1 / span 2;
     grid-column: 2;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-}
-
-.logs-panel .panel-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
 }
 
 .tasks-panel {
     grid-row: 2;
     grid-column: 1;
-    min-height: 0;
-}
-
-.tasks-panel .panel-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
 }
 
 .backups-panel {
@@ -356,15 +329,14 @@ body {
 }
 
 /* =========================================
-   Log Container - FILLS parent panel
+   Log Container
    ========================================= */
 .log-content {
     background-color: rgba(0, 0, 0, 0.5);
     border: 2px solid var(--color-border);
     box-shadow: inset 1px 1px 4px rgba(0, 0, 0, 0.6);
     padding: 8px;
-    flex: 1;               /* Fill all available vertical space */
-    min-height: 0;         /* Allow shrinking below content size */
+    height: 450px;
     overflow-y: auto;
     font-family: var(--font-minecraft-seven);
     font-size: 13px;
@@ -418,8 +390,7 @@ body {
     border: 2px solid var(--color-border);
     box-shadow: inset 1px 1px 4px rgba(0, 0, 0, 0.6);
     padding: 8px;
-    flex: 1;               /* Fill all available vertical space */
-    min-height: 0;         /* Allow shrinking */
+    height: 200px;
     overflow-y: auto;
     font-family: var(--font-minecraft-seven);
     font-size: 13px;
@@ -673,11 +644,6 @@ body {
    Responsive
    ========================================= */
 @media (max-width: 768px) {
-    .minecraft-ui {
-        height: auto;
-        min-height: 100vh;
-    }
-
     .content {
         grid-template-columns: 1fr;
         grid-template-rows: auto;
@@ -691,13 +657,19 @@ body {
     .logs-panel {
         grid-row: auto;
         grid-column: 1;
-        min-height: 400px;
+    }
+
+    .log-content {
+        height: 350px; /* Fixed height on mobile */
     }
 
     .tasks-panel {
         grid-row: auto;
         grid-column: 1;
-        min-height: 200px;
+    }
+
+    .tasks-content {
+        height: 180px; /* Fixed height on mobile */
     }
 
     .backups-panel {

@@ -69,7 +69,7 @@ async def install(plat: str, version: str, client: httpx.AsyncClient, server_dir
                 logger.info(f'{Colors.BOLD}{Colors.BLUE}Installing Bedrock Server...{Colors.END} | {size_in_MB}')
 
                 for item in zip_file.infolist():
-                    logger.debug(f'{Colors.GREY}Unzipping {Colors.BOLD}{item.filename}...{Colors.END}')
+                    # logger.debug(f'{Colors.GREY}Unzipping {Colors.BOLD}{item.filename}...{Colors.END}')
                     if item.filename in skip_items and (server_dir/item.filename).exists():
                         logger.debug(f'Skipping {Colors.BOLD}{item.filename}{Colors.END}')
                     else:

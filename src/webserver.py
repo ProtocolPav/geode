@@ -12,6 +12,9 @@ app = Sanic("geode")
 app.config.OAS_URL_PREFIX = "/api/docs"
 app.config.SWAGGER_UI_CONFIGURATION = {"docExpansion": "list"}
 
+app.config.CORS_ORIGINS = "http://localhost:3000,https://api.everthorn.net"
+app.config.CORS_METHODS = ["*"]
+
 
 class PlainFormatter(logging.Formatter):
     """Formatter that strips ANSI escape codes from log messages"""

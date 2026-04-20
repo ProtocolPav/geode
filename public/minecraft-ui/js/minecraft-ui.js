@@ -533,27 +533,182 @@ function updateButtonStates() {
         });
 }
 
-// Append a log line to the log container
+// ANSI color code mappings to CSS
+const ANSI_COLORS = {
+    // Standard foreground colors
+    30: 'color:#4e4e4e',  // Black (dark gray for visibility)
+    31: 'color:#cc0000',  // Red
+    32: 'color:#4e9a06',  // Green
+    33: 'color:#c4a000',  // Yellow
+    34: 'color:#3465a4',  // Blue
+    35: 'color:#75507b',  // Magenta
+    36: 'color:#06989a',  // Cyan
+    37: 'color:#d3d7cf',  // White
+    // Bright foreground colors
+    90: 'color:#555753',  // Bright Black
+    91: 'color:#ef2929',  // Bright Red
+    92: 'color:#8ae234',  // Bright Green
+    93: 'color:#fce94f',  // Bright Yellow
+    94: 'color:#729fcf',  // Bright Blue
+    95: 'color:#ad7fa8',  // Bright Magenta
+    96: 'color:#34e2e2',  // Bright Cyan
+    97: 'color:#eeeeec',  // Bright White
+};
+
+const ANSI_BG_COLORS = {
+    40: 'background:#4e4e4e',
+    41: 'background:#cc0000',
+    42: 'background:#4e9a06',
+    43: 'background:#c4a000',
+    44: 'background:#3465a4',
+    45: 'background:#75507b',
+    46: 'background:#06989a',
+    47: 'background:#d3d7cf',
+    100: 'background:#555753',
+    101: 'background:#ef2929',
+    102: 'background:#8ae234',
+    103: 'background:#fce94f',
+    104: 'background:#729fcf',
+    105: 'background:#ad7fa8',
+    106: 'background:#34e2e2',
+    107: 'background:#eeeeec',
+};
+
+/**
+ * Parses an ANSI-escaped string and returns a DocumentFragment
+ * with <span> elements styled per escape sequence.
+ */
+function ansiToHtml(text) {
+    const fragment = document.createDocumentFragment();
+    // Regex matches ESC[ ... m sequences
+    const ansiRegex = /\x1b\[([0-9;]*)m/g;
+
+    let lastIndex = 0;
+    let currentStyles = [];   // active CSS style strings
+    let bold = false;
+    let dim = false;
+    let italic = false;
+    let underline = false;
+
+    function flushText(rawText) {
+        if (!rawText) return;
+        const span = document.createElement('span');
+        const allStyles = [...currentStyles];
+        if (bold)      allStyles.push('font-weight:bold');
+        if (dim)       allStyles.push('opacity:0.6');
+        if (italic)    allStyles.push('font-style:italic');
+        if (underline) allStyles.push('text-decoration:underline');
+        if (allStyles.length) span.style.cssText = allStyles.join(';');
+        span.textContent = rawText;
+        fragment.appendChild(span);
+    }
+
+    let match;
+    while ((match = ansiRegex.exec(text)) !== null) {
+        // Flush any text before this escape sequence
+        flushText(text.slice(lastIndex, match.index));
+        lastIndex = match.index + match[0].length;
+
+        // Parse the codes (e.g. "1;32" → [1, 32])
+        const codes = match[1] === '' ? [0] : match[1].split(';').map(Number);
+
+        for (const code of codes) {
+            if (code === 0) {
+                // Reset all
+                currentStyles = [];
+                bold = dim = italic = underline = false;
+            } else if (code === 1) {
+                bold = true;
+            } else if (code === 2) {
+                dim = true;
+            } else if (code === 3) {
+                italic = true;
+            } else if (code === 4) {
+                underline = true;
+            } else if (code === 22) {
+                bold = false; dim = false;
+            } else if (code === 23) {
+                italic = false;
+            } else if (code === 24) {
+                underline = false;
+            } else if (ANSI_COLORS[code]) {
+                // Remove any existing foreground color
+                currentStyles = currentStyles.filter(s => !s.startsWith('color'));
+                currentStyles.push(ANSI_COLORS[code]);
+            } else if (ANSI_BG_COLORS[code]) {
+                currentStyles = currentStyles.filter(s => !s.startsWith('background'));
+                currentStyles.push(ANSI_BG_COLORS[code]);
+            }
+            // 256-color and truecolor (38;5;n / 38;2;r;g;b) are handled below
+        }
+
+        // Handle 256-color: ESC[38;5;<n>m and ESC[48;5;<n>m
+        if (codes[0] === 38 && codes[1] === 5 && codes[2] !== undefined) {
+            currentStyles = currentStyles.filter(s => !s.startsWith('color'));
+            currentStyles.push(`color:${ansi256ToHex(codes[2])}`);
+        } else if (codes[0] === 48 && codes[1] === 5 && codes[2] !== undefined) {
+            currentStyles = currentStyles.filter(s => !s.startsWith('background'));
+            currentStyles.push(`background:${ansi256ToHex(codes[2])}`);
+        }
+        // Handle truecolor: ESC[38;2;<r>;<g>;<b>m
+        else if (codes[0] === 38 && codes[1] === 2 && codes.length >= 5) {
+            currentStyles = currentStyles.filter(s => !s.startsWith('color'));
+            currentStyles.push(`color:rgb(${codes[2]},${codes[3]},${codes[4]})`);
+        } else if (codes[0] === 48 && codes[1] === 2 && codes.length >= 5) {
+            currentStyles = currentStyles.filter(s => !s.startsWith('background'));
+            currentStyles.push(`background:rgb(${codes[2]},${codes[3]},${codes[4]})`);
+        }
+    }
+
+    // Flush any remaining text after the last escape sequence
+    flushText(text.slice(lastIndex));
+    return fragment;
+}
+
+/**
+ * Converts a 256-color ANSI index to a hex color string.
+ */
+function ansi256ToHex(n) {
+    // Standard 16 colors
+    const base16 = [
+        '#000000','#800000','#008000','#808000','#000080','#800080','#008080','#c0c0c0',
+        '#808080','#ff0000','#00ff00','#ffff00','#0000ff','#ff00ff','#00ffff','#ffffff'
+    ];
+    if (n < 16) return base16[n];
+    // 6×6×6 color cube
+    if (n < 232) {
+        n -= 16;
+        const b = n % 6, g = Math.floor(n / 6) % 6, r = Math.floor(n / 36);
+        const c = v => v === 0 ? 0 : 55 + v * 40;
+        return `rgb(${c(r)},${c(g)},${c(b)})`;
+    }
+    // Grayscale ramp
+    const gray = 8 + (n - 232) * 10;
+    return `rgb(${gray},${gray},${gray})`;
+}
+
+// Append a log line to the log container (with ANSI support)
 function appendLogLine(text) {
     const logLine = document.createElement('div');
     logLine.className = 'log-line';
-    
-    // Add color classes based on log content
-    if (text.includes('[ERROR]') || text.includes('Exception') || text.includes('Error:')) {
-        logLine.classList.add('error');
-    } else if (text.includes('[WARN]') || text.includes('[WARNING]')) {
-        logLine.classList.add('warning');
-    } else if (text.includes('[INFO]')) {
-        logLine.classList.add('info');
-    }
-    
-    logLine.textContent = text;
+
+//    // Add semantic color classes based on log level keywords
+//    if (text.includes('[ERROR]') || text.includes('Exception') || text.includes('Error:')) {
+//        logLine.classList.add('error');
+//    } else if (text.includes('[WARN]') || text.includes('[WARNING]')) {
+//        logLine.classList.add('warning');
+//    } else if (text.includes('[INFO]')) {
+//        logLine.classList.add('info');
+//    }
+
+    // Render ANSI codes as styled spans
+    logLine.appendChild(ansiToHtml(text));
     elements.logContainer.appendChild(logLine);
-    
-    // Auto-scroll to the bottom
+
+    // Auto-scroll to bottom
     elements.logContainer.scrollTop = elements.logContainer.scrollHeight;
-    
-    // Limit the number of log lines (keep last 1000 lines)
+
+    // Limit log lines to last 1000
     const maxLogLines = 1000;
     while (elements.logContainer.childElementCount > maxLogLines) {
         elements.logContainer.removeChild(elements.logContainer.firstChild);

@@ -16,19 +16,6 @@ app.config.CORS_ORIGINS = "http://localhost:3000,https://api.everthorn.net"
 app.config.CORS_METHODS = ["*"]
 
 
-class PlainFormatter(logging.Formatter):
-    """Formatter that strips ANSI escape codes from log messages"""
-
-    def __init__(self, fmt=None, datefmt=None):
-        super().__init__(fmt, datefmt)
-        # Regex pattern to match ANSI escape codes
-        self.ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-
-    def format(self, record):
-        # Strip ANSI codes from the message
-        record.msg = self.ansi_escape.sub('', str(record.msg))
-        return super().format(record)
-
 logging.config.dictConfig({
     'version': 1,
     'disable_existing_loggers': False,
@@ -92,7 +79,6 @@ logging.config.dictConfig({
         'generic': {'class': 'sanic.logging.formatter.AutoFormatter'},
         'access': {'class': 'sanic.logging.formatter.AutoAccessFormatter'},
         'plain': {  # Add plain formatter without colors
-            "()": PlainFormatter,
             'format': '%(asctime)s [%(levelname)s] %(message)s',
             'datefmt': '%Y-%m-%d %H:%M:%S'
         }

@@ -46,6 +46,8 @@ async def get_map(request: Request, layer: str, zoomlevel: int, x: int, z: int):
     regionx = math.floor(x // 10)
     regionz = math.floor(z // 10)
 
+    zoomlevel -= 6
+
     if os.path.exists(f'../unmined/{layer}/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png'):
         return await sanic.file(f'../unmined/{layer}/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png', mime_type='image/png')
 

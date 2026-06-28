@@ -1,18 +1,14 @@
-FROM debian:bookworm-slim
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 ARG CLOUD_SERVICE='local'
 
-# Install Python and required system packages
+# Install required system packages
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
-    python3 python3-venv python3-pip \
     openssl \
     findutils \
     libicu-dev libcurl4 libcrypt1 && \
     rm -rf /var/lib/apt/lists/*
-
-# Copy uv binary from official image
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # Copy dependency files first (layer caching — only re-resolves if these change)
 COPY pyproject.toml uv.lock /geode/

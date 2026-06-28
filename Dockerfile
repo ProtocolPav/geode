@@ -1,26 +1,28 @@
-FROM debian:bookworm-slim
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 ARG CLOUD_SERVICE='local'
 
-# Install Python and required system packages
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
-    python3 python3-venv python3-pip \
-    openssl \
-    findutils \
-    libicu-dev libcurl4 libcrypt1 && \
-    rm -rf /var/lib/apt/lists/*
+## Install required system packages
+#RUN apt-get update && \
+#    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+#    openssl \
+#    findutils \
+#    libicu-dev libcurl4 libcrypt1 && \
+#    rm -rf /var/lib/apt/lists/*
 
-# Create and activate a virtual environment
-ENV VENV_PATH=/opt/venv
-RUN python3 -m venv $VENV_PATH
+# Copy dependency files first (layer caching — only re-resolves if these change)
+COPY pyproject.toml uv.lock /geode/
+COPY nexuscore-client /geode/nexuscore-client
 
-# Ensure venv Python/pip are preferred
-ENV PATH="$VENV_PATH/bin:$PATH"
+# Install dependencies
+RUN if [ "$CLOUD_SERVICE" = "gcloud" ]; then \
+        uv sync --frozen --no-dev --project /geode --extra gcloud; \
+    else \
+        uv sync --frozen --no-dev --project /geode; \
+    fi
 
 # Copy requirements and install into venv
-COPY . geode/
-RUN pip install --no-cache-dir -r geode/requirements/${CLOUD_SERVICE}.txt
+COPY . /geode/
 
 # Expose ports
 EXPOSE 19132/tcp
@@ -32,7 +34,8 @@ EXPOSE 8000
 # Set environment + workdir
 ENV PYTHONPATH="${PYTHONPATH}:/geode/"
 ENV CLOUD_SERVICE=${CLOUD_SERVICE}
+ENV UV_LINK_MODE=copy
 
 WORKDIR /geode
 
-CMD ["python3", "-u", "src/webserver.py"]
+CMD ["uv", "run", "--project", "/geode", "python", "-u", "./src/webserver.py"]

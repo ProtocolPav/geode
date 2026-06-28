@@ -8,6 +8,7 @@ import demoji
 import httpx
 from jproperties import Properties
 from sanic import InternalServerError
+from src.api_client import ManagedAPIClient
 from typing_extensions import Literal, Optional
 
 from src import installation
@@ -22,11 +23,16 @@ from src.models import EventParser
 
 from pyventus.events import EventLinker, AsyncIOEventEmitter
 
+from nexuscore.api.guilds import get_online_members_v1_guilds_me_online_get, create_connection_v1_guilds_me_connection_post
+from nexuscore.api.users import lookup_user_v1_guilds_me_users_lookup_get, partial_update_user_v1_guilds_me_users_thorny_id_patch
+from nexuscore.models import ConnectionIn, ConnectionInType, UserUpdate
+
 class BedrockServer:
     __process: asyncio.subprocess.Process | None
     __tasks: list[asyncio.Task]
     __event_emitter = AsyncIOEventEmitter()
     config: ConfigHandler = ConfigHandler()
+    api: ManagedAPIClient = ManagedAPIClient()
     events: EventLinker = EventLinker
     status: Literal['stopped', 'started', 'backup', 'map_update'] = 'stopped'
     executable: str
@@ -157,22 +163,22 @@ class BedrockServer:
         self.status = 'stopped'
 
     async def disconnect_all(self):
-        async with httpx.AsyncClient() as client:
-            sent_successfully = False
-            discord_guild_id = self.config['discord_relay']['discord_guild_id']
-            while not sent_successfully:
-                try:
-                    online = await client.get(f"http://nexuscore:8000/api/v0.2/guilds/{discord_guild_id}/online")
+        sent_successfully = False
+        while not sent_successfully:
+            try:
+                online = await get_online_members_v1_guilds_me_online_get.asyncio(self.api.get())
 
-                    logger.info(f"Disconnecting all Online Players: {len(online.json())}")
-                    for user in online.json():
-                        await client.post(f"http://nexuscore:8000/api/v0.2/events/connection",
-                                          json={'type': 'disconnect', 'thorny_id': user['thorny_id']})
-                    sent_successfully = True
+                logger.info(f"Disconnecting all Online Players: {len(online)}")
+                for user in online:
+                    await create_connection_v1_guilds_me_connection_post.asyncio(
+                        self.api.get(),
+                        body=ConnectionIn(thorny_id=user.thorny_id, type_=ConnectionInType.DISCONNECT)
+                    )
+                sent_successfully = True
 
-                except httpx.TimeoutException:
-                    logger.debug(f"TimeoutException raised while disconnecting all. Retrying in 30 seconds.")
-                    await asyncio.sleep(30)
+            except httpx.TimeoutException:
+                logger.debug(f"TimeoutException raised while disconnecting all. Retrying in 30 seconds.")
+                await asyncio.sleep(30)
 
     def emit(self, event_name: str, *args, **kwargs):
         self.__event_emitter.emit(event_name, self, *args, **kwargs)
@@ -246,12 +252,14 @@ class BedrockServer:
         self.online.append(gamertag)
 
         if xuid:
-            async with httpx.AsyncClient() as client:
-                thorny_user = await client.get(f'http://nexuscore:8000/api/v0.2/users/guild/611008530077712395/{gamertag}')
+            user = await lookup_user_v1_guilds_me_users_lookup_get.asyncio_detailed(self.api.get(), whitelist=gamertag)
 
-                if thorny_user.status_code == 200:
-                    await client.patch(f'http://nexuscore:8000/api/v0.2/users/{thorny_user.json()["thorny_id"]}',
-                                       json={'xuid': xuid})
+            if user.status_code == 200:
+                await partial_update_user_v1_guilds_me_users_thorny_id_patch.asyncio(
+                    user.parsed.thorny_id,
+                    client=self.api.get(),
+                    body=UserUpdate(xuid=xuid)
+                )
 
     @events.on('player.spawn')
     async def on_player_spawn(self, line: str, gamertag: str, xuid: Optional[str], pfid: Optional[str]):

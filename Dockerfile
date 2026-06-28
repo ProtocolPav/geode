@@ -11,16 +11,22 @@ RUN apt-get update && \
     libicu-dev libcurl4 libcrypt1 && \
     rm -rf /var/lib/apt/lists/*
 
-# Create and activate a virtual environment
-ENV VENV_PATH=/opt/venv
-RUN python3 -m venv $VENV_PATH
+# Copy uv binary from official image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Ensure venv Python/pip are preferred
-ENV PATH="$VENV_PATH/bin:$PATH"
+# Copy dependency files first (layer caching — only re-resolves if these change)
+COPY pyproject.toml uv.lock /geode/
+COPY nexuscore-client /geode/nexuscore-client
+
+# Install dependencies
+RUN if [ "$CLOUD_SERVICE" = "gcloud" ]; then \
+        uv sync --frozen --no-dev --project /geode --extra gcloud; \
+    else \
+        uv sync --frozen --no-dev --project /geode; \
+    fi
 
 # Copy requirements and install into venv
-COPY . geode/
-RUN pip install --no-cache-dir -r geode/requirements/${CLOUD_SERVICE}.txt
+COPY . /geode/
 
 # Expose ports
 EXPOSE 19132/tcp
@@ -33,6 +39,6 @@ EXPOSE 8000
 ENV PYTHONPATH="${PYTHONPATH}:/geode/"
 ENV CLOUD_SERVICE=${CLOUD_SERVICE}
 
-WORKDIR /geode
+WORKDIR /geode/src
 
-CMD ["python3", "-u", "src/webserver.py"]
+CMD ["uv", "run", "--project", "/geode", "python", "-u", "geode.py"]

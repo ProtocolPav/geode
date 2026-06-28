@@ -2,13 +2,11 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 ARG CLOUD_SERVICE='local'
 
-## Install required system packages
-#RUN apt-get update && \
-#    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
-#    openssl \
-#    findutils \
-#    libicu-dev libcurl4 libcrypt1 && \
-#    rm -rf /var/lib/apt/lists/*
+# Install required system packages
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+    libicu-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy dependency files first (layer caching — only re-resolves if these change)
 COPY pyproject.toml uv.lock /geode/

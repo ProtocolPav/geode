@@ -6,3 +6,4 @@ demoji==1.1.0
 pydantic==2.11.9
 pyyaml==6.0.2
 pyventus==0.7.1
+openapi-python-client==0.29.0

@@ -13,15 +13,12 @@ class _ScopedToken:
 
 class ManagedAPIClient:
     def __init__(self):
-        self._scopes: dict[int | None, _ScopedToken] = {}
-        # None key = master-scoped (no guild_id)
+        self._token: _ScopedToken | None = None
 
-    async def _refresh(self, guild_id: int | None) -> _ScopedToken:
+    async def _refresh(self) -> _ScopedToken:
         data = {"grant_type": "client_credentials",
                 "client_id": CLIENT_ID,
                 "client_secret": CLIENT_SECRET}
-        if guild_id is not None:
-            data["guild_id"] = str(guild_id)
 
         async with httpx.AsyncClient() as http:
             resp = await http.post(TOKEN_URL, data=data)
@@ -34,11 +31,12 @@ class ManagedAPIClient:
             base_url="http://nexuscore:8000/api",
             token=payload["access_token"]
         )
-        self._scopes[guild_id] = scoped
+        self._token = scoped
         return scoped
 
-    async def get(self, guild_id: int | None = None) -> AuthenticatedClient:
-        scoped = self._scopes.get(guild_id)
+    async def get(self) -> AuthenticatedClient:
+        scoped = self._token
+
         if scoped is None or time.time() >= scoped.expires_at - 30:
-            scoped = await self._refresh(guild_id)
+            scoped = await self._refresh()
         return scoped.client

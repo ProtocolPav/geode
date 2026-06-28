@@ -166,12 +166,12 @@ class BedrockServer:
         sent_successfully = False
         while not sent_successfully:
             try:
-                online = await get_online_members_v1_guilds_me_online_get.asyncio(self.api.get())
+                online = await get_online_members_v1_guilds_me_online_get.asyncio(client=await self.api.get())
 
                 logger.info(f"Disconnecting all Online Players: {len(online)}")
                 for user in online:
                     await create_connection_v1_guilds_me_connection_post.asyncio(
-                        self.api.get(),
+                        client=await self.api.get(),
                         body=ConnectionIn(thorny_id=user.thorny_id, type_=ConnectionInType.DISCONNECT)
                     )
                 sent_successfully = True
@@ -193,7 +193,7 @@ class BedrockServer:
         self.status = 'started'
         self.online = []
 
-        await RelayHandler.relay_start()
+        await RelayHandler.relay_start(await self.api.get())
         await self.disconnect_all()
 
     @events.on('server.stop')
@@ -210,7 +210,7 @@ class BedrockServer:
 
         self.__process.terminate()
 
-        await RelayHandler.relay_stop()
+        await RelayHandler.relay_stop(await self.api.get())
         self.online = []
         await self.disconnect_all()
         # Clean up pending tasks, like the server output, etc.
@@ -225,7 +225,7 @@ class BedrockServer:
         """
         await self.on_server_stop(line)
 
-        await RelayHandler.relay_crash()
+        await RelayHandler.relay_crash(await self.api.get())
 
     @events.on('server.version')
     async def on_server_version(self, line: str, version: str):
@@ -252,12 +252,12 @@ class BedrockServer:
         self.online.append(gamertag)
 
         if xuid:
-            user = await lookup_user_v1_guilds_me_users_lookup_get.asyncio_detailed(self.api.get(), whitelist=gamertag)
+            user = await lookup_user_v1_guilds_me_users_lookup_get.asyncio_detailed(client=await self.api.get(), whitelist=gamertag)
 
             if user.status_code == 200:
                 await partial_update_user_v1_guilds_me_users_thorny_id_patch.asyncio(
                     user.parsed.thorny_id,
-                    client=self.api.get(),
+                    client=await self.api.get(),
                     body=UserUpdate(xuid=xuid)
                 )
 
@@ -313,7 +313,7 @@ class BedrockServer:
 
     @events.on('preemption')
     async def on_preemption(self):
-        await RelayHandler.relay_preemption()
+        await RelayHandler.relay_preemption(await self.api.get())
 
         for player in self.online:
             await self.send_command(f'kick "{player}" by §l§uGeode§r due to server preemption')
@@ -332,7 +332,7 @@ class BedrockServer:
         await self.send_command(f'tellraw @a {{"rawtext": [{{"text": "{header}{processed_message}"}}]}}')
 
         if len(self.online) > 0:
-            await RelayHandler.relay_message(content)
+            await RelayHandler.relay_message(await self.api.get(), content)
 
     @events.on('broadcast.announcement')
     async def on_broadcast_announcement(self, content: str):

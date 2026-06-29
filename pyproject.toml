@@ -1,0 +1,41 @@
+[project]
+name = "geode"
+version = "1.0.0"
+requires-python = ">=3.12"
+dependencies = [
+    "demoji==1.1.0",
+    "httpx==0.28.1",
+    "jproperties==2.1.2",
+    "pydantic==2.11.9",
+    "pyventus==0.7.1",
+    "pyyaml==6.0.2",
+    "sanic==24.6.0",
+    "sanic-ext==24.12.0",
+    "nexuscore-client"
+]
+
+[project.optional-dependencies]
+gcloud = ["google-cloud-storage==3.3.1"]
+
+[project.scripts]
+generate-api = "scripts.generate_client:main"
+
+[tool.uv.workspace]
+members = [
+    "nexuscore-client",
+]
+
+[tool.uv.sources]
+nexuscore-client = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "openapi-python-client>=0.29.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]

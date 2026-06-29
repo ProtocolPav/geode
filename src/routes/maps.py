@@ -1,3 +1,4 @@
+import math
 import os
 
 import sanic
@@ -30,7 +31,7 @@ async def webpage_placeholder(_):
     return sanic.text("This route is served statically, see ../unmined/")
 
 
-@maps_blueprint.get('/<layer:str>/<zoomlevel:int>/<regionx:int>/<regionz:int>/<x:int>/<z:int>')
+@maps_blueprint.get('/<layer:str>/<zoomlevel:int>/<x:int>/<z:int>')
 @openapi.definition(
     response=[
         Response(
@@ -41,7 +42,12 @@ async def webpage_placeholder(_):
         Response(status=404, description="Not found"),
     ]
 )
-async def get_map(request: Request, layer: str, zoomlevel: int, regionx: int, regionz: int, x: int, z: int):
+async def get_map(request: Request, layer: str, zoomlevel: int, x: int, z: int):
+    regionx = math.floor(x // 10)
+    regionz = math.floor(z // 10)
+
+    zoomlevel -= 6
+
     if os.path.exists(f'../unmined/{layer}/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png'):
         return await sanic.file(f'../unmined/{layer}/tiles/zoom.{zoomlevel}/{regionx}/{regionz}/tile.{x}.{z}.png', mime_type='image/png')
 

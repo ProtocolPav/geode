@@ -5,6 +5,15 @@ from src.routes.controls import controls_blueprint
 from src.routes.info import information_blueprint
 from src.routes.maps import maps_blueprint
 from src.routes.messages import messages_blueprint
+from src.routes.minecraft_ui import minecraft_ui_blueprint, static_files_blueprint
 
-blueprints = [controls_blueprint, information_blueprint, backups_blueprint, messages_blueprint, maps_blueprint]
+blueprints = [
+    controls_blueprint, 
+    information_blueprint, 
+    backups_blueprint, 
+    messages_blueprint, 
+    maps_blueprint, 
+    minecraft_ui_blueprint,
+    static_files_blueprint
+]
 blueprint_group = Blueprint.group(url_prefix='/', *blueprints)

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geode - Minecraft Control Panel</title>
+    <link rel="stylesheet" href="/minecraft-ui/css/minecraft-ui.css">
+    <link rel="icon" href="/geode_logo.png">
+    <!-- Preload Minecraft fonts -->
+    <link rel="preload" href="/minecraft-ui/fonts/minecraft-ten.woff" as="font" type="font/woff" crossorigin>
+    <link rel="preload" href="/minecraft-ui/fonts/minecraft-seven.woff2" as="font" type="font/woff2" crossorigin>
+</head>
+<body>
+    <div class="minecraft-ui">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo-container">
+                <img src="../geode_logo.png" alt="Geode Logo" class="logo">
+                <h1 class="title">Geode Control Panel</h1>
+            </div>
+            <div class="server-status">
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Loading...</span>
+                </div>
+                <div class="server-info">
+                    <span class="uptime">Uptime: --:--:--</span>
+                    <span class="version">MC Version: --</span>
+                    <span class="geode-version">Geode: --</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="content">
+            <!-- Controls Section -->
+            <section class="panel control-panel">
+                <div class="panel-header">
+                    <h2>Server Controls</h2>
+                </div>
+                <div class="panel-content">
+                    <div class="button-group">
+                        <button id="start-btn" class="minecraft-btn">Start</button>
+                        <button id="stop-btn" class="minecraft-btn">Stop</button>
+                        <button id="restart-btn" class="minecraft-btn">Restart</button>
+                        <button id="kill-btn" class="minecraft-btn danger">Force Kill</button>
+                    </div>
+                    <div class="command-input">
+                        <input type="text" id="command-input" placeholder="Enter command...">
+                        <button id="send-command-btn" class="minecraft-btn">Send</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Logs Section -->
+            <section class="panel logs-panel">
+                <div class="panel-header">
+                    <h2>Server Logs</h2>
+                    <button id="clear-logs-btn" class="minecraft-btn small">Clear</button>
+                </div>
+                <div class="panel-content">
+                    <div id="log-container" class="log-content"></div>
+                </div>
+            </section>
+
+            <!-- Tasks Section -->
+            <section class="panel tasks-panel">
+                <div class="panel-header">
+                    <h2>Active Tasks</h2>
+                    <button id="refresh-tasks-btn" class="minecraft-btn small">Refresh</button>
+                </div>
+                <div class="panel-content">
+                    <div id="tasks-container" class="tasks-content">
+                        <p>No tasks available.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Backups Section -->
+            <section class="panel backups-panel">
+                <div class="panel-header">
+                    <h2>Backups</h2>
+                    <button id="create-backup-btn" class="minecraft-btn small">Create Backup</button>
+                </div>
+                <div class="panel-content">
+                    <div id="backups-container" class="backups-content">
+                        <p>No backups available.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Geode Minecraft Server Manager | Made with ♥ for Minecraft</p>
+        </footer>
+    </div>
+
+    <!-- Modal for confirmations -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="panel-header">
+                <h2 id="modal-title">Confirm Action</h2>
+                <span class="close-btn">&times;</span>
+            </div>
+            <div class="panel-content">
+                <p id="modal-message">Are you sure you want to perform this action?</p>
+                <div class="button-group">
+                    <button id="modal-confirm" class="minecraft-btn">Confirm</button>
+                    <button id="modal-cancel" class="minecraft-btn">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="/minecraft-ui/js/minecraft-ui.js"></script>
+</body>
+</html>

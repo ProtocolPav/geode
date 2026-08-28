@@ -60,7 +60,8 @@ class BackupHandler:
                 self.server_path / Path('allowlist.json'),
                 self.server_path / Path('permissions.json'),
                 self.server_path / Path('config/default/permissions.json'),
-                self.server_path / Path('config/default/variables.json')
+                self.server_path / Path('config/default/variables.json'),
+                self.server_path / Path('config/default/secrets.json'),
             ]
 
             extra_files = extra_files + server_files

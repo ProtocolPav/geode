@@ -81,8 +81,8 @@ class BackupCoordinator:
         if self._lock.locked():
             msg = f"Backup already in progress ({self.state.value}); skipping {kind}"
             logger.warning(f"{Colors.YELLOW}{msg}{Colors.END}")
-            await self._relay_error("Backup Skipped — Concurrent Hold",
-                                    f"**Requested:** `{kind}`\n**State:** `{self.state.value}`\nAnother save hold is active; skipping.")
+            # await self._relay_error("Backup Skipped — Concurrent Hold",
+            #                         f"**Requested:** `{kind}`\n**State:** `{self.state.value}`\nAnother save hold is active; skipping.")
             return BackupResult(BackupResultType.SKIPPED, kind, "concurrent")
 
         # Also guard via status for API compat (Geode.initiate_save previously checked status)

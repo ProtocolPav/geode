@@ -40,6 +40,8 @@ class BedrockServer:
     start_time: datetime
     version: str
     online: list[str] = []
+    # Queue-free wait_for support for Option A coordinator (evolves to Queue in Option B)
+    _waiters: dict[str, list[asyncio.Future]]  # event_name -> futures
 
     def __init__(self):
         if platform.system().lower() == 'linux' and platform.machine().lower() == 'x86_64':
@@ -48,6 +50,7 @@ class BedrockServer:
             raise OSError('Geode only supports x86_64 Debian-based Linux distributions, we advise you to run Geode via Docker.')
 
         self.__process = None
+        self._waiters = {}
 
         self.parsers = [
             # Player Events
@@ -182,6 +185,29 @@ class BedrockServer:
 
     def emit(self, event_name: str, *args, **kwargs):
         self.__event_emitter.emit(event_name, self, *args, **kwargs)
+        # Fulfill wait_for futures for coordinator (Option A adapter, becomes Queue in Option B)
+        waiters = self._waiters.get(event_name)
+        if waiters:
+            # copy to avoid mutation during iteration
+            for fut in list(waiters):
+                if not fut.done():
+                    # payload is (args, kwargs) — backup.query passes *file_list as args
+                    fut.set_result((args, kwargs))
+
+    async def wait_for(self, event_name: str, timeout: float) -> tuple[tuple, dict]:
+        """Wait for next emit of event_name with timeout. Returns (args, kwargs)."""
+        loop = asyncio.get_running_loop()
+        fut: asyncio.Future = loop.create_future()
+        self._waiters.setdefault(event_name, []).append(fut)
+        try:
+            return await asyncio.wait_for(fut, timeout)
+        finally:
+            # cleanup
+            lst = self._waiters.get(event_name)
+            if lst and fut in lst:
+                lst.remove(fut)
+            if lst == []:
+                self._waiters.pop(event_name, None)
 
     @events.on('server.start')
     async def on_server_start(self, line: str):
@@ -285,30 +311,13 @@ class BedrockServer:
         """
         self.online.remove(gamertag)
 
-    @events.on('backup.hold')
-    async def on_backup_hold(self, line: str):
-        await self.send_command('save query')
-
-    @events.on('backup.query')
-    async def on_backup_query(self, line: str, *file_list: tuple):
-        backup_handler = BackupHandler(file_list, self.properties['level-name'])
-
-        try:
-            if self.status == 'map_update':
-                self.emit('broadcast.announcement', f'A Map Update is in progress. Expect reduced server performance.')
-                await backup_handler.map_update()
-                self.emit('broadcast.message', f'Map Update complete!')
-            elif self.status == 'backup':
-                await backup_handler.backup()
-        finally:
-            await self.send_command('save resume')
-
-    @events.on('backup.error')
-    async def on_backup_error(self, line: str):
-        await self.send_command('save query')
+    # Backup flow now owned by BackupCoordinator (Option A). Keep only status sync.
+    # Parsers still emit backup.hold/query/error/resume for coordinator.wait_for.
+    # Old handlers that triggered duplicate backups are removed.
 
     @events.on('backup.resume')
     async def on_backup_resume(self, line: str):
+        # Idempotent status sync — coordinator also sets started in finally, but keep for manual resume.
         self.status = 'started'
 
     @events.on('preemption')

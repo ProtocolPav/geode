@@ -71,3 +71,20 @@ class RelayHandler:
                          RelayModelType.OTHER,
                         "Server Announcement",
                         content)
+
+    @classmethod
+    async def relay_backup_timeout(cls, client: AuthenticatedClient, save_type: str, duration: int):
+        await cls._relay(client,
+                         RelayModelType.CRASH,
+                        "Backup Failed — Hold Timeout",
+                        f"**Type:** `{save_type}`\n**Duration:** `{duration}s`\n"
+                        f"**Action:** `save resume` was forced and the backup was **skipped** because `save query` never returned a file list. "
+                        f"The held save data was discarded to prevent infinite growth.\n"
+                        f"-# *Powered by **Geode***")
+
+    @classmethod
+    async def relay_backup_error(cls, client: AuthenticatedClient, title: str, content: str):
+        await cls._relay(client,
+                         RelayModelType.CRASH,
+                        title,
+                        f"{content}\n-# *Powered by **Geode***")

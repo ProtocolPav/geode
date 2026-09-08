@@ -8,6 +8,7 @@ from src.handlers.restoration import RestorationHandler
 from src.models.messages import DiscordMessage, Message
 from src.server import BedrockServer
 from src.handlers.config import ConfigHandler
+from src.services.backup_coordinator import BackupCoordinator
 
 from sanic.log import logger, Colors
 
@@ -24,6 +25,9 @@ class Geode:
 
         logger.info(f'Running Geode {Colors.PURPLE}{self.version}{Colors.END}')
         self.server = server
+        # Coordinator owns backup hold lifecycle (global hold, retries, timeout, relay)
+        # Easiest for future Option B: coordinator wraps BdsAdapter.wait_for, not direct emit
+        self.backup_coordinator = BackupCoordinator(server)
 
     async def schedule_message(self, message: Message):
         async def send(geode: Geode):
@@ -45,11 +49,16 @@ class Geode:
         await self.server.start()
 
     async def initiate_save(self, save_type: Literal['backup', 'map_update']):
-        if self.server.status != 'started':
-            raise Exception(f'Server cannot launch a {save_type}. Current state: {self.server.status}. Expected: started')
-
-        await self.server.send_command('save hold')
-        self.server.status = save_type
+        # Delegate to coordinator — single owner for hold→query→backup→resume
+        # Coordinator handles global hold lock, status alias, timeouts, retries, relay, and ensures resume
+        result = await self.backup_coordinator.run(save_type)
+        if result.type == 'skipped' and result.reason == 'concurrent':
+            # Keep API compat: previously raised Exception on concurrent; now raise for callers that expect it
+            raise Exception(f'Server cannot launch a {save_type}. A save is already in progress ({self.server.status})')
+        if result.type == 'failed':
+            raise Exception(f'Backup {save_type} failed: {result.reason}')
+        # On skipped hold_timeout, we do NOT raise — skip backup as requested, hold already resumed
+        return result
 
     async def restore_backup(self, backup_path: str):
         logger.info(f'Restoring backup {Colors.YELLOW}{backup_path}{Colors.END}')

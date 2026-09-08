@@ -24,6 +24,9 @@ backup:
   include_addons: true # Backup the addons that are on your world
   include_server_files: true # Backup server files like server.properties and allowlist.json
 
+  hold_timeout_seconds: 45 # Maximum time to hold the world save before forcing resume (prevents infinite hold)
+  query_retry_interval_seconds: 2.5 # Interval between save query retries when file list is not ready
+
 # WARNING: Ensure cloud credentials are set correctly to avoid backup failures.
 
 # Discord Relay Configuration

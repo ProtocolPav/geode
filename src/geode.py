@@ -86,6 +86,7 @@ class Geode:
         await self.initiate_save('backup')
 
     # Temporary change - map Updates to happen every 2.5 hours
-    @looper.loop('Map Render Loop', 3600*2.5)
-    async def map_render_loop(self):
-        await self.initiate_save('map_update')
+    # TEMP : DISABLE MAP UPDATES ALTOGETHER DUE TO HANGING
+    # @looper.loop('Map Render Loop', 3600*2.5)
+    # async def map_render_loop(self):
+    #     await self.initiate_save('map_update')

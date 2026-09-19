@@ -81,11 +81,11 @@ class Geode:
         logger.info('Backup restoration complete.')
         await self.server.start()
 
-    @looper.loop('Backup Loop', 3600, 60)
+    @looper.loop('Backup Loop', 3600, 30)
     async def backup_loop(self):
         await self.initiate_save('backup')
 
     # Temporary change - map Updates to happen every 2.5 hours
-    @looper.loop('Map Render Loop', 3600*2.5)
+    @looper.loop('Map Render Loop', 3600*2.5, 90)
     async def map_render_loop(self):
         await self.initiate_save('map_update')

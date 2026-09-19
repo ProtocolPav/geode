@@ -42,6 +42,12 @@ class BackupCoordinator:
     Uses BdsAdapter.wait_for for timeout handling (hold timeout, silent query not-ready).
     """
 
+    # Backstop so a hung map render / backup can never hold the save lock forever.
+    # BackupHandler.__run_unmined has its own 20-min timeout + process cleanup;
+    # this outer timeout guarantees run() itself always returns and finally resumes.
+    MAP_UPDATE_TIMEOUT_SECONDS = 20 * 60
+    BACKUP_TIMEOUT_SECONDS = 20 * 60
+
     def __init__(self, server):
         self._server = server
         self._bds = BdsAdapter(server)
@@ -81,8 +87,6 @@ class BackupCoordinator:
         if self._lock.locked():
             msg = f"Backup already in progress ({self.state.value}); skipping {kind}"
             logger.warning(f"{Colors.YELLOW}{msg}{Colors.END}")
-            # await self._relay_error("Backup Skipped — Concurrent Hold",
-            #                         f"**Requested:** `{kind}`\n**State:** `{self.state.value}`\nAnother save hold is active; skipping.")
             return BackupResult(BackupResultType.SKIPPED, kind, "concurrent")
 
         # Also guard via status for API compat (Geode.initiate_save previously checked status)
@@ -184,16 +188,29 @@ class BackupCoordinator:
                     await self._relay_timeout(kind, elapsed)
                     return BackupResult(BackupResultType.SKIPPED, kind, "hold_timeout")
 
-                # Executing backup/map
+                # Executing backup/map — bounded so a hung render can never
+                # wedge the global hold lock (finally still resumes + frees).
                 self.state = BackupState.EXECUTING
                 handler = BackupHandler(files, self._server.properties['level-name'])
                 try:
                     if kind == 'map_update':
                         self._server.emit('broadcast.announcement', f'A Map Update is in progress. Expect reduced server performance.')
-                        await handler.map_update()
+                        try:
+                            await asyncio.wait_for(handler.map_update(), timeout=self.MAP_UPDATE_TIMEOUT_SECONDS)
+                        except asyncio.TimeoutError:
+                            msg = f"Map update timed out after {self.MAP_UPDATE_TIMEOUT_SECONDS // 60}m — render tasks cleared, forcing save resume"
+                            logger.error(f"{Colors.RED}[Backup] {msg}{Colors.END}")
+                            await self._relay_error("Map Update Timed Out", f"**Type:** `{kind}`\n**Error:** `{msg}`")
+                            return BackupResult(BackupResultType.FAILED, kind, "map_update_timeout", files)
                         self._server.emit('broadcast.message', f'Map Update complete!')
                     else:
-                        await handler.backup()
+                        try:
+                            await asyncio.wait_for(handler.backup(), timeout=self.BACKUP_TIMEOUT_SECONDS)
+                        except asyncio.TimeoutError:
+                            msg = f"Backup timed out after {self.BACKUP_TIMEOUT_SECONDS // 60}m — forcing save resume"
+                            logger.error(f"{Colors.RED}[Backup] {msg}{Colors.END}")
+                            await self._relay_error("Backup Timed Out", f"**Type:** `{kind}`\n**Error:** `{msg}`")
+                            return BackupResult(BackupResultType.FAILED, kind, "backup_timeout", files)
                 except Exception as e:
                     msg = f"Backup ({kind}) failed: {e.__class__.__name__}: {e}"
                     logger.error(f"{Colors.RED}{msg}{Colors.END}")

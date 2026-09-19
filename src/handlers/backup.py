@@ -11,6 +11,9 @@ from src.handlers.config import ConfigHandler
 from src.cloud_services.base import get_cloud_service
 
 class BackupHandler:
+    # Hard ceiling for a full map render (all dimensions in parallel).
+    # Guarantees the save hold is never stuck forever if unmined freezes.
+    MAP_RENDER_TIMEOUT_SECONDS = 20 * 60
     def __init__(self, file_list: tuple, level_name: str):
         self.file_list = file_list
         self.level_name = level_name
@@ -140,7 +143,60 @@ class BackupHandler:
         return f'{backup_type}/{relative_path}'
 
     @staticmethod
-    async def __run_unmined(world_path: Path):
+    async def _stream_process_output(proc: asyncio.subprocess.Process, name: str):
+        """Drain + log unmined stdout/stderr line-by-line.
+
+        Must run concurrently with wait(): otherwise the OS pipe buffer
+        fills up, the child blocks on write, and wait() never returns
+        (the "map update freezes" hang).
+        """
+        try:
+            assert proc.stdout is not None
+            while True:
+                line = await proc.stdout.readline()
+                if not line:
+                    break
+                try:
+                    text = line.decode(errors='replace').rstrip()
+                except Exception:
+                    text = repr(line)
+                if text:
+                    logger.info(f'[Map][{name}] {text}')
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.warning(f'[Map][{name}] output streaming failed: {e.__class__.__name__}: {e}')
+
+    @staticmethod
+    async def _terminate_process(proc: asyncio.subprocess.Process, name: str):
+        """Best-effort terminate -> kill a hung unmined process."""
+        try:
+            if proc.returncode is not None:
+                return
+            logger.warning(f'[Map][{name}] terminating hung render (pid={proc.pid})...')
+            proc.terminate()
+            try:
+                await asyncio.wait_for(proc.wait(), timeout=30)
+            except asyncio.TimeoutError:
+                logger.warning(f'[Map][{name}] did not exit after terminate, killing (pid={proc.pid})...')
+                try:
+                    proc.kill()
+                except ProcessLookupError:
+                    pass
+                try:
+                    await asyncio.wait_for(proc.wait(), timeout=15)
+                except asyncio.TimeoutError:
+                    logger.error(f'[Map][{name}] process still alive after kill (pid={proc.pid})')
+        except ProcessLookupError:
+            pass
+        except Exception as e:
+            logger.warning(f'[Map][{name}] terminate failed: {e.__class__.__name__}: {e}')
+
+    @staticmethod
+    async def __run_unmined(world_path: Path, timeout_seconds: float | None = None):
+        if timeout_seconds is None:
+            timeout_seconds = BackupHandler.MAP_RENDER_TIMEOUT_SECONDS
+
         base_cmd = f"../unmined/unmined-cli web render --world='{world_path}'"
 
         # Make dynamic area based on nexuscore border sizes
@@ -148,7 +204,7 @@ class BackupHandler:
             "--imageformat=png",
             "--zoomin=2",
             "--area='b((2111, 2111), (-2112, -2112))'",
-            "--log-level=error",
+            "--log-level=warning",
             "--shadows=3d",
             "--chunkprocessors=1"
         ])
@@ -162,26 +218,93 @@ class BackupHandler:
             'the_end': f"{base_cmd} --output='../unmined/the_end' --dimension=end --mapsettings='./map/End.json' {common_params}"
         }
 
+        processes: dict[str, asyncio.subprocess.Process] = {}
+        stream_tasks: list[asyncio.Task] = []
+        start_time = datetime.now()
         try:
-            processes = [await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT) for cmd in render_tasks.values()]
+            for name, cmd in render_tasks.items():
+                logger.info(f'[Map][{name}] starting render: {cmd}')
+                proc = await asyncio.create_subprocess_shell(
+                    cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.STDOUT,
+                )
+                processes[name] = proc
+                logger.info(f'[Map][{name}] spawned (pid={proc.pid})')
+                stream_tasks.append(
+                    asyncio.create_task(
+                        BackupHandler._stream_process_output(proc, name),
+                        name=f'map-render-log-{name}',
+                    )
+                )
 
-            logger.info(f'Starting {len(render_tasks)} Map Renders...')
-            start_time = datetime.now()
+            timeout_mins = timeout_seconds / 60
+            logger.info(f'Starting {len(render_tasks)} Map Renders (timeout={timeout_mins:.1f}m)...')
+            logger.info(f'All Renders: {", ".join(render_tasks.keys())}')
 
-            results = await asyncio.gather(*[p.wait() for p in processes], return_exceptions=True)
+            try:
+                results = await asyncio.wait_for(
+                    asyncio.gather(*[p.wait() for p in processes.values()]),
+                    timeout=timeout_seconds,
+                )
+            except asyncio.TimeoutError:
+                elapsed = datetime.now() - start_time
+                logger.error(
+                    f'{Colors.RED}[Map] Render timed out after {int(elapsed.total_seconds() // 60)}m '
+                    f'{int(elapsed.total_seconds() % 60)}s (limit={timeout_mins:.0f}m) — '
+                    f'terminating {len(processes)} unmined process(es) to free save hold{Colors.END}'
+                )
+                await asyncio.gather(
+                    *[BackupHandler._terminate_process(p, n) for n, p in processes.items()],
+                    return_exceptions=True,
+                )
+                raise TimeoutError(f'Map render exceeded {timeout_mins:.0f} minute timeout; processes terminated')
 
-            successful = [list(render_tasks.keys())[i] for i, result in enumerate(results) if result == 0]
+            # Ensure all streamed output is drained before reporting
+            if stream_tasks:
+                await asyncio.gather(*stream_tasks, return_exceptions=True)
+
+            names = list(render_tasks.keys())
+            successful = [names[i] for i, result in enumerate(results) if result == 0]
+            failed = [(names[i], results[i]) for i in range(len(names)) if results[i] != 0]
+            for layer, code in failed:
+                logger.error(f'[Map][{layer}] exited with code {code}')
 
             duration = datetime.now() - start_time
-            minutes = duration.seconds // 60
-            seconds = duration.seconds % 60
+            minutes = int(duration.total_seconds() // 60)
+            seconds = int(duration.total_seconds() % 60)
 
             logger.info(f'Map Render completed in {minutes}m {seconds}s. Completed: {len(successful)}/{len(results)}')
             logger.info(f'All Renders: {", ".join(render_tasks.keys())}')
-            logger.info(f'Completed Renders: {", ".join(successful)}')
+            logger.info(f'Completed Renders: {", ".join(successful) if successful else "(none)"}')
 
+            if failed:
+                logger.error(f'[Map] Incomplete render: {len(successful)}/{len(results)} succeeded; failed layers will be retried next cycle')
+
+        except (asyncio.CancelledError, TimeoutError):
+            # Always clear tasks + processes so the coordinator lock/hold frees up.
+            for t in stream_tasks:
+                if not t.done():
+                    t.cancel()
+            if stream_tasks:
+                await asyncio.gather(*stream_tasks, return_exceptions=True)
+            await asyncio.gather(
+                *[BackupHandler._terminate_process(p, n) for n, p in processes.items()],
+                return_exceptions=True,
+            )
+            raise
         except Exception as e:
+            for t in stream_tasks:
+                if not t.done():
+                    t.cancel()
+            if stream_tasks:
+                await asyncio.gather(*stream_tasks, return_exceptions=True)
+            await asyncio.gather(
+                *[BackupHandler._terminate_process(p, n) for n, p in processes.items() if p.returncode is None],
+                return_exceptions=True,
+            )
             logger.error(f'Map update failed: {e.__class__.__name__} - {str(e)}')
+            raise
 
     async def backup(self):
         with tempfile.TemporaryDirectory(dir=self.backup_path) as temp_dir:

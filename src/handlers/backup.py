@@ -4,6 +4,7 @@ import shutil
 import signal
 import tempfile
 import zipfile
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -372,18 +373,61 @@ class BackupHandler:
                 except Exception:
                     pass
 
-    async def backup(self):
-        with tempfile.TemporaryDirectory(dir=self.backup_path) as temp_dir:
-            temp_dir_path = Path(temp_dir)
+    @staticmethod
+    @asynccontextmanager
+    async def _temp_work_dir(base: Path):
+        """Temp dir whose cleanup can never fail the caller.
 
+        Removing a multi-GB world copy via shutil.rmtree can transiently
+        fail (e.g. ENOTEMPTY if a lingering child still touches the tree,
+        or flaky overlayfs behavior in Docker). Without this guard, a
+        fully successful backup/render would be reported as FAILED and the
+        loop would immediately re-run it.
+        """
+        tmp = tempfile.TemporaryDirectory(dir=base, ignore_cleanup_errors=True)
+        try:
+            yield Path(tmp.name)
+        except Exception:
+            # Body raised: the backup/render genuinely failed — attempt
+            # cleanup, then let the original error propagate.
+            try:
+                tmp.cleanup()
+            except Exception as e:
+                logger.warning(f'Temp work dir cleanup failed after error: {e.__class__.__name__}: {e} ({tmp.name})')
+            raise
+        else:
+            # Body succeeded: cleanup must never fail the result.
+            try:
+                tmp.cleanup()
+            except Exception as e:
+                logger.warning(f'Temp work dir cleanup failed (result preserved): {e.__class__.__name__}: {e} ({tmp.name})')
+        finally:
+            leftover = Path(tmp.name)
+            if leftover.exists():
+                try:
+                    entries = [str(p.relative_to(leftover)) for p in leftover.rglob('*')]
+                    logger.warning(
+                        f'Temp work dir not fully removed ({len(entries)} leftover entries, '
+                        f'e.g. {entries[:10]}); retrying removal in background: {leftover}'
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f'Temp work dir not fully removed; retrying removal in background: '
+                        f'{leftover} ({e.__class__.__name__}: {e})'
+                    )
+                try:
+                    await asyncio.to_thread(shutil.rmtree, leftover, ignore_errors=True)
+                except Exception as e:
+                    logger.warning(f'Background removal of temp work dir failed: {e.__class__.__name__}: {e} ({leftover})')
+
+    async def backup(self):
+        async with self._temp_work_dir(self.backup_path) as temp_dir_path:
             await asyncio.to_thread(self.__copy_files_to_dir, temp_dir_path)
             await asyncio.to_thread(self.__copy_extra_files, temp_dir_path)
             zip_file_name = await asyncio.to_thread(self.__zip_files, temp_dir_path)
             await asyncio.to_thread(self.__upload_to_cloud, temp_dir_path, zip_file_name)
 
     async def map_update(self):
-        with tempfile.TemporaryDirectory(dir=self.backup_path) as temp_dir:
-            temp_dir_path = Path(temp_dir)
-
+        async with self._temp_work_dir(self.backup_path) as temp_dir_path:
             level_path: Path = await asyncio.to_thread(self.__copy_files_to_dir, temp_dir_path)
             await self.__run_unmined('..' / level_path)

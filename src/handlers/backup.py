@@ -1,5 +1,7 @@
 import asyncio
+import os
 import shutil
+import signal
 import tempfile
 import zipfile
 from datetime import datetime
@@ -13,7 +15,11 @@ from src.cloud_services.base import get_cloud_service
 class BackupHandler:
     # Hard ceiling for a full map render (all dimensions in parallel).
     # Guarantees the save hold is never stuck forever if unmined freezes.
-    MAP_RENDER_TIMEOUT_SECONDS = 20 * 60
+    MAP_RENDER_TIMEOUT_SECONDS = 60 * 60
+    # Append-only render log on the persisted /server volume (survives
+    # container takedowns; never truncated or rotated) — keeps the noisy
+    # unmined output off the main log stream.
+    MAP_RENDER_LOG_FILE = Path('../server/logs/map-render.log')
     def __init__(self, file_list: tuple, level_name: str):
         self.file_list = file_list
         self.level_name = level_name
@@ -143,12 +149,13 @@ class BackupHandler:
         return f'{backup_type}/{relative_path}'
 
     @staticmethod
-    async def _stream_process_output(proc: asyncio.subprocess.Process, name: str):
-        """Drain + log unmined stdout/stderr line-by-line.
+    async def _stream_process_output(proc: asyncio.subprocess.Process, name: str, sink):
+        """Drain unmined stdout/stderr line-by-line into the render log file.
 
         Must run concurrently with wait(): otherwise the OS pipe buffer
         fills up, the child blocks on write, and wait() never returns
-        (the "map update freezes" hang).
+        (the "map update freezes" hang). Lines go to `sink` (the dedicated
+        render log file), NOT the main log stream.
         """
         try:
             assert proc.stdout is not None
@@ -161,7 +168,12 @@ class BackupHandler:
                 except Exception:
                     text = repr(line)
                 if text:
-                    logger.info(f'[Map][{name}] {text}')
+                    try:
+                        await sink(f'[{name}] {text}')
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:
+                        logger.warning(f'[Map][{name}] render-log write failed: {e.__class__.__name__}: {e}')
         except asyncio.CancelledError:
             raise
         except Exception as e:
@@ -169,33 +181,69 @@ class BackupHandler:
 
     @staticmethod
     async def _terminate_process(proc: asyncio.subprocess.Process, name: str):
-        """Best-effort terminate -> kill a hung unmined process."""
+        """Best-effort terminate -> kill a hung unmined process tree.
+
+        Renders are spawned with start_new_session=True, so killpg takes
+        down the shell wrapper AND the unmined child (plain terminate()
+        would only kill the shell and orphan unmined-cli).
+        """
         try:
             if proc.returncode is not None:
                 return
             logger.warning(f'[Map][{name}] terminating hung render (pid={proc.pid})...')
-            proc.terminate()
+            try:
+                os.killpg(proc.pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
             try:
                 await asyncio.wait_for(proc.wait(), timeout=30)
+                return
             except asyncio.TimeoutError:
-                logger.warning(f'[Map][{name}] did not exit after terminate, killing (pid={proc.pid})...')
+                pass
+            logger.warning(f'[Map][{name}] did not exit after terminate, killing (pid={proc.pid})...')
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
                 try:
                     proc.kill()
                 except ProcessLookupError:
                     pass
-                try:
-                    await asyncio.wait_for(proc.wait(), timeout=15)
-                except asyncio.TimeoutError:
-                    logger.error(f'[Map][{name}] process still alive after kill (pid={proc.pid})')
+            try:
+                await asyncio.wait_for(proc.wait(), timeout=15)
+            except asyncio.TimeoutError:
+                logger.error(f'[Map][{name}] process still alive after kill (pid={proc.pid})')
         except ProcessLookupError:
             pass
         except Exception as e:
             logger.warning(f'[Map][{name}] terminate failed: {e.__class__.__name__}: {e}')
 
     @staticmethod
-    async def __run_unmined(world_path: Path, timeout_seconds: float | None = None):
+    async def __run_unmined(world_path: Path, timeout_seconds: float | None = None, log_file: Path | None = None):
         if timeout_seconds is None:
             timeout_seconds = BackupHandler.MAP_RENDER_TIMEOUT_SECONDS
+        if log_file is None:
+            log_file = BackupHandler.MAP_RENDER_LOG_FILE
+
+        # Append-only render log on the persisted volume: never truncated,
+        # so history survives container takedowns. Falls back to the main
+        # log stream only if the file can't be opened.
+        render_log = None
+        try:
+            log_file.parent.mkdir(parents=True, exist_ok=True)
+            render_log = open(log_file, 'a', encoding='utf-8', buffering=1)
+        except Exception as e:
+            logger.warning(f'[Map] Could not open render log {log_file}: {e.__class__.__name__}: {e} — falling back to main log')
+            render_log = None
+        write_lock = asyncio.Lock()
+
+        async def _render_log(line: str):
+            entry = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} [Map] {line}"
+            if render_log is None:
+                logger.info(entry)
+                return
+            async with write_lock:
+                render_log.write(entry + '\n')
+                render_log.flush()
 
         base_cmd = f"../unmined/unmined-cli web render --world='{world_path}'"
 
@@ -204,7 +252,7 @@ class BackupHandler:
             "--imageformat=png",
             "--zoomin=2",
             "--area='b((2111, 2111), (-2112, -2112))'",
-            "--log-level=warning",
+            "--log-level=debug",
             "--shadows=3d",
             "--chunkprocessors=1"
         ])
@@ -222,25 +270,29 @@ class BackupHandler:
         stream_tasks: list[asyncio.Task] = []
         start_time = datetime.now()
         try:
+            timeout_mins = timeout_seconds / 60
+            await _render_log(f'===== Render started (world={world_path}, timeout={timeout_mins:.0f}m) =====')
+            logger.info(f'Starting {len(render_tasks)} Map Renders (timeout={timeout_mins:.0f}m). Detailed log: {log_file}')
+            logger.info(f'All Renders: {", ".join(render_tasks.keys())}')
+
             for name, cmd in render_tasks.items():
-                logger.info(f'[Map][{name}] starting render: {cmd}')
+                await _render_log(f'[{name}] starting render: {cmd}')
                 proc = await asyncio.create_subprocess_shell(
                     cmd,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT,
+                    # New process group per render so timeout cleanup can
+                    # kill the whole tree (shell + unmined child) via killpg.
+                    start_new_session=True,
                 )
                 processes[name] = proc
-                logger.info(f'[Map][{name}] spawned (pid={proc.pid})')
+                await _render_log(f'[{name}] spawned (pid={proc.pid})')
                 stream_tasks.append(
                     asyncio.create_task(
-                        BackupHandler._stream_process_output(proc, name),
+                        BackupHandler._stream_process_output(proc, name, _render_log),
                         name=f'map-render-log-{name}',
                     )
                 )
-
-            timeout_mins = timeout_seconds / 60
-            logger.info(f'Starting {len(render_tasks)} Map Renders (timeout={timeout_mins:.1f}m)...')
-            logger.info(f'All Renders: {", ".join(render_tasks.keys())}')
 
             try:
                 results = await asyncio.wait_for(
@@ -249,11 +301,13 @@ class BackupHandler:
                 )
             except asyncio.TimeoutError:
                 elapsed = datetime.now() - start_time
-                logger.error(
-                    f'{Colors.RED}[Map] Render timed out after {int(elapsed.total_seconds() // 60)}m '
+                timeout_msg = (
+                    f'Render timed out after {int(elapsed.total_seconds() // 60)}m '
                     f'{int(elapsed.total_seconds() % 60)}s (limit={timeout_mins:.0f}m) — '
-                    f'terminating {len(processes)} unmined process(es) to free save hold{Colors.END}'
+                    f'terminating {len(processes)} unmined process(es) to free save hold'
                 )
+                await _render_log(timeout_msg)
+                logger.error(f'{Colors.RED}[Map] {timeout_msg}{Colors.END}')
                 await asyncio.gather(
                     *[BackupHandler._terminate_process(p, n) for n, p in processes.items()],
                     return_exceptions=True,
@@ -268,18 +322,19 @@ class BackupHandler:
             successful = [names[i] for i, result in enumerate(results) if result == 0]
             failed = [(names[i], results[i]) for i in range(len(names)) if results[i] != 0]
             for layer, code in failed:
-                logger.error(f'[Map][{layer}] exited with code {code}')
+                await _render_log(f'[{layer}] exited with code {code}')
 
             duration = datetime.now() - start_time
             minutes = int(duration.total_seconds() // 60)
             seconds = int(duration.total_seconds() % 60)
-
-            logger.info(f'Map Render completed in {minutes}m {seconds}s. Completed: {len(successful)}/{len(results)}')
-            logger.info(f'All Renders: {", ".join(render_tasks.keys())}')
-            logger.info(f'Completed Renders: {", ".join(successful) if successful else "(none)"}')
+            summary = f'Render completed in {minutes}m {seconds}s. Completed: {len(successful)}/{len(results)} ({", ".join(successful) if successful else "none"})'
+            await _render_log(f'===== {summary} =====')
+            logger.info(f'[Map] {summary}')
 
             if failed:
-                logger.error(f'[Map] Incomplete render: {len(successful)}/{len(results)} succeeded; failed layers will be retried next cycle')
+                failed_msg = f'Incomplete render: {len(successful)}/{len(results)} succeeded; failed layers will be retried next cycle'
+                await _render_log(failed_msg)
+                logger.error(f'[Map] {failed_msg}')
 
         except (asyncio.CancelledError, TimeoutError):
             # Always clear tasks + processes so the coordinator lock/hold frees up.
@@ -303,8 +358,19 @@ class BackupHandler:
                 *[BackupHandler._terminate_process(p, n) for n, p in processes.items() if p.returncode is None],
                 return_exceptions=True,
             )
-            logger.error(f'Map update failed: {e.__class__.__name__} - {str(e)}')
+            err_msg = f'Map update failed: {e.__class__.__name__} - {str(e)}'
+            try:
+                await _render_log(err_msg)
+            except Exception:
+                pass
+            logger.error(err_msg)
             raise
+        finally:
+            if render_log is not None:
+                try:
+                    render_log.close()
+                except Exception:
+                    pass
 
     async def backup(self):
         with tempfile.TemporaryDirectory(dir=self.backup_path) as temp_dir:

@@ -43,9 +43,9 @@ class BackupCoordinator:
     """
 
     # Backstop so a hung map render / backup can never hold the save lock forever.
-    # BackupHandler.__run_unmined has its own 20-min timeout + process cleanup;
+    # BackupHandler.__run_unmined has its own 60-min timeout + process cleanup;
     # this outer timeout guarantees run() itself always returns and finally resumes.
-    MAP_UPDATE_TIMEOUT_SECONDS = 20 * 60
+    MAP_UPDATE_TIMEOUT_SECONDS = 60 * 60
     BACKUP_TIMEOUT_SECONDS = 20 * 60
 
     def __init__(self, server):
